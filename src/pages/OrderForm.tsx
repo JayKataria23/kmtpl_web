@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { Eye, Printer, Save, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,18 +18,21 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Toaster } from "@/components/ui/toaster";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "@/components/ui/use-toast";
 
 const designs = ["Design A", "Design B", "Design C", "Design D", "Design E"];
+
+interface DesignData {
+  shades: string[];
+  price: string;
+}
 
 export default function OrderForm() {
   const [date, setDate] = useState(new Date("2024-09-18"));
   const [selectedDesign, setSelectedDesign] = useState("");
-  const [shades, setShades] = useState<Record<string, string[]>>({});
+  const [designData, setDesignData] = useState<Record<string, DesignData>>({});
   const [savedDesigns, setSavedDesigns] = useState<string[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const { toast } = useToast();
 
   const handleDateChange = (amount: number, unit: "day" | "month" | "year") => {
     const newDate = new Date(date);
@@ -49,36 +52,55 @@ export default function OrderForm() {
 
   const handleDesignSelect = (design: string) => {
     setSelectedDesign(design);
-    if (!shades[design]) {
-      setShades((prev) => ({ ...prev, [design]: Array(50).fill("") }));
+    if (!designData[design]) {
+      setDesignData((prev) => ({
+        ...prev,
+        [design]: { shades: Array(50).fill(""), price: "" },
+      }));
     }
   };
 
   const handleShadeChange = (index: number, value: string) => {
-    setShades((prev) => ({
+    setDesignData((prev) => ({
       ...prev,
-      [selectedDesign]: prev[selectedDesign].map((shade, i) =>
-        i === index ? value : shade
-      ),
+      [selectedDesign]: {
+        ...prev[selectedDesign],
+        shades: prev[selectedDesign].shades.map((shade, i) =>
+          i === index ? value : shade
+        ),
+      },
+    }));
+  };
+
+  const handlePriceChange = (value: string) => {
+    setDesignData((prev) => ({
+      ...prev,
+      [selectedDesign]: {
+        ...prev[selectedDesign],
+        price: value,
+      },
     }));
   };
 
   const handleShadeToggle = (index: number) => {
-    setShades((prev) => ({
+    setDesignData((prev) => ({
       ...prev,
-      [selectedDesign]: prev[selectedDesign].map((shade, i) => {
-        if (i === index) {
-          if (shade === "50") return "100";
-          if (shade === "100") return "";
-          return "50";
-        }
-        return shade;
-      }),
+      [selectedDesign]: {
+        ...prev[selectedDesign],
+        shades: prev[selectedDesign].shades.map((shade, i) => {
+          if (i === index) {
+            if (shade === "50") return "100";
+            if (shade === "100") return "";
+            return "50";
+          }
+          return shade;
+        }),
+      },
     }));
   };
 
   const handleSaveDesign = () => {
-    if (selectedDesign && shades[selectedDesign]) {
+    if (selectedDesign && designData[selectedDesign]) {
       setSavedDesigns((prev) =>
         prev.includes(selectedDesign) ? prev : [...prev, selectedDesign]
       );
@@ -97,8 +119,8 @@ export default function OrderForm() {
 
   const handleDeleteDesign = (design: string) => {
     setSavedDesigns((prev) => prev.filter((d) => d !== design));
-    setShades((prev) => {
-      const { [design]: deletedDesign, ...rest } = prev;
+    setDesignData((prev) => {
+      const { [design]: _, ...rest } = prev;
       return rest;
     });
     toast({
@@ -207,6 +229,18 @@ export default function OrderForm() {
                 </div>
                 {selectedDesign && (
                   <>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <Label htmlFor="price" className="text-right">
+                        Price
+                      </Label>
+                      <Input
+                        id="price"
+                        value={designData[selectedDesign]?.price || ""}
+                        onChange={(e) => handlePriceChange(e.target.value)}
+                        className="col-span-3"
+                        placeholder="Enter price"
+                      />
+                    </div>
                     <ScrollArea className="h-[200px] w-full rounded-md border p-4">
                       <div className="grid gap-4">
                         {Array.from({ length: 50 }, (_, i) => (
@@ -222,7 +256,9 @@ export default function OrderForm() {
                             </Label>
                             <Input
                               id={`shade-${i}`}
-                              value={shades[selectedDesign]?.[i] || ""}
+                              value={
+                                designData[selectedDesign]?.shades[i] || ""
+                              }
                               onChange={(e) =>
                                 handleShadeChange(i, e.target.value)
                               }
@@ -234,7 +270,8 @@ export default function OrderForm() {
                               size="sm"
                               className="col-span-1"
                             >
-                              {shades[selectedDesign]?.[i] || "50/100"}
+                              {designData[selectedDesign]?.shades[i] ||
+                                "50/100"}
                             </Button>
                           </div>
                         ))}
@@ -259,7 +296,9 @@ export default function OrderForm() {
                   key={index}
                   className="flex items-center justify-between p-2 bg-gray-100 rounded"
                 >
-                  <span>{design}</span>
+                  <span>
+                    {design} - Price: {designData[design]?.price || "N/A"}
+                  </span>
                   <div className="space-x-2">
                     <Button
                       variant="ghost"
@@ -299,7 +338,6 @@ export default function OrderForm() {
           </Button>
         </div>
       </div>
-      <Toaster />
     </div>
   );
 }
