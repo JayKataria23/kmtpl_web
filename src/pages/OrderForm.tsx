@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Eye, Printer, Save, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +20,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Toaster } from "@/components/ui/toaster";
 import { useToast } from "@/hooks/use-toast";
+import supabase from "@/utils/supabase";
 
 const designs = ["Design A", "Design B", "Design C", "Design D", "Design E"];
 interface DesignData {
@@ -28,7 +29,6 @@ interface DesignData {
 }
 
 // Add these option lists at the top of your file, outside the component
-const brokerOptions = ["Broker A", "Broker B", "Broker C"];
 const transportOptions = ["Transport X", "Transport Y", "Transport Z"];
 const partyNameOptions = ["Party 1", "Party 2", "Party 3"];
 const deliveryOptions = [
@@ -44,6 +44,28 @@ export default function OrderForm() {
   const [savedDesigns, setSavedDesigns] = useState<string[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
+  const [brokerOptions, setBrokerOptions] = useState<string[]>([]);
+
+  useEffect(() => {
+    fetchBrokers();
+  }, []);
+
+  const fetchBrokers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("brokers")
+        .select("name")
+        .order("name");
+
+      if (error) throw error;
+
+      const brokerNames = data.map((broker) => broker.name);
+      setBrokerOptions(brokerNames);
+    } catch (error) {
+      console.error("Error fetching brokers:", error);
+      // Optionally, you can show an error message to the user
+    }
+  };
 
   const handleDateChange = (amount: number, unit: "day" | "month" | "year") => {
     const newDate = new Date(date);
