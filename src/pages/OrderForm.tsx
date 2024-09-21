@@ -27,15 +27,6 @@ interface DesignData {
   price: string;
 }
 
-// Add these option lists at the top of your file, outside the component
-const transportOptions = ["Transport X", "Transport Y", "Transport Z"];
-const partyNameOptions = ["Party 1", "Party 2", "Party 3"];
-const deliveryOptions = [
-  "Delivery Method 1",
-  "Delivery Method 2",
-  "Delivery Method 3",
-];
-
 export default function OrderForm() {
   const [date, setDate] = useState(new Date("2024-09-18"));
   const [selectedDesign, setSelectedDesign] = useState("");
@@ -43,25 +34,62 @@ export default function OrderForm() {
   const [savedDesigns, setSavedDesigns] = useState<string[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
-  const [brokerOptions, setBrokerOptions] = useState<string[]>([]);
+  const [brokerOptions, setBrokerOptions] = useState<
+    { id: number; name: string }[]
+  >([]);
   const [designs, setDesigns] = useState<string[]>([]);
+  const [transportOptions, setTransportOptions] = useState<
+    { id: number; name: string }[]
+  >([]);
+  const [partyOptions, setPartyOptions] = useState<
+    {
+      id: number;
+      name: string;
+      delivery_id: number | null;
+      broker_id: number | null;
+      transport_id: number | null;
+    }[]
+  >([]);
+  const [selectedBillTo, setSelectedBillTo] = useState<number | null>(null);
+  const [selectedShipTo, setSelectedShipTo] = useState<number | null>(null);
+  const [selectedBroker, setSelectedBroker] = useState<number | null>(null);
+  const [selectedTransport, setSelectedTransport] = useState<number | null>(
+    null
+  );
 
   useEffect(() => {
     fetchBrokers();
     fetchDesigns();
+    fetchTransportOptions();
+    fetchPartyOptions();
   }, []);
+
+  const fetchTransportOptions = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("transport_profiles")
+        .select("id, name")
+        .order("name");
+
+      if (error) throw error;
+
+      setTransportOptions(data);
+    } catch (error) {
+      console.error("Error fetching transport options:", error);
+      // Optionally, you can show an error message to the user
+    }
+  };
 
   const fetchBrokers = async () => {
     try {
       const { data, error } = await supabase
         .from("brokers")
-        .select("name")
+        .select("id, name")
         .order("name");
 
       if (error) throw error;
 
-      const brokerNames = data.map((broker) => broker.name);
-      setBrokerOptions(brokerNames);
+      setBrokerOptions(data);
     } catch (error) {
       console.error("Error fetching brokers:", error);
       // Optionally, you can show an error message to the user
@@ -81,6 +109,22 @@ export default function OrderForm() {
       setDesigns(designTitles);
     } catch (error) {
       console.error("Error fetching designs:", error);
+      // Optionally, you can show an error message to the user
+    }
+  };
+
+  const fetchPartyOptions = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("party_profiles")
+        .select("id, name, delivery_id, broker_id, transport_id")
+        .order("name");
+
+      if (error) throw error;
+
+      setPartyOptions(data);
+    } catch (error) {
+      console.error("Error fetching party options:", error);
       // Optionally, you can show an error message to the user
     }
   };
@@ -192,17 +236,32 @@ export default function OrderForm() {
     console.log("Save clicked");
   };
 
-  // Create a function to get the appropriate options list
+  const handleBillToChange = (partyId: number) => {
+    setSelectedBillTo(partyId);
+    const selectedParty = partyOptions.find((party) => party.id === partyId);
+    if (selectedParty) {
+      if (selectedParty.delivery_id) {
+        setSelectedShipTo(selectedParty.delivery_id);
+      }
+      if (selectedParty.broker_id) {
+        setSelectedBroker(selectedParty.broker_id);
+      }
+      if (selectedParty.transport_id) {
+        setSelectedTransport(selectedParty.transport_id);
+      }
+    }
+  };
+
+  // Modify the getOptionsForField function
   const getOptionsForField = (field: string) => {
     switch (field) {
       case "Broker":
         return brokerOptions;
       case "Transport":
         return transportOptions;
-      case "Party Name":
-        return partyNameOptions;
-      case "Delivery":
-        return deliveryOptions;
+      case "Bill To":
+      case "Ship To":
+        return partyOptions;
       default:
         return [];
     }
@@ -243,19 +302,42 @@ export default function OrderForm() {
           </div>
         </div>
 
-        {["Party Name", "Broker", "Transport", "Delivery"].map((field) => (
+        {["Bill To", "Broker", "Transport", "Ship To"].map((field) => (
           <div key={field}>
             <Label htmlFor={field.toLowerCase().replace(" ", "-")}>
               {field}
             </Label>
-            <Select>
+            <Select
+              onValueChange={(value) => {
+                if (field === "Bill To") {
+                  handleBillToChange(Number(value));
+                } else if (field === "Ship To") {
+                  setSelectedShipTo(Number(value));
+                } else if (field === "Broker") {
+                  setSelectedBroker(Number(value));
+                } else if (field === "Transport") {
+                  setSelectedTransport(Number(value));
+                }
+              }}
+              value={
+                field === "Bill To"
+                  ? selectedBillTo?.toString()
+                  : field === "Ship To"
+                  ? selectedShipTo?.toString()
+                  : field === "Broker"
+                  ? selectedBroker?.toString()
+                  : field === "Transport"
+                  ? selectedTransport?.toString()
+                  : undefined
+              }
+            >
               <SelectTrigger id={field.toLowerCase().replace(" ", "-")}>
                 <SelectValue placeholder={`Select ${field}`} />
               </SelectTrigger>
               <SelectContent>
                 {getOptionsForField(field).map((option) => (
-                  <SelectItem key={option} value={option}>
-                    {option}
+                  <SelectItem key={option.id} value={option.id.toString()}>
+                    {option.name}
                   </SelectItem>
                 ))}
               </SelectContent>
