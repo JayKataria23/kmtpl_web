@@ -22,7 +22,6 @@ import { Toaster } from "@/components/ui/toaster";
 import { useToast } from "@/hooks/use-toast";
 import supabase from "@/utils/supabase";
 
-const designs = ["Design A", "Design B", "Design C", "Design D", "Design E"];
 interface DesignData {
   shades: string[];
   price: string;
@@ -45,9 +44,11 @@ export default function OrderForm() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
   const [brokerOptions, setBrokerOptions] = useState<string[]>([]);
+  const [designs, setDesigns] = useState<string[]>([]);
 
   useEffect(() => {
     fetchBrokers();
+    fetchDesigns();
   }, []);
 
   const fetchBrokers = async () => {
@@ -63,6 +64,23 @@ export default function OrderForm() {
       setBrokerOptions(brokerNames);
     } catch (error) {
       console.error("Error fetching brokers:", error);
+      // Optionally, you can show an error message to the user
+    }
+  };
+
+  const fetchDesigns = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("designs")
+        .select("title")
+        .order("title");
+
+      if (error) throw error;
+
+      const designTitles = data.map((design) => design.title);
+      setDesigns(designTitles);
+    } catch (error) {
+      console.error("Error fetching designs:", error);
       // Optionally, you can show an error message to the user
     }
   };
