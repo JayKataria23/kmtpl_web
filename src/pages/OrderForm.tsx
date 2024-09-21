@@ -133,16 +133,15 @@ export default function OrderForm() {
     }));
   };
 
-  const handleShadeToggle = (index: number) => {
+  const handleShadeIncrement = (index: number) => {
     setDesignData((prev) => ({
       ...prev,
       [selectedDesign]: {
         ...prev[selectedDesign],
         shades: prev[selectedDesign].shades.map((shade, i) => {
           if (i === index) {
-            if (shade === "50") return "100";
-            if (shade === "100") return "";
-            return "50";
+            const currentValue = parseInt(shade) || 0;
+            return (currentValue + 50).toString();
           }
           return shade;
         }),
@@ -244,7 +243,7 @@ export default function OrderForm() {
           </div>
         </div>
 
-        {["Broker", "Transport", "Party Name", "Delivery"].map((field) => (
+        {["Party Name", "Broker", "Transport", "Delivery"].map((field) => (
           <div key={field}>
             <Label htmlFor={field.toLowerCase().replace(" ", "-")}>
               {field}
@@ -337,13 +336,12 @@ export default function OrderForm() {
                               className="col-span-3"
                             />
                             <Button
-                              onClick={() => handleShadeToggle(i)}
+                              onClick={() => handleShadeIncrement(i)}
                               variant="outline"
                               size="sm"
                               className="col-span-1"
                             >
-                              {designData[selectedDesign]?.shades[i] ||
-                                "50/100"}
+                              +50
                             </Button>
                           </div>
                         ))}
