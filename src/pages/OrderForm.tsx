@@ -22,11 +22,20 @@ import { Toaster } from "@/components/ui/toaster";
 import { useToast } from "@/hooks/use-toast";
 
 const designs = ["Design A", "Design B", "Design C", "Design D", "Design E"];
-
 interface DesignData {
   shades: string[];
   price: string;
 }
+
+// Add these option lists at the top of your file, outside the component
+const brokerOptions = ["Broker A", "Broker B", "Broker C"];
+const transportOptions = ["Transport X", "Transport Y", "Transport Z"];
+const partyNameOptions = ["Party 1", "Party 2", "Party 3"];
+const deliveryOptions = [
+  "Delivery Method 1",
+  "Delivery Method 2",
+  "Delivery Method 3",
+];
 
 export default function OrderForm() {
   const [date, setDate] = useState(new Date("2024-09-18"));
@@ -144,6 +153,22 @@ export default function OrderForm() {
     console.log("Save clicked");
   };
 
+  // Create a function to get the appropriate options list
+  const getOptionsForField = (field: string) => {
+    switch (field) {
+      case "Broker":
+        return brokerOptions;
+      case "Transport":
+        return transportOptions;
+      case "Party Name":
+        return partyNameOptions;
+      case "Delivery":
+        return deliveryOptions;
+      default:
+        return [];
+    }
+  };
+
   return (
     <div className="max-w-md mx-auto p-6 bg-white">
       <h1 className="text-2xl font-bold mb-6">General Details</h1>
@@ -179,17 +204,21 @@ export default function OrderForm() {
           </div>
         </div>
 
-        {["Broker", "Transport", "To", "Delivery"].map((field) => (
+        {["Broker", "Transport", "Party Name", "Delivery"].map((field) => (
           <div key={field}>
-            <Label htmlFor={field.toLowerCase()}>{field}</Label>
+            <Label htmlFor={field.toLowerCase().replace(" ", "-")}>
+              {field}
+            </Label>
             <Select>
-              <SelectTrigger id={field.toLowerCase()}>
+              <SelectTrigger id={field.toLowerCase().replace(" ", "-")}>
                 <SelectValue placeholder={`Select ${field}`} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="option1">Option 1</SelectItem>
-                <SelectItem value="option2">Option 2</SelectItem>
-                <SelectItem value="option3">Option 3</SelectItem>
+                {getOptionsForField(field).map((option) => (
+                  <SelectItem key={option} value={option}>
+                    {option}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
