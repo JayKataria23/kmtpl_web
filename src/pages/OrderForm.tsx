@@ -18,7 +18,8 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { toast } from "@/components/ui/use-toast";
+import { Toaster } from "@/components/ui/toaster";
+import { useToast } from "@/hooks/use-toast";
 
 const designs = ["Design A", "Design B", "Design C", "Design D", "Design E"];
 
@@ -33,6 +34,7 @@ export default function OrderForm() {
   const [designData, setDesignData] = useState<Record<string, DesignData>>({});
   const [savedDesigns, setSavedDesigns] = useState<string[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const { toast } = useToast();
 
   const handleDateChange = (amount: number, unit: "day" | "month" | "year") => {
     const newDate = new Date(date);
@@ -338,6 +340,7 @@ export default function OrderForm() {
           </Button>
         </div>
       </div>
+      <Toaster />
     </div>
   );
 }
