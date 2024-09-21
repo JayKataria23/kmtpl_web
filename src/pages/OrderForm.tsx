@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { Eye, Printer, Save, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -122,8 +122,9 @@ export default function OrderForm() {
   const handleDeleteDesign = (design: string) => {
     setSavedDesigns((prev) => prev.filter((d) => d !== design));
     setDesignData((prev) => {
-      const { [design]: _, ...rest } = prev;
-      return rest;
+      const updatedData = { ...prev };
+      delete updatedData[design];
+      return updatedData;
     });
     toast({
       title: "Design Deleted",
