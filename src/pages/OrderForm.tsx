@@ -22,22 +22,24 @@ import { Toaster } from "@/components/ui/toaster";
 import { useToast } from "@/hooks/use-toast";
 import supabase from "@/utils/supabase";
 
-interface DesignData {
-  shades: string[];
+interface DesignEntry {
+  id: string;
+  design: string;
   price: string;
+  remark: string;
+  shades: string[];
 }
 
 export default function OrderForm() {
   const [date, setDate] = useState(new Date("2024-09-18"));
-  const [selectedDesign, setSelectedDesign] = useState("");
-  const [designData, setDesignData] = useState<Record<string, DesignData>>({});
-  const [savedDesigns, setSavedDesigns] = useState<string[]>([]);
+  const [designEntries, setDesignEntries] = useState<DesignEntry[]>([]);
+  const [currentEntry, setCurrentEntry] = useState<DesignEntry | null>(null);
+  const [designs, setDesigns] = useState<string[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
   const [brokerOptions, setBrokerOptions] = useState<
     { id: number; name: string }[]
   >([]);
-  const [designs, setDesigns] = useState<string[]>([]);
   const [transportOptions, setTransportOptions] = useState<
     { id: number; name: string }[]
   >([]);
@@ -146,81 +148,95 @@ export default function OrderForm() {
   };
 
   const handleDesignSelect = (design: string) => {
-    setSelectedDesign(design);
-    if (!designData[design]) {
-      setDesignData((prev) => ({
-        ...prev,
-        [design]: { shades: Array(50).fill(""), price: "" },
-      }));
-    }
+    setCurrentEntry({
+      id: Date.now().toString(),
+      design,
+      price: "",
+      remark: "",
+      shades: Array(50).fill(""),
+    });
   };
 
   const handleShadeChange = (index: number, value: string) => {
-    setDesignData((prev) => ({
-      ...prev,
-      [selectedDesign]: {
-        ...prev[selectedDesign],
-        shades: prev[selectedDesign].shades.map((shade, i) =>
+    if (currentEntry) {
+      setCurrentEntry({
+        ...currentEntry,
+        shades: currentEntry.shades.map((shade, i) =>
           i === index ? value : shade
         ),
-      },
-    }));
+      });
+    }
   };
 
   const handlePriceChange = (value: string) => {
-    setDesignData((prev) => ({
-      ...prev,
-      [selectedDesign]: {
-        ...prev[selectedDesign],
+    if (currentEntry) {
+      setCurrentEntry({
+        ...currentEntry,
         price: value,
-      },
-    }));
+      });
+    }
+  };
+
+  const handleRemarkChange = (value: string) => {
+    if (currentEntry) {
+      setCurrentEntry({
+        ...currentEntry,
+        remark: value,
+      });
+    }
   };
 
   const handleShadeIncrement = (index: number) => {
-    setDesignData((prev) => ({
-      ...prev,
-      [selectedDesign]: {
-        ...prev[selectedDesign],
-        shades: prev[selectedDesign].shades.map((shade, i) => {
+    if (currentEntry) {
+      setCurrentEntry({
+        ...currentEntry,
+        shades: currentEntry.shades.map((shade, i) => {
           if (i === index) {
             const currentValue = parseInt(shade) || 0;
             return (currentValue + 50).toString();
           }
           return shade;
         }),
-      },
-    }));
-  };
-
-  const handleSaveDesign = () => {
-    if (selectedDesign && designData[selectedDesign]) {
-      setSavedDesigns((prev) =>
-        prev.includes(selectedDesign) ? prev : [...prev, selectedDesign]
-      );
-      toast({
-        title: "Design Saved",
-        description: `${selectedDesign} has been saved successfully.`,
       });
-      setIsDialogOpen(false);
     }
   };
 
-  const handleEditDesign = (design: string) => {
-    setSelectedDesign(design);
-    setIsDialogOpen(true);
+  const handleSaveDesign = () => {
+    if (currentEntry) {
+      setDesignEntries((prev) => {
+        const index = prev.findIndex((entry) => entry.id === currentEntry.id);
+        if (index !== -1) {
+          // Update existing entry
+          return prev.map((entry) =>
+            entry.id === currentEntry.id ? currentEntry : entry
+          );
+        } else {
+          // Add new entry
+          return [...prev, currentEntry];
+        }
+      });
+      setCurrentEntry(null);
+      setIsDialogOpen(false);
+      toast({
+        title: "Design Saved",
+        description: `${currentEntry.design} has been saved successfully.`,
+      });
+    }
   };
 
-  const handleDeleteDesign = (design: string) => {
-    setSavedDesigns((prev) => prev.filter((d) => d !== design));
-    setDesignData((prev) => {
-      const updatedData = { ...prev };
-      delete updatedData[design];
-      return updatedData;
-    });
+  const handleEditDesign = (id: string) => {
+    const entryToEdit = designEntries.find((entry) => entry.id === id);
+    if (entryToEdit) {
+      setCurrentEntry({ ...entryToEdit });
+      setIsDialogOpen(true);
+    }
+  };
+
+  const handleDeleteDesign = (id: string) => {
+    setDesignEntries((prev) => prev.filter((entry) => entry.id !== id));
     toast({
       title: "Design Deleted",
-      description: `${design} has been deleted.`,
+      description: `Design entry has been deleted.`,
     });
   };
 
@@ -349,14 +365,14 @@ export default function OrderForm() {
           <Label>Designs</Label>
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
-              <Button className="w-full" onClick={() => setSelectedDesign("")}>
+              <Button className="w-full" onClick={() => setCurrentEntry(null)}>
                 Add Design
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[425px]">
               <DialogHeader>
                 <DialogTitle>
-                  {selectedDesign ? `Edit ${selectedDesign}` : "Add Design"}
+                  {currentEntry ? `Edit ${currentEntry.design}` : "Add Design"}
                 </DialogTitle>
               </DialogHeader>
               <div className="grid gap-4 py-4">
@@ -365,7 +381,7 @@ export default function OrderForm() {
                     Design
                   </Label>
                   <Select
-                    value={selectedDesign}
+                    value={currentEntry?.design || ""}
                     onValueChange={handleDesignSelect}
                   >
                     <SelectTrigger className="col-span-3">
@@ -380,7 +396,7 @@ export default function OrderForm() {
                     </SelectContent>
                   </Select>
                 </div>
-                {selectedDesign && (
+                {currentEntry && (
                   <>
                     <div className="grid grid-cols-4 items-center gap-4">
                       <Label htmlFor="price" className="text-right">
@@ -388,10 +404,22 @@ export default function OrderForm() {
                       </Label>
                       <Input
                         id="price"
-                        value={designData[selectedDesign]?.price || ""}
+                        value={currentEntry.price}
                         onChange={(e) => handlePriceChange(e.target.value)}
                         className="col-span-3"
                         placeholder="Enter price"
+                      />
+                    </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <Label htmlFor="remark" className="text-right">
+                        Remark
+                      </Label>
+                      <Input
+                        id="remark"
+                        value={currentEntry.remark}
+                        onChange={(e) => handleRemarkChange(e.target.value)}
+                        className="col-span-3"
+                        placeholder="Enter remark"
                       />
                     </div>
                     <ScrollArea className="h-[200px] w-full rounded-md border p-4">
@@ -409,9 +437,7 @@ export default function OrderForm() {
                             </Label>
                             <Input
                               id={`shade-${i}`}
-                              value={
-                                designData[selectedDesign]?.shades[i] || ""
-                              }
+                              value={currentEntry.shades[i]}
                               onChange={(e) =>
                                 handleShadeChange(i, e.target.value)
                               }
@@ -439,30 +465,33 @@ export default function OrderForm() {
           </Dialog>
         </div>
 
-        {savedDesigns.length > 0 && (
+        {designEntries.length > 0 && (
           <div>
             <Label>Saved Designs</Label>
             <div className="mt-2 space-y-2">
-              {savedDesigns.map((design, index) => (
+              {designEntries.map((entry) => (
                 <div
-                  key={index}
+                  key={entry.id}
                   className="flex items-center justify-between p-2 bg-gray-100 rounded"
                 >
-                  <span>
-                    {design} - Price: {designData[design]?.price || "N/A"}
-                  </span>
+                  <div>
+                    <span>{entry.design} - Price: {entry.price || "N/A"}</span>
+                    {entry.remark && (
+                      <p className="text-sm text-gray-600">Remark: {entry.remark}</p>
+                    )}
+                  </div>
                   <div className="space-x-2">
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => handleEditDesign(design)}
+                      onClick={() => handleEditDesign(entry.id)}
                     >
                       Edit
                     </Button>
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => handleDeleteDesign(design)}
+                      onClick={() => handleDeleteDesign(entry.id)}
                     >
                       <X className="h-4 w-4" />
                     </Button>
