@@ -3,6 +3,7 @@ import { Eye, Printer, Save, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { generateHTML } from "../utils/generateHTML"; // Import the generateHTML function
 import {
   Select,
   SelectContent,
@@ -30,8 +31,21 @@ interface DesignEntry {
   shades: string[];
 }
 
+interface OrderDetails {
+  orderNo: string;
+  date: string;
+  billTo: number | null;
+  shipTo: number | null;
+  broker: number | null;
+  transport: number | null;
+  designs: DesignEntry[];
+  remark: string;
+  billToAddress?: string;
+  shipToAddress?: string;
+}
+
 export default function OrderForm() {
-  const [date, setDate] = useState(new Date("2024-09-18"));
+  const [date, setDate] = useState(new Date());
   const [designEntries, setDesignEntries] = useState<DesignEntry[]>([]);
   const [currentEntry, setCurrentEntry] = useState<DesignEntry | null>(null);
   const [designs, setDesigns] = useState<string[]>([]);
@@ -240,8 +254,60 @@ export default function OrderForm() {
     });
   };
 
-  const handlePreview = () => {
-    console.log("Preview clicked");
+  const handlePreview = async () => {
+    const orderDetails: OrderDetails = {
+      orderNo: (document.getElementById("orderNo") as HTMLInputElement)?.value,
+      date: formatDate(date),
+      billTo: selectedBillTo,
+      shipTo: selectedShipTo,
+      broker: selectedBroker,
+      transport: selectedTransport,
+      designs: designEntries,
+      remark: (document.getElementById("remark") as HTMLInputElement)?.value,
+    };
+
+    try {
+      // Fetch billTo details
+      if (selectedBillTo) {
+        const { data: billToData, error: billToError } = await supabase
+          .from("party_profiles")
+          .select("name, address")
+          .eq("id", selectedBillTo)
+          .single();
+
+        if (billToError) throw billToError;
+
+        orderDetails.billTo = billToData.name;
+        orderDetails.billToAddress = billToData.address;
+      }
+
+      // Fetch shipTo details
+      if (selectedShipTo) {
+        const { data: shipToData, error: shipToError } = await supabase
+          .from("party_profiles")
+          .select("name, address")
+          .eq("id", selectedShipTo)
+          .single();
+
+        if (shipToError) throw shipToError;
+
+        orderDetails.shipTo = shipToData.name;
+        orderDetails.shipToAddress = shipToData.address;
+      }
+
+      const html = generateHTML(orderDetails);
+      console.log(orderDetails);
+      const previewWindow = window.open("", "_blank");
+      if (previewWindow) {
+        previewWindow.document.write(html);
+        previewWindow.document.close();
+      } else {
+        console.error("Failed to open preview window");
+      }
+    } catch (error) {
+      console.error("Error fetching party details:", error);
+      // Optionally, you can show an error message to the user
+    }
   };
 
   const handlePrint = () => {
@@ -258,6 +324,8 @@ export default function OrderForm() {
     if (selectedParty) {
       if (selectedParty.delivery_id) {
         setSelectedShipTo(selectedParty.delivery_id);
+      } else {
+        setSelectedShipTo(selectedParty.id);
       }
       if (selectedParty.broker_id) {
         setSelectedBroker(selectedParty.broker_id);
@@ -475,9 +543,13 @@ export default function OrderForm() {
                   className="flex items-center justify-between p-2 bg-gray-100 rounded"
                 >
                   <div>
-                    <span>{entry.design} - Price: {entry.price || "N/A"}</span>
+                    <span>
+                      {entry.design} - Price: {entry.price || "N/A"}
+                    </span>
                     {entry.remark && (
-                      <p className="text-sm text-gray-600">Remark: {entry.remark}</p>
+                      <p className="text-sm text-gray-600">
+                        Remark: {entry.remark}
+                      </p>
                     )}
                   </div>
                   <div className="space-x-2">
