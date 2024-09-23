@@ -295,7 +295,22 @@ export default function OrderForm() {
         orderDetails.shipToAddress = shipToData.address;
       }
 
-      const html = generateHTML(orderDetails);
+      const orderDetailsFixed = {
+        ...orderDetails,
+        broker:
+          orderDetails.broker !== null ? orderDetails.broker.toString() : "",
+        transport:
+          orderDetails.transport !== null
+            ? orderDetails.transport.toString()
+            : "",
+        billTo:
+          orderDetails.billTo !== null ? orderDetails.billTo.toString() : "",
+        shipTo:
+          orderDetails.shipTo !== null ? orderDetails.shipTo.toString() : "",
+        billToAddress: orderDetails.billToAddress?.toString() ?? "",
+        shipToAddress: orderDetails.shipToAddress?.toString() ?? "",
+      };
+      const html = generateHTML(orderDetailsFixed);
       console.log(orderDetails);
       const previewWindow = window.open("", "_blank");
       if (previewWindow) {
