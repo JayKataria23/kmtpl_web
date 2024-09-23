@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 interface Shade {
   [key: number]: string;
 }
@@ -21,30 +20,6 @@ interface Order {
   shipTo: string;
   shipToAddress: string;
   remark: string;
-}
-
-interface EntriesRowResult {
-  rows: number;
-  exceedingIndex: number;
-}
-
-function entriesRow(order: Order): EntriesRowResult {
-  let rows = 0;
-  let exceedingIndex = -1;
-
-  for (let i = 0; i < order.designs.length; i++) {
-    const nonEmptyShades = Object.values(order.designs[i].shades).filter(
-      (shade) => shade !== ""
-    ).length;
-    if (nonEmptyShades > 0) {
-      rows += Math.ceil(nonEmptyShades / 8);
-    }
-    if (rows > 12 && exceedingIndex === -1) {
-      exceedingIndex = i;
-    }
-  }
-
-  return { rows, exceedingIndex };
 }
 
 function splitOrder(order: Order): Order[] {
@@ -93,7 +68,7 @@ export function generateHTML(order: Order): string {
       .join("");
   };
 
-  const generatePartHTML = (part: Order, partIndex: number): string => {
+  const generatePartHTML = (part: Order): string => {
     const designsHTML = part.designs
       .map((design, index) => {
         return `
@@ -201,5 +176,5 @@ export function generateHTML(order: Order): string {
     </html>`;
   };
 
-  return parts.map((part, index) => generatePartHTML(part, index)).join("");
+  return parts.map((part) => generatePartHTML(part)).join("");
 }
