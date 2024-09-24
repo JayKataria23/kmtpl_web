@@ -486,21 +486,19 @@ export default function OrderForm() {
                   <Label htmlFor="design" className="text-right">
                     Design
                   </Label>
-                  <Select
+                  <Input
+                    id="design"
+                    list="designs"
                     value={currentEntry?.design || ""}
-                    onValueChange={handleDesignSelect}
-                  >
-                    <SelectTrigger className="col-span-3">
-                      <SelectValue placeholder="Select a design" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {designs.map((design) => (
-                        <SelectItem key={design} value={design}>
-                          {design}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    onChange={(e) => handleDesignSelect(e.target.value)}
+                    className="col-span-3"
+                    placeholder="Search for a design"
+                  />
+                  <datalist id="designs">
+                    {designs.map((design) => (
+                      <option key={design} value={design} />
+                    ))}
+                  </datalist>
                 </div>
                 {currentEntry && (
                   <>
@@ -611,12 +609,10 @@ export default function OrderForm() {
             </div>
           </div>
         )}
-
         <div>
           <Label htmlFor="remark">Remark</Label>
           <Input id="remark" />
         </div>
-
         <div className="flex justify-between pt-4">
           <Button onClick={handlePreview} className="flex items-center">
             <Printer className="mr-2 h-4 w-4" /> Preview
