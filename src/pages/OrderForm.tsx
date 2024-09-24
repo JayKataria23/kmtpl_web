@@ -78,7 +78,26 @@ export default function OrderForm() {
     fetchDesigns();
     fetchTransportOptions();
     fetchPartyOptions();
+    generateUniqueOrderNo();
   }, []);
+
+  const generateUniqueOrderNo = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("orders")
+        .select("order_no")
+        .order("order_no", { ascending: false })
+        .limit(1);
+
+      if (error) throw error;
+
+      const lastOrderNo = data.length > 0 ? parseInt(data[0].order_no) : 0;
+      const newOrderNo = (lastOrderNo + 1).toString();
+      (document.getElementById("orderNo") as HTMLInputElement).value = newOrderNo;
+    } catch (error) {
+      console.error("Error generating unique order number:", error);
+    }
+  };
 
   const fetchTransportOptions = async () => {
     try {
