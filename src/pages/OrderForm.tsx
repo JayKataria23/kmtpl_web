@@ -3,7 +3,7 @@ import { Printer, Save, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { generateHTML } from "../utils/generateHTML"; // Import the generateHTML function
+import { generateHTML } from "../utils/generateHTML";
 import {
   Select,
   SelectContent,
@@ -72,6 +72,7 @@ export default function OrderForm() {
   const [selectedTransport, setSelectedTransport] = useState<number | null>(
     null
   );
+  const [designSearch, setDesignSearch] = useState<string>("");
 
   useEffect(() => {
     fetchBrokers();
@@ -169,6 +170,7 @@ export default function OrderForm() {
       remark: "",
       shades: Array(50).fill(""),
     });
+    setDesignSearch(design);
   };
 
   const handleShadeChange = (index: number, value: string) => {
@@ -231,6 +233,7 @@ export default function OrderForm() {
       });
       setCurrentEntry(null);
       setIsDialogOpen(false);
+      setDesignSearch("");
       toast({
         title: "Design Saved",
         description: `${currentEntry.design} has been saved successfully.`,
@@ -389,6 +392,17 @@ export default function OrderForm() {
     }
   };
 
+  const filteredDesigns = designs.filter((design) =>
+    design.toLowerCase().includes(designSearch.toLowerCase())
+  );
+
+  // Close the scroll area if there is only one item and it matches the search input
+  useEffect(() => {
+    if (filteredDesigns.length === 1 && filteredDesigns[0] === designSearch) {
+      handleDesignSelect(filteredDesigns[0]);
+    }
+  }, [designSearch, filteredDesigns]);
+
   return (
     <div className="max-w-md mx-auto p-6 bg-white">
       <h1 className="text-2xl font-bold mb-6">General Details</h1>
@@ -486,22 +500,27 @@ export default function OrderForm() {
                   <Label htmlFor="design" className="text-right">
                     Design
                   </Label>
-                  <Select
-                    value={currentEntry?.design || ""}
-                    onValueChange={handleDesignSelect}
-                  >
-                    <SelectTrigger className="col-span-3">
-                      <SelectValue placeholder="Select a design" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {designs.map((design) => (
-                        <SelectItem key={design} value={design}>
-                          {design}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Input
+                    id="design"
+                    value={designSearch}
+                    onChange={(e) => setDesignSearch(e.target.value)}
+                    className="col-span-3"
+                    placeholder="Search for a design"
+                  />
                 </div>
+                <ScrollArea className="max-h-[200px] w-full rounded-md border p-4">
+                  <div className="grid gap-4">
+                    {filteredDesigns.map((design) => (
+                      <div
+                        key={design}
+                        className="cursor-pointer"
+                        onClick={() => handleDesignSelect(design)}
+                      >
+                        {design}
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
                 {currentEntry && (
                   <>
                     <div className="grid grid-cols-4 items-center gap-4">
