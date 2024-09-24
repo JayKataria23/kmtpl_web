@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Eye, Printer, Save, ChevronLeft, ChevronRight, X } from "lucide-react";
+import { Printer, Save, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -325,10 +325,6 @@ export default function OrderForm() {
     }
   };
 
-  const handlePrint = () => {
-    console.log("Print clicked");
-  };
-
   const handleSave = () => {
     console.log("Save clicked");
   };
@@ -596,10 +592,7 @@ export default function OrderForm() {
 
         <div className="flex justify-between pt-4">
           <Button onClick={handlePreview} className="flex items-center">
-            <Eye className="mr-2 h-4 w-4" /> Preview
-          </Button>
-          <Button onClick={handlePrint} className="flex items-center">
-            <Printer className="mr-2 h-4 w-4" /> Print
+            <Printer className="mr-2 h-4 w-4" /> Preview
           </Button>
           <Button onClick={handleSave} className="flex items-center">
             <Save className="mr-2 h-4 w-4" /> Save
