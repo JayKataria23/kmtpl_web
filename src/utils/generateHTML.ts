@@ -76,7 +76,7 @@ export function generateHTML(order: Order): string {
           <div style="width: 5%; border-right: 1px solid #000; text-align: center; word-wrap: break-word;">
             <p>${index + 1}</p>
           </div>
-          <div style="width: 12%; border-right: 1px solid #000; text-align: center; word-wrap: break-word;">
+          <div style="width: 12%; border-right: 1px solid #000; text-align: center; word-wrap: break-word; font-weight: bold;">
             <p>${design.design}</p>
           </div>
           <div style="width: 64%; border-right: 1px solid #000; text-align: center; display: flex; flex-direction: row; flex-wrap: wrap;">
@@ -85,10 +85,10 @@ export function generateHTML(order: Order): string {
           <div style="width: 4%; border-right: 1px solid #000; text-align: center; word-wrap: break-word;">
             <p>${Object.values(design.shades).filter((s) => s).length}</p>
           </div>
-          <div style="width: 10%; border-right: 1px solid #000; text-align: center; word-wrap: break-word;">
+          <div style="width: 8%; border-right: 1px solid #000; text-align: center; word-wrap: break-word; font-weight: bold;">
             <p>${design.price}</p>
           </div>
-          <div style="width: 5%">${design.remark}</div>
+          <div style="width: 7%">${design.remark}</div>
         </div>
         `;
       })
@@ -97,8 +97,15 @@ export function generateHTML(order: Order): string {
     return `
     <html>
       <head>
+        <title>OrderForm</title>
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <style>
+          @page {
+            size: A4;
+            margin: 1cm;
+          }
+        </style>
       </head>
       <body style="margin: 2px">
         <div style="border: 2px solid #000">
@@ -107,21 +114,21 @@ export function generateHTML(order: Order): string {
             K.M. TEXTILES PVT. LTD.
           </div>
           <div style="border-bottom: 1px solid #000; display: flex; flex-direction: row;">
-            <div style="border-right: 1px solid #000; width: 63%">
+            <div style="border-right: 1px solid #000; width: 55%; font-size: small">
               47-SHANTI BHAVEN, 1ST FLOOR, ROOM NO. 1, 2, 3, 4 <br />
               OLD HANUMAN LANE, KALBADEVI ROAD, MUMBAI-400002 <br />
               TEL : 022 40225657 / 022 40641137
               <i class="fa fa-whatsapp" style="margin-left: 10px"></i>:+91 8097301148 <br />
               EMAIL : k.m.textilespvtltd@gmail.com
             </div>
-            <div style="width: 38%; display: flex; flex-direction: row">
-              <div style="width: 35%; text-align: right">
+            <div style="width: 45%; display: flex; flex-direction: row; font-size: small">
+              <div style="width: 25%; text-align: right">
                 Order No. :<br />
                 Date : <br />
                 Broker : <br />
                 Transport :
               </div>
-              <div style="width: 65%; text-align: left; padding-left: 2">
+              <div style="width: 75%; text-align: left; padding-left: 2; font-weight: bold">
                 ${part.orderNo} <br />
                 ${part.date} <br />
                 ${part.broker} <br />
@@ -130,11 +137,11 @@ export function generateHTML(order: Order): string {
             </div>
           </div>
           <div style="border-bottom: 1px solid #000; display: flex; flex-direction: row;">
-            <div style="width: 55%; border-right: 1px solid #000">
+            <div style="width: 55%; border-right: 1px solid #000; font-size: smalll; ">
               <b>To:</b> ${part.billTo}<br />
               ${part.billToAddress}<br />
             </div>
-            <div style="width: 45%">
+            <div style="width: 45%; font-size: small">
               <b>Delivery:</b> ${part.shipTo}<br />
               ${part.shipToAddress}<br />
             </div>
@@ -145,14 +152,14 @@ export function generateHTML(order: Order): string {
               ${part.remark}
             </div>
           </div>
-          <div style="height: 700px; overflow: hidden">
+          <div style="height: 800px; overflow: hidden">
             <div style="border-bottom: 1px solid #000; display: flex; flex-direction: row; font-size: x-large;">
-              <div style="width: 5%; border-right: 1px solid #000; font-weight: bold; text-align: center;">S/n.</div>
-              <div style="width: 12%; border-right: 1px solid #000; font-weight: bold; text-align: center;">Design</div>
-              <div style="width: 64%; border-right: 1px solid #000; font-weight: bold; text-align: center;">Shades</div>
-              <div style="width: 4%; border-right: 1px solid #000; font-weight: bold; text-align: center;">Pc</div>
-              <div style="width: 10%; border-right: 1px solid #000; font-weight: bold; text-align: center;">Price</div>
-              <div style="width: 5%"></div>
+              <div style="width: 5%; border-right: 1px solid #000; font-weight: bold; text-align: center; font-size: small">S/n.</div>
+              <div style="width: 12%; border-right: 1px solid #000; font-weight: bold; text-align: center; font-size: small">Design</div>
+              <div style="width: 64%; border-right: 1px solid #000; font-weight: bold; text-align: center; font-size: small">Shades</div>
+              <div style="width: 4%; border-right: 1px solid #000; font-weight: bold; text-align: center; font-size: small">Pc</div>
+              <div style="width: 8%; border-right: 1px solid #000; font-weight: bold; text-align: center; font-size: small">Price</div>
+              <div style="width: 7%; font-size: small"></div>
             </div>
             ${designsHTML}
             <div style="display: flex; flex-direction: row; height: 100vh"></div>

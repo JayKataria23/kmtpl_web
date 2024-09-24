@@ -294,6 +294,31 @@ export default function OrderForm() {
         orderDetails.shipTo = shipToData.name;
         orderDetails.shipToAddress = shipToData.address;
       }
+      // Fetch broker details
+      if (selectedBroker) {
+        const { data: brokerData, error: brokerError } = await supabase
+          .from("brokers")
+          .select("name")
+          .eq("id", selectedBroker)
+          .single();
+
+        if (brokerError) throw brokerError;
+
+        orderDetails.broker = brokerData.name;
+      }
+
+      // Fetch transport details
+      if (selectedTransport) {
+        const { data: transportData, error: transportError } = await supabase
+          .from("transport_profiles")
+          .select("name")
+          .eq("id", selectedTransport)
+          .single();
+
+        if (transportError) throw transportError;
+
+        orderDetails.transport = transportData.name;
+      }
 
       const orderDetailsFixed = {
         ...orderDetails,
