@@ -371,8 +371,66 @@ export default function OrderForm() {
     }
   };
 
-  const handleSave = () => {
-    console.log("Save clicked");
+  const handleSave = async () => {
+    const orderDetails: OrderDetails = {
+      orderNo: (document.getElementById("orderNo") as HTMLInputElement)?.value,
+      date: formatDate(date),
+      billTo: selectedBillTo,
+      shipTo: selectedShipTo,
+      broker: selectedBroker,
+      transport: selectedTransport,
+      designs: designEntries,
+      remark: (document.getElementById("remark") as HTMLInputElement)?.value,
+    };
+
+    try {
+      // Insert order details
+      const { data: orderData, error: orderError } = await supabase
+        .from("orders")
+        .insert([
+          {
+            order_no: orderDetails.orderNo,
+            date: orderDetails.date,
+            bill_to_id: orderDetails.billTo,
+            ship_to_id: orderDetails.shipTo,
+            broker_id: orderDetails.broker,
+            transport_id: orderDetails.transport,
+            remark: orderDetails.remark,
+          },
+        ])
+        .select();
+
+      if (orderError) throw orderError;
+
+      const orderId = orderData[0].id;
+
+      // Insert design entries
+      const designEntriesData = orderDetails.designs.map((design) => ({
+        order_id: orderId,
+        design: design.design,
+        price: design.price,
+        remark: design.remark,
+        shades: design.shades,
+      }));
+
+      const { error: designEntriesError } = await supabase
+        .from("design_entries")
+        .insert(designEntriesData);
+
+      if (designEntriesError) throw designEntriesError;
+
+      toast({
+        title: "Order Saved",
+        description: `Order ${orderDetails.orderNo} has been saved successfully.`,
+      });
+    } catch (error) {
+      console.error("Error saving order details:", error);
+      toast({
+        title: "Error",
+        description: "There was an error saving the order details.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleBillToChange = (partyId: number) => {
