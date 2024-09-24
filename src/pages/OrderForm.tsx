@@ -315,6 +315,8 @@ export default function OrderForm() {
       const previewWindow = window.open("", "_blank");
       if (previewWindow) {
         previewWindow.document.write(html);
+        previewWindow.focus();
+        previewWindow.print();
         previewWindow.document.close();
       } else {
         console.error("Failed to open preview window");
