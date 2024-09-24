@@ -500,7 +500,7 @@ export default function OrderForm() {
                     ))}
                   </datalist>
                 </div>
-                {currentEntry && (
+                {currentEntry && designs.includes(currentEntry.design) && (
                   <>
                     <div className="grid grid-cols-4 items-center gap-4">
                       <Label htmlFor="price" className="text-right">
