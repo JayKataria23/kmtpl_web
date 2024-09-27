@@ -1,21 +1,21 @@
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import KMLogo from "@/assets/KM.svg";
 
 export default function HomePage() {
   const navigate = useNavigate();
 
   return (
     <div className="container mx-auto mt-10 text-center">
-      <h1 className="text-3xl font-bold mb-8">
-        Welcome to the Order Management System
-      </h1>
+      <img src={KMLogo} alt="KM Logo" className="mx-auto mb-8 w-48 h-auto" />
+      
       <div className="space-y-4">
-        <Button className="w-64" onClick={() => navigate("/order-form")}>
-          Go to Order Form
+        <Button className="w-64 text-lg" onClick={() => navigate("/order-form")}>
+          Order Form
         </Button>
         <br />
-        <Button className="w-64" onClick={() => navigate("/order-file")}>
-          Go to Order File Page
+        <Button className="w-64 text-lg" onClick={() => navigate("/order-file")}>
+          Order File
         </Button>
       </div>
     </div>
