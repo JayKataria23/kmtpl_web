@@ -1,5 +1,12 @@
 import { useState, useEffect } from "react";
-import { Printer, Save, ChevronLeft, ChevronRight, X } from "lucide-react";
+import {
+  Printer,
+  Save,
+  ChevronLeft,
+  ChevronRight,
+  X,
+  Home,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,6 +29,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Toaster } from "@/components/ui/toaster";
 import { useToast } from "@/hooks/use-toast";
 import supabase from "@/utils/supabase";
+import { useNavigate } from "react-router-dom";
 
 interface DesignEntry {
   id: string;
@@ -72,6 +80,7 @@ export default function OrderForm() {
   const [selectedTransport, setSelectedTransport] = useState<number | null>(
     null
   );
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchBrokers();
@@ -93,7 +102,8 @@ export default function OrderForm() {
 
       const lastOrderNo = data.length > 0 ? parseInt(data[0].order_no) : 0;
       const newOrderNo = (lastOrderNo + 1).toString();
-      (document.getElementById("orderNo") as HTMLInputElement).value = newOrderNo;
+      (document.getElementById("orderNo") as HTMLInputElement).value =
+        newOrderNo;
     } catch (error) {
       console.error("Error generating unique order number:", error);
     }
@@ -371,6 +381,7 @@ export default function OrderForm() {
     }
   };
 
+
   const handleSave = async () => {
     const orderDetails: OrderDetails = {
       orderNo: (document.getElementById("orderNo") as HTMLInputElement)?.value,
@@ -423,6 +434,7 @@ export default function OrderForm() {
         title: "Order Saved",
         description: `Order ${orderDetails.orderNo} has been saved successfully.`,
       });
+      navigate("/");
     } catch (error) {
       console.error("Error saving order details:", error);
       toast({
@@ -468,7 +480,17 @@ export default function OrderForm() {
 
   return (
     <div className="max-w-md mx-auto p-6 bg-white">
-      <h1 className="text-2xl font-bold mb-6">General Details</h1>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">General Details</h1>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => navigate("/")}
+          className="flex items-center"
+        >
+          <Home className="mr-2 h-4 w-4" /> Back to Home
+        </Button>
+      </div>
 
       <div className="space-y-4">
         <div>
