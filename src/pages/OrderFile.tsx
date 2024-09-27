@@ -18,6 +18,7 @@ interface OrderDetail {
   partyName: string;
   shades: number[];
   totalMeters: number;
+  order_remark: string; // Add this line
 }
 
 function OrderFile() {
@@ -58,17 +59,23 @@ function OrderFile() {
       if (error) throw error;
 
       const orderDetails: OrderDetail[] = data.map(
-        (entry: { party_name: string; shades: [] }) => ({
+        (entry: {
+          party_name: string;
+          shades: [];
+          order_remark: string | null;
+        }) => ({
           partyName: entry.party_name,
           shades: entry.shades,
           totalMeters: entry.shades.reduce(
             (sum: number, meters: number) => sum + Number(meters || 0),
             0
           ),
+          order_remark: entry.order_remark, // Add this line
         })
       );
 
       setDesignOrders((prev) => ({ ...prev, [design]: orderDetails }));
+      console.log(designOrders);
     } catch (error) {
       console.error("Error fetching order details:", error);
     }
@@ -105,6 +112,11 @@ function OrderFile() {
                         >
                           <td className="px-2 py-4 w-2/3 text-sm font-medium text-gray-900">
                             <div className="break-words">{order.partyName}</div>
+                            {order.order_remark && (
+                              <div className="text-xs text-gray-500 mt-1">
+                                {order.order_remark}
+                              </div>
+                            )}
                           </td>
                           <td className="px-2 py-4 w-1/3 text-sm text-gray-500">
                             {order.shades.map((meters, index) =>
