@@ -12,13 +12,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { generateHTML } from "../utils/generateHTML"; // Import the generateHTML function
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -478,6 +471,33 @@ export default function OrderForm() {
     }
   };
 
+  // Add these new functions near the top of your component
+  const handleInputChange = (field: string, value: string) => {
+    const option = getOptionsForField(field).find(opt => opt.name.toLowerCase() === value.toLowerCase());
+    if (option) {
+      if (field === "Bill To") handleBillToChange(option.id);
+      else if (field === "Ship To") setSelectedShipTo(option.id);
+      else if (field === "Broker") setSelectedBroker(option.id);
+      else if (field === "Transport") setSelectedTransport(option.id);
+    }
+  };
+
+  const getSelectedValue = (field: string) => {
+    const options = getOptionsForField(field);
+    switch (field) {
+      case "Bill To":
+        return options.find(opt => opt.id === selectedBillTo)?.name ;
+      case "Ship To":
+        return options.find(opt => opt.id === selectedShipTo)?.name ;
+      case "Broker":
+        return options.find(opt => opt.id === selectedBroker)?.name ;
+      case "Transport":
+        return options.find(opt => opt.id === selectedTransport)?.name;
+      default:
+        return "";
+    }
+  };
+
   return (
     <div className="max-w-md mx-auto p-6 bg-white">
       <div className="flex justify-between items-center mb-6">
@@ -523,46 +543,24 @@ export default function OrderForm() {
           </div>
         </div>
 
+        {/* Replace the existing mapping of fields with this updated version */}
         {["Bill To", "Broker", "Transport", "Ship To"].map((field) => (
           <div key={field}>
             <Label htmlFor={field.toLowerCase().replace(" ", "-")}>
               {field}
             </Label>
-            <Select
-              onValueChange={(value) => {
-                if (field === "Bill To") {
-                  handleBillToChange(Number(value));
-                } else if (field === "Ship To") {
-                  setSelectedShipTo(Number(value));
-                } else if (field === "Broker") {
-                  setSelectedBroker(Number(value));
-                } else if (field === "Transport") {
-                  setSelectedTransport(Number(value));
-                }
-              }}
-              value={
-                field === "Bill To"
-                  ? selectedBillTo?.toString()
-                  : field === "Ship To"
-                  ? selectedShipTo?.toString()
-                  : field === "Broker"
-                  ? selectedBroker?.toString()
-                  : field === "Transport"
-                  ? selectedTransport?.toString()
-                  : undefined
-              }
-            >
-              <SelectTrigger id={field.toLowerCase().replace(" ", "-")}>
-                <SelectValue placeholder={`Select ${field}`} />
-              </SelectTrigger>
-              <SelectContent>
-                {getOptionsForField(field).map((option) => (
-                  <SelectItem key={option.id} value={option.id.toString()}>
-                    {option.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Input
+              id={field.toLowerCase().replace(" ", "-")}
+              list={`${field.toLowerCase().replace(" ", "-")}-options`}
+              value={getSelectedValue(field)}
+              onChange={(e) => handleInputChange(field, e.target.value)}
+              placeholder={`Select ${field}`}
+            />
+            <datalist id={`${field.toLowerCase().replace(" ", "-")}-options`}>
+              {getOptionsForField(field).map((option) => (
+                <option key={option.id} value={option.name} />
+              ))}
+            </datalist>
           </div>
         ))}
 
