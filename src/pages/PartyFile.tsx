@@ -9,66 +9,61 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 
-interface DesignCount {
-  design: string;
-  count: number;
+interface PartyCount {
+  party_name: string; // Changed from 'party' to 'party_name'
+  design_entry_count: number; // Changed from 'count' to 'design_entry_count'
 }
 
-interface OrderDetail {
-  partyName: string;
+interface DesignDetail {
+  design: string;
   shades: number[];
   totalMeters: number;
+  remark: string;
 }
 
-function OrderFile() {
-  const [designCounts, setDesignCounts] = useState<DesignCount[]>([]);
-  const [designOrders, setDesignOrders] = useState<{
-    [key: string]: OrderDetail[];
+function PartyFile() {
+  const [partyCounts, setPartyCounts] = useState<PartyCount[]>([]);
+  const [partyOrders, setPartyOrders] = useState<{
+    [key: string]: DesignDetail[];
   }>({});
   const navigate = useNavigate();
 
   useEffect(() => {
-    fetchDesignCounts();
+    fetchPartyCounts();
   }, []);
 
-  const fetchDesignCounts = async () => {
+  const fetchPartyCounts = async () => {
     try {
-      const { data, error } = await supabase.rpc("get_design_entry_count");
+      const { data, error } = await supabase.rpc(
+        "get_party_design_entry_count"
+      );
 
       if (error) throw error;
 
-      const formattedData: DesignCount[] = data.map(
-        (item: { design: string; count: bigint }) => ({
-          design: item.design,
-          count: Number(item.count), // Convert BIGINT to number
-        })
-      );
-      setDesignCounts(formattedData);
+      setPartyCounts(data); // Directly set the data without mapping
     } catch (error) {
-      console.error("Error fetching design counts:", error);
+      console.error("Error fetching party counts:", error);
     }
   };
 
-  const fetchOrderDetails = async (design: string) => {
+  const fetchOrderDetails = async (party: string) => {
     try {
-      const { data, error } = await supabase.rpc("get_orders_by_design", {
-        design_input: design,
+      const { data, error } = await supabase.rpc("get_designs_by_party", {
+        party_name_input: party, // Changed from party_input to party_name_input
       });
 
       if (error) throw error;
 
-      const orderDetails: OrderDetail[] = data.map(
-        (entry: { party_name: string; shades: [] }) => ({
-          partyName: entry.party_name,
+      const designDetails: DesignDetail[] = data.map(
+        (entry: { design_name: string; shades: string; remark: string }) => ({
+          design: entry.design_name,
           shades: entry.shades,
-          totalMeters: entry.shades.reduce(
-            (sum: number, meters: number) => sum + Number(meters || 0),
-            0
-          ),
+          totalMeters: entry.shades,
+          remark: entry.remark,
         })
       );
 
-      setDesignOrders((prev) => ({ ...prev, [design]: orderDetails }));
+      setPartyOrders((prev) => ({ ...prev, [party]: designDetails }));
     } catch (error) {
       console.error("Error fetching order details:", error);
     }
@@ -80,23 +75,23 @@ function OrderFile() {
         Back to Home
       </Button>
       <Accordion type="single" collapsible className="w-full">
-        {designCounts.map((item, index) => (
+        {partyCounts.map((item, index) => (
           <AccordionItem key={index} value={`item-${index}`}>
             <AccordionTrigger
-              className="text-lg flex justify-between items-center w-full"
-              onClick={() => fetchOrderDetails(item.design)}
+              className="text-md flex justify-between items-center w-full"
+              onClick={() => fetchOrderDetails(item.party_name)}
             >
-              <span className="text-left flex-grow">{item.design}</span>
-              <span className="text-sm text-gray-500 ml-2 mr-3">
-                count: {item.count}
+              <span className="text-left flex-grow">{item.party_name}</span>
+              <span className="text-sm min-w-20 text-gray-500 ml-2 ">
+                count: {item.design_entry_count}
               </span>
             </AccordionTrigger>
             <AccordionContent>
-              {designOrders[item.design] ? (
-                <div className="overflow-x-auto">
+              {partyOrders[item.party_name] ? (
+                <div className="overflow-x-auto ">
                   <table className="w-full divide-y divide-gray-200">
                     <tbody>
-                      {designOrders[item.design].map((order, orderIndex) => (
+                      {partyOrders[item.party_name].map((order, orderIndex) => (
                         <tr
                           key={orderIndex}
                           className={
@@ -104,7 +99,15 @@ function OrderFile() {
                           }
                         >
                           <td className="px-2 py-4 w-2/3 text-sm font-medium text-gray-900">
-                            <div className="break-words">{order.partyName}</div>
+                            <div className="break-words">
+                              {order.design}
+                              {order.remark && (
+                                <>
+                                  <br />
+                                  Remark: {order.remark}
+                                </>
+                              )}
+                            </div>
                           </td>
                           <td className="px-2 py-4 w-1/3 text-sm text-gray-500">
                             {order.shades.map((meters, index) =>
@@ -131,4 +134,4 @@ function OrderFile() {
   );
 }
 
-export default OrderFile;
+export default PartyFile;

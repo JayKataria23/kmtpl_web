@@ -5,6 +5,7 @@ import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
 import OrderForm from "./pages/OrderForm";
 import OrderFile from "./pages/OrderFile";
 import HomePage from "./pages/HomePage";
+import PartyFile from "./pages/PartyFile";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
@@ -13,6 +14,7 @@ createRoot(document.getElementById("root")!).render(
         <Route path="/" element={<HomePage />} />
         <Route path="/order-form" element={<OrderForm />} />
         <Route path="/order-file" element={<OrderFile />} />
+        <Route path="/party-file" element={<PartyFile />} />
       </Routes>
     </Router>
   </StrictMode>
