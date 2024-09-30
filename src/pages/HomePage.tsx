@@ -30,6 +30,13 @@ export default function HomePage() {
         >
           Party Wise Order
         </Button>
+        <br />
+        <Button
+          className="w-64 text-lg"
+          onClick={() => navigate("/party-profiles")}
+        >
+          Party Profiles
+        </Button>
       </div>
     </div>
   );
