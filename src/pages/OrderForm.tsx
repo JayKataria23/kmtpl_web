@@ -23,6 +23,7 @@ import { generateHTML } from "../utils/generateHTML"; // Import the generateHTML
 import supabase from "@/utils/supabase";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import InputWithAutocomplete from "@/components/custom/InputWithAutocomplete";
 
 interface DesignEntry {
   id: string;
@@ -74,6 +75,7 @@ export default function OrderForm() {
     null
   );
   const navigate = useNavigate();
+  const [orderNo, setOrderNo] = useState<string>("");
 
   useEffect(() => {
     fetchBrokers();
@@ -92,11 +94,10 @@ export default function OrderForm() {
         .limit(1);
 
       if (error) throw error;
-
+      console.log(data);
       const lastOrderNo = data.length > 0 ? parseInt(data[0].order_no) : 0;
       const newOrderNo = (lastOrderNo + 1).toString();
-      (document.getElementById("orderNo") as HTMLInputElement).value =
-        newOrderNo;
+      setOrderNo(newOrderNo);
     } catch (error) {
       console.error("Error generating unique order number:", error);
     }
@@ -278,7 +279,7 @@ export default function OrderForm() {
 
   const handlePreview = async () => {
     const orderDetails: OrderDetails = {
-      orderNo: (document.getElementById("orderNo") as HTMLInputElement)?.value,
+      orderNo: orderNo,
       date: formatDate(date),
       billTo: selectedBillTo,
       shipTo: selectedShipTo,
@@ -374,10 +375,9 @@ export default function OrderForm() {
     }
   };
 
-
   const handleSave = async () => {
     const orderDetails: OrderDetails = {
-      orderNo: (document.getElementById("orderNo") as HTMLInputElement)?.value,
+      orderNo: orderNo,
       date: formatDate(date),
       billTo: selectedBillTo,
       shipTo: selectedShipTo,
@@ -473,7 +473,9 @@ export default function OrderForm() {
 
   // Add these new functions near the top of your component
   const handleInputChange = (field: string, value: string) => {
-    const option = getOptionsForField(field).find(opt => opt.name.toLowerCase() === value.toLowerCase());
+    const option = getOptionsForField(field).find(
+      (opt) => opt.name.toLowerCase() === value.toLowerCase()
+    );
     if (option) {
       if (field === "Bill To") handleBillToChange(option.id);
       else if (field === "Ship To") setSelectedShipTo(option.id);
@@ -486,13 +488,13 @@ export default function OrderForm() {
     const options = getOptionsForField(field);
     switch (field) {
       case "Bill To":
-        return options.find(opt => opt.id === selectedBillTo)?.name ;
+        return options.find((opt) => opt.id === selectedBillTo)?.name;
       case "Ship To":
-        return options.find(opt => opt.id === selectedShipTo)?.name ;
+        return options.find((opt) => opt.id === selectedShipTo)?.name;
       case "Broker":
-        return options.find(opt => opt.id === selectedBroker)?.name ;
+        return options.find((opt) => opt.id === selectedBroker)?.name;
       case "Transport":
-        return options.find(opt => opt.id === selectedTransport)?.name;
+        return options.find((opt) => opt.id === selectedTransport)?.name;
       default:
         return "";
     }
@@ -515,7 +517,7 @@ export default function OrderForm() {
       <div className="space-y-4">
         <div>
           <Label htmlFor="orderNo">Order No.</Label>
-          <Input id="orderNo" defaultValue="1" />
+          <Input id="orderNo" value={orderNo} readOnly />
         </div>
 
         <div>
@@ -549,18 +551,14 @@ export default function OrderForm() {
             <Label htmlFor={field.toLowerCase().replace(" ", "-")}>
               {field}
             </Label>
-            <Input
+            <InputWithAutocomplete
               id={field.toLowerCase().replace(" ", "-")}
-              list={`${field.toLowerCase().replace(" ", "-")}-options`}
-              value={getSelectedValue(field)}
-              onChange={(e) => handleInputChange(field, e.target.value)}
+              value={getSelectedValue(field) ?? ""}
+              onChange={(value) => handleInputChange(field, value)}
+              options={getOptionsForField(field)}
               placeholder={`Select ${field}`}
+              label={field}
             />
-            <datalist id={`${field.toLowerCase().replace(" ", "-")}-options`}>
-              {getOptionsForField(field).map((option) => (
-                <option key={option.id} value={option.name} />
-              ))}
-            </datalist>
           </div>
         ))}
 
