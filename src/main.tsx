@@ -7,6 +7,7 @@ import OrderFile from "./pages/OrderFile";
 import HomePage from "./pages/HomePage";
 import PartyFile from "./pages/PartyFile";
 import PartyProfilePage from "./pages/PartyProfilePage";
+import BrokerTransportPage from "./pages/BrokerTransportPage";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
@@ -17,6 +18,7 @@ createRoot(document.getElementById("root")!).render(
         <Route path="/order-file" element={<OrderFile />} />
         <Route path="/party-file" element={<PartyFile />} />
         <Route path="/party-profiles" element={<PartyProfilePage />} />
+        <Route path="/broker-transport" element={<BrokerTransportPage />} />
       </Routes>
     </Router>
   </StrictMode>

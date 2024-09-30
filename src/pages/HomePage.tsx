@@ -37,6 +37,13 @@ export default function HomePage() {
         >
           Party Profiles
         </Button>
+        <br />
+        <Button
+          className="w-64 text-lg"
+          onClick={() => navigate("/broker-transport")}
+        >
+          Broker Transport
+        </Button>
       </div>
     </div>
   );
