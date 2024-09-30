@@ -7,22 +7,22 @@ import {
   X,
   Home,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { generateHTML } from "../utils/generateHTML"; // Import the generateHTML function
 import {
+  Button,
+  Input,
+  Label,
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Toaster } from "@/components/ui/toaster";
-import { useToast } from "@/hooks/use-toast";
+  ScrollArea,
+  Toaster,
+} from "@/components/ui";
+import { generateHTML } from "../utils/generateHTML"; // Import the generateHTML function
 import supabase from "@/utils/supabase";
 import { useNavigate } from "react-router-dom";
+import { useToast } from "@/hooks/use-toast";
 
 interface DesignEntry {
   id: string;
