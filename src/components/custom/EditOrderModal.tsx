@@ -285,6 +285,15 @@ export function EditOrderModal({
 
   const handleSaveDesign = () => {
     if (currentEntry) {
+      if (!currentEntry.price || currentEntry.price.trim() === '') {
+        toast({
+          title: "Error",
+          description: "Please enter a price for the design before saving.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       setDesignEntries((prev) => {
         const index = prev.findIndex((entry) => entry.id === currentEntry.id);
         if (index !== -1) {
