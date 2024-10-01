@@ -72,23 +72,29 @@ export function generateHTML(order: Order): string {
     const designsHTML = part.designs
       .map((design, index) => {
         return `
-        <div style="border-bottom: 1px solid #000; display: flex; flex-direction: row;">
-          <div style="width: 5%; border-right: 1px solid #000; text-align: center; word-wrap: break-word;">
-            <p>${index + 1}</p>
+        <div style="border-bottom: 1px solid #000;">
+          <div style="display: flex; flex-direction: row;">
+            <div style="width: 5%; border-right: 1px solid #000; text-align: center; word-wrap: break-word;">
+              <p>${index + 1}</p>
+            </div>
+            <div style="width: 12%; border-right: 1px solid #000; text-align: center; word-wrap: break-word; font-weight: bold;">
+              <p>${design.design}</p>
+            </div>
+            <div style="width: 71%; border-right: 1px solid #000; text-align: center; display: flex; flex-direction: row; flex-wrap: wrap;">
+              ${shadesRow(design)}
+            </div>
+            <div style="width: 4%; border-right: 1px solid #000; text-align: center; word-wrap: break-word;">
+              <p>${Object.values(design.shades).filter((s) => s).length}</p>
+            </div>
+            <div style="width: 8%; text-align: center; word-wrap: break-word; font-weight: bold;">
+              <p>${design.price}</p>
+            </div>
           </div>
-          <div style="width: 12%; border-right: 1px solid #000; text-align: center; word-wrap: break-word; font-weight: bold;">
-            <p>${design.design}</p>
-          </div>
-          <div style="width: 64%; border-right: 1px solid #000; text-align: center; display: flex; flex-direction: row; flex-wrap: wrap;">
-            ${shadesRow(design)}
-          </div>
-          <div style="width: 4%; border-right: 1px solid #000; text-align: center; word-wrap: break-word;">
-            <p>${Object.values(design.shades).filter((s) => s).length}</p>
-          </div>
-          <div style="width: 8%; border-right: 1px solid #000; text-align: center; word-wrap: break-word; font-weight: bold;">
-            <p>${design.price}</p>
-          </div>
-          <div style="width: 7%">${design.remark}</div>
+          ${
+            design.remark
+              ? `<div style="color: red; font-size: small; padding-left: 5%; border: 1px solid #000;">${design.remark}</div>`
+              : ""
+          }
         </div>
         `;
       })
@@ -156,10 +162,9 @@ export function generateHTML(order: Order): string {
             <div style="border-bottom: 1px solid #000; display: flex; flex-direction: row; font-size: x-large;">
               <div style="width: 5%; border-right: 1px solid #000; font-weight: bold; text-align: center; font-size: small">S/n.</div>
               <div style="width: 12%; border-right: 1px solid #000; font-weight: bold; text-align: center; font-size: small">Design</div>
-              <div style="width: 64%; border-right: 1px solid #000; font-weight: bold; text-align: center; font-size: small">Shades</div>
+              <div style="width: 71%; border-right: 1px solid #000; font-weight: bold; text-align: center; font-size: small">Shades</div>
               <div style="width: 4%; border-right: 1px solid #000; font-weight: bold; text-align: center; font-size: small">Pc</div>
-              <div style="width: 8%; border-right: 1px solid #000; font-weight: bold; text-align: center; font-size: small">Price</div>
-              <div style="width: 7%; font-size: small"></div>
+              <div style="width: 8%; font-weight: bold; text-align: center; font-size: small">Price</div>
             </div>
             ${designsHTML}
             <div style="display: flex; flex-direction: row; height: 100vh"></div>
@@ -167,7 +172,7 @@ export function generateHTML(order: Order): string {
           <div style="display: flex; flex-direction: row; border-top: 1px solid #000; font-size: x-large;">
             <div style="width: 5%; border-right: 1px solid #000; text-align: center"></div>
             <div style="width: 12%; border-right: 1px solid #000; text-align: center"></div>
-            <div style="width: 64%; border-right: 1px solid #000; font-weight: bold; text-align: right; padding-right: 2;">Total</div>
+            <div style="width: 71%; border-right: 1px solid #000; font-weight: bold; text-align: right; padding-right: 2;">Total</div>
             <div style="width: 4%; border-right: 1px solid #000; font-weight: bold; text-align: center;">
               ${part.designs.reduce(
                 (total, design) =>
@@ -175,8 +180,7 @@ export function generateHTML(order: Order): string {
                 0
               )}
             </div>
-            <div style="width: 10%; border-right: 1px solid #000; text-align: center"></div>
-            <div style="width: 5%"></div>
+            <div style="width: 8%; text-align: center"></div>
           </div>
         </div>
       </body>
