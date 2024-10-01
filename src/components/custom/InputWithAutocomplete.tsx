@@ -8,6 +8,7 @@ interface InputWithAutocompleteProps {
   options: { id: number; name: string }[];
   placeholder: string;
   label: string;
+  className?: string;
 }
 
 const InputWithAutocomplete: React.FC<InputWithAutocompleteProps> = ({
@@ -17,6 +18,7 @@ const InputWithAutocomplete: React.FC<InputWithAutocompleteProps> = ({
   options,
   placeholder,
   label,
+  className,
 }) => {
   const [inputValue, setInputValue] = useState(value);
 
@@ -31,7 +33,7 @@ const InputWithAutocomplete: React.FC<InputWithAutocompleteProps> = ({
   };
 
   return (
-    <div>
+    <div className={className}>
       <Input
         id={id}
         value={inputValue}

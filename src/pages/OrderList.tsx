@@ -1,9 +1,11 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button, Toaster } from "@/components/ui";
 import supabase from "@/utils/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+import { EditOrderModal } from "@/components/custom/EditOrderModal";
 
 interface Order {
   id: number;
@@ -25,6 +27,8 @@ export default function OrderList() {
   const [orders, setOrders] = useState<Order[]>([]);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
 
   const fetchOrders = async () => {
     try {
@@ -66,11 +70,11 @@ export default function OrderList() {
 
   useEffect(() => {
     fetchOrders();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Only run once on mount
+  }, []);
 
   const handleEdit = (orderId: number) => {
-    navigate(`/order-form/${orderId}`);
+    setSelectedOrderId(orderId);
+    setIsEditModalOpen(true);
   };
 
   const handleDelete = async (id: number) => {
@@ -90,6 +94,10 @@ export default function OrderList() {
         variant: "destructive",
       });
     }
+  };
+
+  const handleOrderUpdated = () => {
+    fetchOrders();
   };
 
   return (
@@ -137,6 +145,12 @@ export default function OrderList() {
           </div>
         ))}
       </div>
+      <EditOrderModal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        orderId={selectedOrderId}
+        onOrderUpdated={handleOrderUpdated}
+      />
       <Toaster />
     </div>
   );

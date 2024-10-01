@@ -21,7 +21,6 @@ createRoot(document.getElementById("root")!).render(
         <Route path="/party-profiles" element={<PartyProfilePage />} />
         <Route path="/broker-transport" element={<BrokerTransportPage />} />
         <Route path="/order-list" element={<OrderList />} />
-        <Route path="/order-form/:orderId" element={<OrderForm />} />
       </Routes>
     </Router>
   </StrictMode>
