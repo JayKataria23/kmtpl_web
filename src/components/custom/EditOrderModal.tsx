@@ -440,7 +440,7 @@ export function EditOrderModal({
             open={isDesignDialogOpen}
             onOpenChange={setIsDesignDialogOpen}
           >
-            <DialogContent className="sm:max-w-[425px]">
+            <DialogContent className="sm:max-w-[425px] top-[40%]">
               <DialogHeader>
                 <DialogTitle>
                   {currentEntry?.design

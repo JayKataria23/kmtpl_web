@@ -570,7 +570,7 @@ export default function OrderForm() {
                 Add Design
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]">
+            <DialogContent className="sm:max-w-[425px] top-[40%]">
               <DialogHeader>
                 <DialogTitle>
                   {currentEntry ? `Edit ${currentEntry.design}` : "Add Design"}
