@@ -240,7 +240,7 @@ export default function OrderForm() {
 
   const handleSaveDesign = () => {
     if (currentEntry) {
-      if (!currentEntry.price || currentEntry.price.trim() === '') {
+      if (!currentEntry.price || currentEntry.price.trim() === "") {
         toast({
           title: "Error",
           description: "Please enter a price for the design before saving.",
@@ -372,8 +372,6 @@ export default function OrderForm() {
       const previewWindow = window.open("", "_blank");
       if (previewWindow) {
         previewWindow.document.write(html);
-        previewWindow.focus();
-        previewWindow.print();
         previewWindow.document.close();
       } else {
         console.error("Failed to open preview window");
@@ -436,7 +434,6 @@ export default function OrderForm() {
         title: "Order Saved",
         description: `Order ${orderDetails.orderNo} has been saved successfully.`,
       });
-      navigate("/");
     } catch (error) {
       console.error("Error saving order details:", error);
       toast({
