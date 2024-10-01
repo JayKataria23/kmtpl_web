@@ -5,11 +5,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Button, Input, Label } from "@/components/ui";
+import { Button, Input, Label, ScrollArea } from "@/components/ui";
 import { useToast } from "@/hooks/use-toast";
 import supabase from "@/utils/supabase";
 import InputWithAutocomplete from "@/components/custom/InputWithAutocomplete";
 import { format, isValid, parseISO } from "date-fns";
+import { X } from "lucide-react";
 
 interface EditOrderModalProps {
   isOpen: boolean;
@@ -33,6 +34,14 @@ interface Option {
   name: string;
 }
 
+interface DesignEntry {
+  id: string;
+  design: string;
+  price: string;
+  remark: string;
+  shades: string[];
+}
+
 export function EditOrderModal({
   isOpen,
   onClose,
@@ -51,6 +60,10 @@ export function EditOrderModal({
   const [partyOptions, setPartyOptions] = useState<Option[]>([]);
   const [brokerOptions, setBrokerOptions] = useState<Option[]>([]);
   const [transportOptions, setTransportOptions] = useState<Option[]>([]);
+  const [designEntries, setDesignEntries] = useState<DesignEntry[]>([]);
+  const [currentEntry, setCurrentEntry] = useState<DesignEntry | null>(null);
+  const [designs, setDesigns] = useState<string[]>([]);
+  const [isDesignDialogOpen, setIsDesignDialogOpen] = useState(false);
   const { toast } = useToast();
 
   const fetchOrderDetails = useCallback(async () => {
@@ -112,12 +125,65 @@ export function EditOrderModal({
     }
   }, [toast]);
 
+  const fetchDesigns = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from("designs")
+        .select("title")
+        .order("title");
+
+      if (error) throw error;
+
+      const designTitles = data.map((design) => design.title);
+      setDesigns(designTitles);
+    } catch (error) {
+      console.error("Error fetching designs:", error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch designs",
+        variant: "destructive",
+      });
+    }
+  }, [toast]);
+
+  const fetchDesignEntries = useCallback(async () => {
+    if (!orderId) return;
+
+    try {
+      const { data, error } = await supabase
+        .from("design_entries")
+        .select("*")
+        .eq("order_id", orderId);
+
+      if (error) throw error;
+
+      setDesignEntries(
+        data.map((entry) => ({
+          id: entry.id,
+          design: entry.design,
+          price: entry.price,
+          remark: entry.remark,
+          shades: entry.shades,
+        }))
+      );
+    } catch (error) {
+      console.error("Error fetching design entries:", error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch design entries",
+        variant: "destructive",
+      });
+    }
+  }, [orderId, toast]);
+
   useEffect(() => {
     if (isOpen && orderId) {
       fetchOrderDetails();
       fetchOptions();
+      fetchDesigns();
+      fetchDesignEntries();
     }
-  }, [isOpen, orderId, fetchOrderDetails, fetchOptions]);
+  }, [isOpen, orderId, fetchOrderDetails, fetchOptions, fetchDesigns, fetchDesignEntries]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -156,6 +222,99 @@ export function EditOrderModal({
     return options.find((opt) => opt.id === orderDetails[field])?.name || "";
   };
 
+  const handleDesignSelect = (design: string) => {
+    setCurrentEntry({
+      id: Date.now().toString(),
+      design,
+      price: "",
+      remark: "",
+      shades: Array(50).fill(""),
+    });
+  };
+
+  const handleShadeChange = (index: number, value: string) => {
+    if (currentEntry) {
+      setCurrentEntry({
+        ...currentEntry,
+        shades: currentEntry.shades.map((shade, i) =>
+          i === index ? value : shade
+        ),
+      });
+    }
+  };
+
+  const handlePriceChange = (value: string) => {
+    if (currentEntry) {
+      setCurrentEntry({
+        ...currentEntry,
+        price: value,
+      });
+    }
+  };
+
+  const handleRemarkChange = (value: string) => {
+    if (currentEntry) {
+      setCurrentEntry({
+        ...currentEntry,
+        remark: value,
+      });
+    }
+  };
+
+  const handleShadeIncrement = (index: number) => {
+    if (currentEntry) {
+      setCurrentEntry({
+        ...currentEntry,
+        shades: currentEntry.shades.map((shade, i) => {
+          if (i === index) {
+            const currentValue = parseInt(shade) || 0;
+            return (currentValue + 50).toString();
+          }
+          return shade;
+        }),
+      });
+    }
+  };
+
+  const handleSaveDesign = () => {
+    if (currentEntry) {
+      setDesignEntries((prev) => {
+        const index = prev.findIndex((entry) => entry.id === currentEntry.id);
+        if (index !== -1) {
+          // Update existing entry
+          return prev.map((entry) =>
+            entry.id === currentEntry.id ? currentEntry : entry
+          );
+        } else {
+          // Add new entry
+          return [...prev, currentEntry];
+        }
+      });
+      setCurrentEntry(null);
+      setIsDesignDialogOpen(false);
+      toast({
+        title: "Design Saved",
+        description: `${currentEntry.design} has been saved successfully.`,
+      });
+    }
+  };
+
+  const handleEditDesign = (id: string) => {
+    const entryToEdit = designEntries.find((entry) => entry.id === id);
+    if (entryToEdit) {
+      setCurrentEntry({ ...entryToEdit });
+      setIsDesignDialogOpen(true);
+    }
+  };
+
+  const handleDeleteDesign = (id: string) => {
+    setDesignEntries((prev) => prev.filter((entry) => entry.id !== id));
+    toast({
+      title: "Design Deleted",
+      description: `Design entry has been deleted.`,
+    });
+  };
+
   const handleSubmit = async () => {
     try {
       const { error } = await supabase
@@ -171,6 +330,23 @@ export function EditOrderModal({
         .eq("id", orderId);
 
       if (error) throw error;
+
+      // Update design entries
+      await supabase.from("design_entries").delete().eq("order_id", orderId);
+
+      const designEntriesData = designEntries.map((design) => ({
+        order_id: orderId,
+        design: design.design,
+        price: design.price,
+        remark: design.remark,
+        shades: design.shades,
+      }));
+
+      const { error: designEntriesError } = await supabase
+        .from("design_entries")
+        .insert(designEntriesData);
+
+      if (designEntriesError) throw designEntriesError;
 
       toast({ title: "Success", description: "Order updated successfully" });
       onOrderUpdated();
@@ -188,6 +364,17 @@ export function EditOrderModal({
   const formatDate = (dateString: string) => {
     const date = parseISO(dateString);
     return isValid(date) ? format(date, "yyyy-MM-dd") : "";
+  };
+
+  const handleAddDesign = () => {
+    setCurrentEntry({
+      id: Date.now().toString(),
+      design: "",
+      price: "",
+      remark: "",
+      shades: Array(50).fill(""),
+    });
+    setIsDesignDialogOpen(true);
   };
 
   return (
@@ -235,6 +422,148 @@ export function EditOrderModal({
               />
             </div>
           ))}
+          <div>
+            <Label>Designs</Label>
+            <Button className="w-full mt-2" onClick={handleAddDesign}>
+              Add Design
+            </Button>
+          </div>
+
+          <Dialog open={isDesignDialogOpen} onOpenChange={setIsDesignDialogOpen}>
+            <DialogContent className="sm:max-w-[425px]">
+              <DialogHeader>
+                <DialogTitle>
+                  {currentEntry?.design ? `Edit ${currentEntry.design}` : "Add Design"}
+                </DialogTitle>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="design" className="text-right">
+                    Design
+                  </Label>
+                  <Input
+                    id="design"
+                    list="designs"
+                    value={currentEntry?.design || ""}
+                    onChange={(e) => handleDesignSelect(e.target.value)}
+                    className="col-span-3"
+                    placeholder="Search for a design"
+                  />
+                  <datalist id="designs">
+                    {designs.map((design) => (
+                      <option key={design} value={design} />
+                    ))}
+                  </datalist>
+                </div>
+                {currentEntry && designs.includes(currentEntry.design) && (
+                  <>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <Label htmlFor="price" className="text-right">
+                        Price
+                      </Label>
+                      <Input
+                        id="price"
+                        value={currentEntry.price}
+                        onChange={(e) => handlePriceChange(e.target.value)}
+                        className="col-span-3"
+                        placeholder="Enter price"
+                      />
+                    </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <Label htmlFor="remark" className="text-right">
+                        Remark
+                      </Label>
+                      <Input
+                        id="remark"
+                        value={currentEntry.remark}
+                        onChange={(e) => handleRemarkChange(e.target.value)}
+                        className="col-span-3"
+                        placeholder="Enter remark"
+                      />
+                    </div>
+                    <ScrollArea className="h-[200px] w-full rounded-md border p-4">
+                      <div className="grid gap-4">
+                        {Array.from({ length: 50 }, (_, i) => (
+                          <div
+                            key={i}
+                            className="grid grid-cols-5 items-center gap-2"
+                          >
+                            <Label
+                              htmlFor={`shade-${i}`}
+                              className="text-right col-span-1"
+                            >
+                              Shade {i + 1}
+                            </Label>
+                            <Input
+                              id={`shade-${i}`}
+                              value={currentEntry.shades[i]}
+                              onChange={(e) =>
+                                handleShadeChange(i, e.target.value)
+                              }
+                              className="col-span-3"
+                            />
+                            <Button
+                              onClick={() => handleShadeIncrement(i)}
+                              variant="outline"
+                              size="sm"
+                              className="col-span-1"
+                            >
+                              +50
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    </ScrollArea>
+                    <Button onClick={handleSaveDesign} className="mt-4">
+                      Save Design
+                    </Button>
+                  </>
+                )}
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          {designEntries.length > 0 && (
+            <div>
+              <Label>Saved Designs</Label>
+              <div className="mt-2 space-y-2">
+                {designEntries.map((entry) => (
+                  <div
+                    key={entry.id}
+                    className="flex items-center justify-between p-2 bg-gray-100 rounded"
+                  >
+                    <div>
+                      <span>
+                        {entry.design} - Price: {entry.price || "N/A"}
+                      </span>
+                      {entry.remark && (
+                        <p className="text-sm text-gray-600">
+                          Remark: {entry.remark}
+                        </p>
+                      )}
+                    </div>
+                    <div className="space-x-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleEditDesign(entry.id)}
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDeleteDesign(entry.id)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="remark" className="text-right">
               Remark
