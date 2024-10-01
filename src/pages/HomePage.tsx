@@ -44,6 +44,13 @@ export default function HomePage() {
         >
           Broker Transport
         </Button>
+        <br />
+        <Button
+          className="w-64 text-lg"
+          onClick={() => navigate("/order-list")}
+        >
+          Order List
+        </Button>
       </div>
     </div>
   );
