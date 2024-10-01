@@ -15,17 +15,25 @@ interface Profile {
   name: string;
 }
 
+interface Design {
+  id: number;
+  title: string;
+}
+
 export default function BrokerTransportPage() {
   const [brokers, setBrokers] = useState<Profile[]>([]);
   const [transports, setTransports] = useState<Profile[]>([]);
+  const [designs, setDesigns] = useState<Design[]>([]);
   const [newBroker, setNewBroker] = useState("");
   const [newTransport, setNewTransport] = useState("");
+  const [newDesign, setNewDesign] = useState("");
   const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
     fetchBrokers();
     fetchTransports();
+    fetchDesigns();
   }, []);
 
   const fetchBrokers = async () => {
@@ -49,6 +57,18 @@ export default function BrokerTransportPage() {
       console.error("Error fetching transport profiles:", error);
     } else {
       setTransports(data);
+    }
+  };
+
+  const fetchDesigns = async () => {
+    const { data, error } = await supabase
+      .from("designs")
+      .select("*")
+      .order("title");
+    if (error) {
+      console.error("Error fetching designs:", error);
+    } else {
+      setDesigns(data);
     }
   };
 
@@ -98,6 +118,29 @@ export default function BrokerTransportPage() {
     }
   };
 
+  const addDesign = async () => {
+    if (newDesign.trim()) {
+      const { data, error } = await supabase
+        .from("designs")
+        .insert({ title: newDesign.trim() })
+        .select();
+      if (error) {
+        toast({
+          title: "Error",
+          description: "Failed to add design",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Success",
+          description: `Design "${data[0].title}" added successfully`,
+        });
+        setNewDesign("");
+        fetchDesigns();
+      }
+    }
+  };
+
   const deleteBroker = async (id: number) => {
     const { error } = await supabase.from("brokers").delete().eq("id", id);
     if (error) {
@@ -129,6 +172,23 @@ export default function BrokerTransportPage() {
         description: "Transport profile deleted successfully",
       });
       fetchTransports();
+    }
+  };
+
+  const deleteDesign = async (id: number) => {
+    const { error } = await supabase.from("designs").delete().eq("id", id);
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete design",
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Success",
+        description: "Design deleted successfully",
+      });
+      fetchDesigns();
     }
   };
 
@@ -191,6 +251,36 @@ export default function BrokerTransportPage() {
                     <li key={transport.id} className="flex justify-between items-center bg-gray-100 p-2 rounded">
                       <span>{transport.name}</span>
                       <Button onClick={() => deleteTransport(transport.id)} variant="destructive" size="sm">Delete</Button>
+                    </li>
+                  ))}
+                </ul>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+        </div>
+        <div>
+          <h2 className="text-2xl font-bold mb-4">Designs</h2>
+          <div className="space-y-2 mb-4">
+            <Label htmlFor="newDesign">Add New Design</Label>
+            <div className="flex space-x-2">
+              <Input
+                id="newDesign"
+                value={newDesign}
+                onChange={(e) => setNewDesign(e.target.value)}
+                placeholder="Enter design title"
+              />
+              <Button onClick={addDesign}>Add</Button>
+            </div>
+          </div>
+          <Accordion type="single" collapsible className="w-full">
+            <AccordionItem value="designs">
+              <AccordionTrigger>Existing Designs</AccordionTrigger>
+              <AccordionContent>
+                <ul className="space-y-2">
+                  {designs.map((design) => (
+                    <li key={design.id} className="flex justify-between items-center bg-gray-100 p-2 rounded">
+                      <span>{design.title}</span>
+                      <Button onClick={() => deleteDesign(design.id)} variant="destructive" size="sm">Delete</Button>
                     </li>
                   ))}
                 </ul>
