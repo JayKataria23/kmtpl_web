@@ -1,5 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import { Input } from "@/components/ui";
+import { X } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface InputWithAutocompleteProps {
   id: string;
@@ -32,8 +34,13 @@ const InputWithAutocomplete: React.FC<InputWithAutocompleteProps> = ({
     onChange(newValue);
   };
 
+  const handleClear = () => {
+    setInputValue("");
+    onChange("");
+  };
+
   return (
-    <div className={className}>
+    <div className={`relative ${className}`}>
       <Input
         id={id}
         value={inputValue}
@@ -41,7 +48,17 @@ const InputWithAutocomplete: React.FC<InputWithAutocompleteProps> = ({
         list={`${id}-options`}
         placeholder={placeholder}
         aria-label={label}
+        className="pr-8"
       />
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        className="absolute right-1 top-1/2 -translate-y-1/2"
+        onClick={handleClear}
+      >
+        <X className="h-4 w-4" />
+      </Button>
       <datalist id={`${id}-options`}>
         {options.map((option) => (
           <option key={option.id} value={option.name} />
