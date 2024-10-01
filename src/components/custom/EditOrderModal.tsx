@@ -183,7 +183,14 @@ export function EditOrderModal({
       fetchDesigns();
       fetchDesignEntries();
     }
-  }, [isOpen, orderId, fetchOrderDetails, fetchOptions, fetchDesigns, fetchDesignEntries]);
+  }, [
+    isOpen,
+    orderId,
+    fetchOrderDetails,
+    fetchOptions,
+    fetchDesigns,
+    fetchDesignEntries,
+  ]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -429,11 +436,16 @@ export function EditOrderModal({
             </Button>
           </div>
 
-          <Dialog open={isDesignDialogOpen} onOpenChange={setIsDesignDialogOpen}>
+          <Dialog
+            open={isDesignDialogOpen}
+            onOpenChange={setIsDesignDialogOpen}
+          >
             <DialogContent className="sm:max-w-[425px]">
               <DialogHeader>
                 <DialogTitle>
-                  {currentEntry?.design ? `Edit ${currentEntry.design}` : "Add Design"}
+                  {currentEntry?.design
+                    ? `Edit ${currentEntry.design}`
+                    : "Add Design"}
                 </DialogTitle>
               </DialogHeader>
               <div className="grid gap-4 py-4">
@@ -467,6 +479,7 @@ export function EditOrderModal({
                         onChange={(e) => handlePriceChange(e.target.value)}
                         className="col-span-3"
                         placeholder="Enter price"
+                        type="number"
                       />
                     </div>
                     <div className="grid grid-cols-4 items-center gap-4">

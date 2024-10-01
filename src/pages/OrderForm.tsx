@@ -607,6 +607,7 @@ export default function OrderForm() {
                         onChange={(e) => handlePriceChange(e.target.value)}
                         className="col-span-3"
                         placeholder="Enter price"
+                        type="number"
                       />
                     </div>
                     <div className="grid grid-cols-4 items-center gap-4">
