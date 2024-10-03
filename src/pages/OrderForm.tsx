@@ -6,6 +6,7 @@ import {
   ChevronRight,
   X,
   Home,
+  Share2, // Add this import
 } from "lucide-react";
 import {
   Button,
@@ -24,6 +25,8 @@ import supabase from "@/utils/supabase";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import InputWithAutocomplete from "@/components/custom/InputWithAutocomplete";
+import { v4 as uuidv4 } from "uuid"; // Add this import at the top of your file
+import html2pdf from "html2pdf.js";
 
 interface DesignEntry {
   id: string;
@@ -506,6 +509,146 @@ export default function OrderForm() {
     }
   };
 
+  const handleShare = async () => {
+    try {
+      const orderDetails: OrderDetails = {
+        orderNo: orderNo,
+        date: formatDate(date),
+        billTo: selectedBillTo,
+        shipTo: selectedShipTo,
+        broker: selectedBroker,
+        transport: selectedTransport,
+        designs: designEntries,
+        remark: (document.getElementById("remark") as HTMLInputElement)?.value,
+      };
+
+      try {
+        // Fetch billTo details
+        if (selectedBillTo) {
+          const { data: billToData, error: billToError } = await supabase
+            .from("party_profiles")
+            .select("name, address")
+            .eq("id", selectedBillTo)
+            .single();
+
+          if (billToError) throw billToError;
+
+          orderDetails.billTo = billToData.name;
+          orderDetails.billToAddress = billToData.address;
+        }
+
+        // Fetch shipTo details
+        if (selectedShipTo) {
+          const { data: shipToData, error: shipToError } = await supabase
+            .from("party_profiles")
+            .select("name, address")
+            .eq("id", selectedShipTo)
+            .single();
+
+          if (shipToError) throw shipToError;
+
+          orderDetails.shipTo = shipToData.name;
+          orderDetails.shipToAddress = shipToData.address;
+        }
+        // Fetch broker details
+        if (selectedBroker) {
+          const { data: brokerData, error: brokerError } = await supabase
+            .from("brokers")
+            .select("name")
+            .eq("id", selectedBroker)
+            .single();
+
+          if (brokerError) throw brokerError;
+
+          orderDetails.broker = brokerData.name;
+        }
+
+        // Fetch transport details
+        if (selectedTransport) {
+          const { data: transportData, error: transportError } = await supabase
+            .from("transport_profiles")
+            .select("name")
+            .eq("id", selectedTransport)
+            .single();
+
+          if (transportError) throw transportError;
+
+          orderDetails.transport = transportData.name;
+        }
+
+        const orderDetailsFixed = {
+          ...orderDetails,
+          broker:
+            orderDetails.broker !== null ? orderDetails.broker.toString() : "",
+          transport:
+            orderDetails.transport !== null
+              ? orderDetails.transport.toString()
+              : "",
+          billTo:
+            orderDetails.billTo !== null ? orderDetails.billTo.toString() : "",
+          shipTo:
+            orderDetails.shipTo !== null ? orderDetails.shipTo.toString() : "",
+          billToAddress: orderDetails.billToAddress?.toString() ?? "",
+          shipToAddress: orderDetails.shipToAddress?.toString() ?? "",
+        };
+        const html = generateHTML(orderDetailsFixed);
+
+        // Convert HTML to PDF and encode it to base64
+        const pdfBlob = await htmlToPdf(html);
+        const uniqueId = uuidv4();
+        // Create WhatsApp share link with base64 PDF
+        const { data, error } = await supabase.storage
+          .from("temp-pdfs")
+          .upload(`${uniqueId}.pdf`, pdfBlob, {
+            contentType: "application/pdf",
+          });
+        console.log(data);
+        if (error) throw error;
+
+        const {
+          data: { publicUrl },
+        } = supabase.storage.from("temp-pdfs").getPublicUrl(`${uniqueId}.pdf`);
+
+        // Open WhatsApp share link in a new window
+        const orderSummary = `
+Order No: ${orderDetails.orderNo}
+Date: ${orderDetails.date}
+Bill To: ${orderDetailsFixed.billTo}
+Ship To: ${orderDetailsFixed.shipTo}
+Designs: ${orderDetails.designs.length}
+Total Value: ${orderDetails.designs.reduce(
+          (sum, design) => sum + parseFloat(design.price),
+          0
+        )}
+    `.trim();
+        const whatsappText = encodeURIComponent(
+          `${orderSummary}\n\nView full order: ${publicUrl}`
+        );
+        const whatsappLink = `https://wa.me/?text=${whatsappText}`;
+        window.open(whatsappLink, "_blank");
+
+        toast({
+          title: "Order Shared",
+          description: "Order summary and secure link sent to WhatsApp.",
+        });
+      } catch (error) {
+        console.error("Error sharing order:", error);
+        toast({
+          title: "Error",
+          description: "There was an error sharing the order.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Error sharing order:", error);
+      toast({
+        title: "Error",
+        description: "There was an error sharing the order.",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="max-w-md mx-auto p-6 bg-white">
       <div className="flex justify-between items-center mb-6">
@@ -719,6 +862,9 @@ export default function OrderForm() {
           <Button onClick={handlePreview} className="flex items-center">
             <Printer className="mr-2 h-4 w-4" /> Preview
           </Button>
+          <Button onClick={handleShare} className="flex items-center">
+            <Share2 className="mr-2 h-4 w-4" /> Share
+          </Button>
           <Button onClick={handleSave} className="flex items-center">
             <Save className="mr-2 h-4 w-4" /> Save
           </Button>
@@ -727,4 +873,38 @@ export default function OrderForm() {
       <Toaster />
     </div>
   );
+}
+
+async function htmlToPdf(html: string): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    const container = document.createElement("div");
+    container.innerHTML = html;
+    document.body.appendChild(container);
+
+    const pdfOptions = {
+      margin: 5,
+      filename: "order.pdf",
+      image: { type: "jpeg", quality: 0.98 },
+      html2canvas: {
+        scale: 2,
+        logging: false,
+        dpi: 192,
+        letterRendering: true,
+      },
+      jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+    };
+
+    html2pdf()
+      .from(container)
+      .set(pdfOptions)
+      .outputPdf("blob")
+      .then((pdfBlob: Blob) => {
+        document.body.removeChild(container);
+        resolve(pdfBlob);
+      })
+      .catch((error: Error) => {
+        document.body.removeChild(container);
+        reject(error);
+      });
+  });
 }

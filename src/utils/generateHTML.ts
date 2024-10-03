@@ -158,7 +158,7 @@ export function generateHTML(order: Order): string {
               ${part.remark}
             </div>
           </div>
-          <div style="height: 750px; overflow: hidden">
+          <div style="height: 740px; overflow: hidden">
             <div style="border-bottom: 1px solid #000; display: flex; flex-direction: row; font-size: x-large;">
               <div style="width: 5%; border-right: 1px solid #000; font-weight: bold; text-align: center; font-size: small">S/n.</div>
               <div style="width: 12%; border-right: 1px solid #000; font-weight: bold; text-align: center; font-size: small">Design</div>
