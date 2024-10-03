@@ -66,7 +66,7 @@ export default function OrderList() {
       console.error("Error fetching orders:", error);
       toast({
         title: "Error",
-        description: "Failed to fetch orders",
+        description: `Failed to fetch orders: ${error instanceof Error ? error.message : 'Unknown error'}`,
         variant: "destructive",
       });
     }
@@ -94,7 +94,7 @@ export default function OrderList() {
       console.error("Error deleting order:", error);
       toast({
         title: "Error",
-        description: "Failed to delete order",
+        description: `Failed to delete order: ${error instanceof Error ? error.message : 'Unknown error'}`,
         variant: "destructive",
       });
     }
@@ -124,7 +124,7 @@ export default function OrderList() {
       console.error("Error opening PDF:", error);
       toast({
         title: "Error",
-        description: "Failed to open PDF",
+        description: `Failed to open PDF: ${error instanceof Error ? error.message : 'Unknown error'}`,
         variant: "destructive",
       });
     }
