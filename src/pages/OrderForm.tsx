@@ -398,6 +398,85 @@ export default function OrderForm() {
     };
 
     try {
+      // Fetch additional details for PDF generation
+      if (selectedBillTo) {
+        const { data: billToData, error: billToError } = await supabase
+          .from("party_profiles")
+          .select("name, address")
+          .eq("id", selectedBillTo)
+          .single();
+
+        if (billToError) throw billToError;
+
+        orderDetails.billTo = billToData.name;
+        orderDetails.billToAddress = billToData.address;
+      }
+
+      if (selectedShipTo) {
+        const { data: shipToData, error: shipToError } = await supabase
+          .from("party_profiles")
+          .select("name, address")
+          .eq("id", selectedShipTo)
+          .single();
+
+        if (shipToError) throw shipToError;
+
+        orderDetails.shipTo = shipToData.name;
+        orderDetails.shipToAddress = shipToData.address;
+      }
+
+      if (selectedBroker) {
+        const { data: brokerData, error: brokerError } = await supabase
+          .from("brokers")
+          .select("name")
+          .eq("id", selectedBroker)
+          .single();
+
+        if (brokerError) throw brokerError;
+
+        orderDetails.broker = brokerData.name;
+      }
+
+      if (selectedTransport) {
+        const { data: transportData, error: transportError } = await supabase
+          .from("transport_profiles")
+          .select("name")
+          .eq("id", selectedTransport)
+          .single();
+
+        if (transportError) throw transportError;
+
+        orderDetails.transport = transportData.name;
+      }
+
+      // Generate PDF
+      const orderDetailsFixed = {
+        ...orderDetails,
+        broker: orderDetails.broker?.toString() ?? "",
+        transport: orderDetails.transport?.toString() ?? "",
+        billTo: orderDetails.billTo?.toString() ?? "",
+        shipTo: orderDetails.shipTo?.toString() ?? "",
+        billToAddress: orderDetails.billToAddress?.toString() ?? "",
+        shipToAddress: orderDetails.shipToAddress?.toString() ?? "",
+      };
+      const html = generateHTML(orderDetailsFixed);
+      const pdfBlob = await htmlToPdf(html);
+
+      // Generate a UUID for the file name
+      const fileUuid = uuidv4();
+      const pdfFileName = `order_${fileUuid}.pdf`;
+
+      // Upload PDF to Supabase storage
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from("temp-pdfs")
+        .upload(pdfFileName, pdfBlob, {
+          contentType: "application/pdf",
+        });
+
+      if (uploadError) throw uploadError;
+
+      const pdfPath = uploadData.path;
+
       // Insert order details
       const { data: orderData, error: orderError } = await supabase
         .from("orders")
@@ -405,11 +484,12 @@ export default function OrderForm() {
           {
             order_no: orderDetails.orderNo,
             date: orderDetails.date,
-            bill_to_id: orderDetails.billTo,
-            ship_to_id: orderDetails.shipTo,
-            broker_id: orderDetails.broker,
-            transport_id: orderDetails.transport,
+            bill_to_id: selectedBillTo,
+            ship_to_id: selectedShipTo,
+            broker_id: selectedBroker,
+            transport_id: selectedTransport,
             remark: orderDetails.remark,
+            pdf: pdfPath,
           },
         ])
         .select();
@@ -511,134 +591,47 @@ export default function OrderForm() {
 
   const handleShare = async () => {
     try {
-      const orderDetails: OrderDetails = {
-        orderNo: orderNo,
-        date: formatDate(date),
-        billTo: selectedBillTo,
-        shipTo: selectedShipTo,
-        broker: selectedBroker,
-        transport: selectedTransport,
-        designs: designEntries,
-        remark: (document.getElementById("remark") as HTMLInputElement)?.value,
-      };
+      // Fetch the order details from the database
+      const { data: orderData, error: orderError } = await supabase
+        .from("orders")
+        .select("*")
+        .eq("order_no", orderNo)
+        .single();
 
-      try {
-        // Fetch billTo details
-        if (selectedBillTo) {
-          const { data: billToData, error: billToError } = await supabase
-            .from("party_profiles")
-            .select("name, address")
-            .eq("id", selectedBillTo)
-            .single();
+      if (orderError) throw orderError;
 
-          if (billToError) throw billToError;
-
-          orderDetails.billTo = billToData.name;
-          orderDetails.billToAddress = billToData.address;
-        }
-
-        // Fetch shipTo details
-        if (selectedShipTo) {
-          const { data: shipToData, error: shipToError } = await supabase
-            .from("party_profiles")
-            .select("name, address")
-            .eq("id", selectedShipTo)
-            .single();
-
-          if (shipToError) throw shipToError;
-
-          orderDetails.shipTo = shipToData.name;
-          orderDetails.shipToAddress = shipToData.address;
-        }
-        // Fetch broker details
-        if (selectedBroker) {
-          const { data: brokerData, error: brokerError } = await supabase
-            .from("brokers")
-            .select("name")
-            .eq("id", selectedBroker)
-            .single();
-
-          if (brokerError) throw brokerError;
-
-          orderDetails.broker = brokerData.name;
-        }
-
-        // Fetch transport details
-        if (selectedTransport) {
-          const { data: transportData, error: transportError } = await supabase
-            .from("transport_profiles")
-            .select("name")
-            .eq("id", selectedTransport)
-            .single();
-
-          if (transportError) throw transportError;
-
-          orderDetails.transport = transportData.name;
-        }
-
-        const orderDetailsFixed = {
-          ...orderDetails,
-          broker:
-            orderDetails.broker !== null ? orderDetails.broker.toString() : "",
-          transport:
-            orderDetails.transport !== null
-              ? orderDetails.transport.toString()
-              : "",
-          billTo:
-            orderDetails.billTo !== null ? orderDetails.billTo.toString() : "",
-          shipTo:
-            orderDetails.shipTo !== null ? orderDetails.shipTo.toString() : "",
-          billToAddress: orderDetails.billToAddress?.toString() ?? "",
-          shipToAddress: orderDetails.shipToAddress?.toString() ?? "",
-        };
-        const html = generateHTML(orderDetailsFixed);
-
-        // Convert HTML to PDF and encode it to base64
-        const pdfBlob = await htmlToPdf(html);
-        const uniqueId = uuidv4();
-        // Create WhatsApp share link with base64 PDF
-        const { data, error } = await supabase.storage
-          .from("temp-pdfs")
-          .upload(`${uniqueId}.pdf`, pdfBlob, {
-            contentType: "application/pdf",
-          });
-        console.log(data);
-        if (error) throw error;
-
-        const {
-          data: { publicUrl },
-        } = supabase.storage.from("temp-pdfs").getPublicUrl(`${uniqueId}.pdf`);
-
-        // Open WhatsApp share link in a new window
-        const orderSummary = `
-Order No: ${orderDetails.orderNo}
-Date: ${orderDetails.date}
-Bill To: ${orderDetailsFixed.billTo}
-Ship To: ${orderDetailsFixed.shipTo}
-Designs: ${orderDetails.designs.length}
-Total Value: ${orderDetails.designs.reduce(
-          (sum, design) => sum + parseFloat(design.price),
-          0
-        )}
-    `.trim();
-        const whatsappText = encodeURIComponent(
-          `${orderSummary}\n\nView full order: ${publicUrl}`
-        );
-        const whatsappLink = `https://wa.me/?text=${whatsappText}`;
-        window.open(whatsappLink, "_blank");
-
-        toast({
-          title: "Order Shared",
-          description: "Order summary and secure link sent to WhatsApp.",
-        });
-      } catch (error) {
-        console.error("Error sharing order:", error);
-        toast({
-          title: "Error",
-          description: "There was an error sharing the order.",
-          variant: "destructive",
-        });
+      if (!orderData.pdf) {
+        throw new Error("PDF not found for this order");
       }
+
+      // Get the public URL for the PDF
+      const { data: publicUrlData } = supabase.storage
+        .from("temp-pdfs")
+        .getPublicUrl(orderData.pdf);
+
+      const publicUrl = publicUrlData.publicUrl;
+
+      // Prepare order summary
+      const orderSummary = `
+Order No: ${orderData.order_no}
+Date: ${orderData.date}
+Bill To: ${getSelectedValue("Bill To")}
+Ship To: ${getSelectedValue("Ship To")}
+    `.trim();
+
+      // Create WhatsApp share link
+      const whatsappText = encodeURIComponent(
+        `${orderSummary}\n\nView full order: ${publicUrl}`
+      );
+      const whatsappLink = `https://wa.me/?text=${whatsappText}`;
+
+      // Open WhatsApp share link in a new window
+      window.open(whatsappLink, "_blank");
+
+      toast({
+        title: "Order Shared",
+        description: "Order summary and secure link sent to WhatsApp.",
+      });
     } catch (error) {
       console.error("Error sharing order:", error);
       toast({
