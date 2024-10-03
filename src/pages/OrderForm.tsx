@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 import { useState, useEffect } from "react";
 import {
   Printer,
@@ -103,6 +104,13 @@ export default function OrderForm() {
       setOrderNo(newOrderNo);
     } catch (error) {
       console.error("Error generating unique order number:", error);
+      toast({
+        title: "Error",
+        description: `Failed to generate unique order number: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`,
+        variant: "destructive",
+      });
     }
   };
 
@@ -521,7 +529,9 @@ export default function OrderForm() {
       console.error("Error saving order details:", error);
       toast({
         title: "Error",
-        description: "There was an error saving the order details.",
+        description: `There was an error saving the order details: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`,
         variant: "destructive",
       });
     }
@@ -636,7 +646,9 @@ Ship To: ${getSelectedValue("Ship To")}
       console.error("Error sharing order:", error);
       toast({
         title: "Error",
-        description: "There was an error sharing the order.",
+        description: `There was an error sharing the order: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`,
         variant: "destructive",
       });
     }
