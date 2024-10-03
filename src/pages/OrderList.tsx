@@ -13,6 +13,7 @@ interface Order {
   date: string;
   party_name: string;
   remark: string | null;
+  pdf: string | null;
 }
 
 interface OrderFromDB {
@@ -21,6 +22,7 @@ interface OrderFromDB {
   date: string;
   remark: string | null;
   bill_to: { name: string } | null;
+  pdf: string | null;
 }
 
 export default function OrderList() {
@@ -40,7 +42,8 @@ export default function OrderList() {
           order_no, 
           date, 
           remark,
-          bill_to:bill_to_id(name)
+          bill_to:bill_to_id(name),
+          pdf
         `
         )
         .order("date", { ascending: false })
@@ -55,6 +58,7 @@ export default function OrderList() {
           date: order.date,
           remark: order.remark,
           party_name: order.bill_to?.name || "N/A",
+          pdf: order.pdf,
         })
       );
       setOrders(formattedOrders);
@@ -100,6 +104,32 @@ export default function OrderList() {
     fetchOrders();
   };
 
+  const handleOpenPDF = async (pdfPath: string | null) => {
+    if (!pdfPath) {
+      toast({
+        title: "Error",
+        description: "PDF not found for this order",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const { data } = supabase.storage
+        .from("temp-pdfs")
+        .getPublicUrl(pdfPath);
+      const publicUrl = data.publicUrl;
+      window.open(publicUrl, "_blank");
+    } catch (error) {
+      console.error("Error opening PDF:", error);
+      toast({
+        title: "Error",
+        description: "Failed to open PDF",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="container mx-auto mt-8 p-4 max-w-4xl">
       <Button onClick={() => navigate("/")} className="mb-6">
@@ -120,6 +150,9 @@ export default function OrderList() {
                 </span>
               </div>
               <div className="space-x-2">
+                <Button onClick={() => handleOpenPDF(order.pdf)} size="sm">
+                  Open PDF
+                </Button>
                 <Button
                   onClick={() => handleEdit(order.id)}
                   variant="outline"
