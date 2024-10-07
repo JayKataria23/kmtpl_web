@@ -28,6 +28,7 @@ import { useToast } from "@/hooks/use-toast";
 import InputWithAutocomplete from "@/components/custom/InputWithAutocomplete";
 import { v4 as uuidv4 } from "uuid"; // Add this import at the top of your file
 import html2pdf from "html2pdf.js";
+import { useUser } from "@clerk/clerk-react"; // Import useAuth
 
 interface DesignEntry {
   id: string;
@@ -49,6 +50,7 @@ interface OrderDetails {
   billToAddress?: string;
   shipToAddress?: string;
 }
+
 
 export default function OrderForm() {
   const [date, setDate] = useState(new Date());
@@ -80,6 +82,8 @@ export default function OrderForm() {
   );
   const navigate = useNavigate();
   const [orderNo, setOrderNo] = useState<string>("");
+  const { user } = useUser(); // Get the user object
+  const userName = user?.fullName || user?.firstName || "Unknown User"; // Get the user's name
 
   useEffect(() => {
     fetchBrokers();
@@ -485,7 +489,7 @@ export default function OrderForm() {
 
       const pdfPath = uploadData.path;
 
-      // Insert order details
+      // Insert order details including created_by
       const { data: orderData, error: orderError } = await supabase
         .from("orders")
         .insert([
@@ -498,6 +502,7 @@ export default function OrderForm() {
             transport_id: selectedTransport,
             remark: orderDetails.remark,
             pdf: pdfPath,
+            created_by: userName, // Add the created_by field
           },
         ])
         .select();
