@@ -117,7 +117,7 @@ export function generateHTML(order: Order): string {
         <div style="border: 2px solid #000">
           <div style="border-bottom: 1px solid #000; text-align: center; font-weight: bold;">ॐ</div>
           <div style="border-bottom: 1px solid #000; text-align: center; font-weight: bold; font-size: xx-large;">
-            K.M. TEXTILES PVT. LTD.
+            K.M. TEXTILES   PVT. LTD.
           </div>
           <div style="border-bottom: 1px solid #000; display: flex; flex-direction: row;">
             <div style="border-right: 1px solid #000; width: 55%; font-size: small">
