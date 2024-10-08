@@ -16,6 +16,7 @@ import {
 import ProtectedRoute from "./pages/ProtectedRoute";
 import SignInPage from "./pages/sign-in";
 import SignUpPage from "./pages/sign-up";
+import OrderPreviewPage from "./pages/OrderPreviewPage";
 
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
@@ -36,6 +37,10 @@ createRoot(document.getElementById("root")!).render(
                 <OrderForm />
               </ProtectedRoute>
             }
+          />
+          <Route
+            path="/order-preview/:orderId"
+            element={<OrderPreviewPage />}
           />
           <Route
             path="/order-file"

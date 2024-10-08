@@ -408,7 +408,7 @@ export default function OrderForm() {
     };
 
     try {
-      // Fetch additional details for PDF generation
+      // Fetch additional details for order generation
       if (selectedBillTo) {
         const { data: billToData, error: billToError } = await supabase
           .from("party_profiles")
@@ -459,10 +459,6 @@ export default function OrderForm() {
         orderDetails.transport = transportData.name;
       }
 
-      // Generate PDF
-      // Upload PDF to Supabase storage
-
-      // Insert order details including created_by
       const { data: orderData, error: orderError } = await supabase
         .from("orders")
         .insert([
@@ -475,6 +471,7 @@ export default function OrderForm() {
             transport_id: selectedTransport,
             remark: orderDetails.remark,
             created_by: userName, // Add the created_by field
+            // pdf: null, // Removed any reference to pdf
           },
         ])
         .select();
@@ -805,4 +802,3 @@ export default function OrderForm() {
     </div>
   );
 }
-
