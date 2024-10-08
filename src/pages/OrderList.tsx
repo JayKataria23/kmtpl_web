@@ -104,8 +104,9 @@ export default function OrderList() {
     fetchOrders();
   };
 
-  const handleOpenPDF = () => {
-    console.log("Openig PDF");
+  const handleOpenPDF = (orderId: number) => {
+    // Accept orderId as a parameter
+    navigate(`/order-preview/${orderId}`); // Navigate to OpenPreviewPage with orderId
   };
 
   return (
@@ -128,7 +129,7 @@ export default function OrderList() {
                 </span>
               </div>
               <div className="space-x-2">
-                <Button onClick={() => handleOpenPDF()} size="sm">
+                <Button onClick={() => handleOpenPDF(order.id)} size="sm">
                   Open PDF
                 </Button>
                 <Button
