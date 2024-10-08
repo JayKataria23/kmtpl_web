@@ -26,8 +26,7 @@ import supabase from "@/utils/supabase";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import InputWithAutocomplete from "@/components/custom/InputWithAutocomplete";
-import { v4 as uuidv4 } from "uuid"; // Add this import at the top of your file
-import html2pdf from "html2pdf.js";
+ // Add this import at the top of your file
 import { useUser } from "@clerk/clerk-react"; // Import useAuth
 
 interface DesignEntry {
@@ -50,7 +49,6 @@ interface OrderDetails {
   billToAddress?: string;
   shipToAddress?: string;
 }
-
 
 export default function OrderForm() {
   const [date, setDate] = useState(new Date());
@@ -462,32 +460,7 @@ export default function OrderForm() {
       }
 
       // Generate PDF
-      const orderDetailsFixed = {
-        ...orderDetails,
-        broker: orderDetails.broker?.toString() ?? "",
-        transport: orderDetails.transport?.toString() ?? "",
-        billTo: orderDetails.billTo?.toString() ?? "",
-        shipTo: orderDetails.shipTo?.toString() ?? "",
-        billToAddress: orderDetails.billToAddress?.toString() ?? "",
-        shipToAddress: orderDetails.shipToAddress?.toString() ?? "",
-      };
-      const html = generateHTML(orderDetailsFixed);
-      const pdfBlob = await htmlToPdf(html);
-
-      // Generate a UUID for the file name
-      const fileUuid = uuidv4();
-      const pdfFileName = `order_${fileUuid}.pdf`;
-
       // Upload PDF to Supabase storage
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from("temp-pdfs")
-        .upload(pdfFileName, pdfBlob, {
-          contentType: "application/pdf",
-        });
-
-      if (uploadError) throw uploadError;
-
-      const pdfPath = uploadData.path;
 
       // Insert order details including created_by
       const { data: orderData, error: orderError } = await supabase
@@ -501,7 +474,6 @@ export default function OrderForm() {
             broker_id: selectedBroker,
             transport_id: selectedTransport,
             remark: orderDetails.remark,
-            pdf: pdfPath,
             created_by: userName, // Add the created_by field
           },
         ])
@@ -605,58 +577,7 @@ export default function OrderForm() {
   };
 
   const handleShare = async () => {
-    try {
-      // Fetch the order details from the database
-      const { data: orderData, error: orderError } = await supabase
-        .from("orders")
-        .select("*")
-        .eq("order_no", orderNo)
-        .single();
-
-      if (orderError) throw orderError;
-
-      if (!orderData.pdf) {
-        throw new Error("PDF not found for this order");
-      }
-
-      // Get the public URL for the PDF
-      const { data: publicUrlData } = supabase.storage
-        .from("temp-pdfs")
-        .getPublicUrl(orderData.pdf);
-
-      const publicUrl = publicUrlData.publicUrl;
-
-      // Prepare order summary
-      const orderSummary = `
-Order No: ${orderData.order_no}
-Date: ${orderData.date}
-Bill To: ${getSelectedValue("Bill To")}
-Ship To: ${getSelectedValue("Ship To")}
-    `.trim();
-
-      // Create WhatsApp share link
-      const whatsappText = encodeURIComponent(
-        `${orderSummary}\n\nView full order: ${publicUrl}`
-      );
-      const whatsappLink = `https://wa.me/?text=${whatsappText}`;
-
-      // Open WhatsApp share link in a new window
-      window.open(whatsappLink, "_blank");
-
-      toast({
-        title: "Order Shared",
-        description: "Order summary and secure link sent to WhatsApp.",
-      });
-    } catch (error) {
-      console.error("Error sharing order:", error);
-      toast({
-        title: "Error",
-        description: `There was an error sharing the order: ${
-          error instanceof Error ? error.message : "Unknown error"
-        }`,
-        variant: "destructive",
-      });
-    }
+    console.log("Sharing")
   };
 
   return (
@@ -885,36 +806,3 @@ Ship To: ${getSelectedValue("Ship To")}
   );
 }
 
-async function htmlToPdf(html: string): Promise<Blob> {
-  return new Promise((resolve, reject) => {
-    const container = document.createElement("div");
-    container.innerHTML = html;
-    document.body.appendChild(container);
-
-    const pdfOptions = {
-      margin: 5,
-      filename: "order.pdf",
-      image: { type: "jpeg", quality: 0.98 },
-      html2canvas: {
-        scale: 2,
-        logging: false,
-        dpi: 192,
-        letterRendering: true,
-      },
-      jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-    };
-
-    html2pdf()
-      .from(container)
-      .set(pdfOptions)
-      .outputPdf("blob")
-      .then((pdfBlob: Blob) => {
-        document.body.removeChild(container);
-        resolve(pdfBlob);
-      })
-      .catch((error: Error) => {
-        document.body.removeChild(container);
-        reject(error);
-      });
-  });
-}
