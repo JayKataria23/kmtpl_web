@@ -1,8 +1,9 @@
 import { useParams } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import supabase from "@/utils/supabase";
-import { format, parseISO } from "date-fns";
-
+import { generateHTML } from "@/utils/generateHTML"; // Import the ge
+import { Button } from "@/components/ui";
+import { Card } from "@/components/ui/card";
 
 interface RelatedEntity {
   name: string;
@@ -31,127 +32,136 @@ function OrderPreviewPage() {
   const { orderId } = useParams<{ orderId: string }>();
   const [orderDetails, setOrderDetails] = useState<OrderData | null>(null);
   const [designEntries, setDesignEntries] = useState<DesignEntry[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [generatedHtml, setGeneratedHtml] = useState<string | null>(null); // State to hold generated HTML
+
+  const handleGenerateHTML = useCallback(() => {
+    if (!orderDetails) return;
+
+    const orderForPreview = {
+      designs: designEntries,
+      orderNo: orderDetails.order_no,
+      date: orderDetails.date,
+      broker: orderDetails.broker,
+      transport: orderDetails.transport,
+      billTo: orderDetails.bill_to,
+      billToAddress: "N/A",
+      shipTo: orderDetails.ship_to,
+      shipToAddress: "N/A",
+      remark: orderDetails.remark,
+    };
+
+    const html = generateHTML(orderForPreview);
+    setGeneratedHtml(html);
+    const printWindow = window.open("", "_blank");
+    if (printWindow) {
+      printWindow.document.write(html);
+      printWindow.document.close();
+    }
+    // Store generated HTML in state
+  }, [orderDetails, designEntries]);
+
+  const handlePrint = () => {
+    if (!generatedHtml) return;
+
+    const printWindow = window.open("", "_blank");
+    if (printWindow) {
+      printWindow.document.write(generatedHtml);
+      printWindow.document.close();
+      printWindow.print(); // Trigger the print dialog
+    }
+  };
 
   useEffect(() => {
     const fetchOrderDetails = async () => {
-      if (!orderId) return;
+      if (!orderId) {
+        setError("No order ID provided");
+        setIsLoading(false);
+        return;
+      }
 
       try {
-        const { data, error } = await supabase
-          .from("orders")
-          .select(
+        const [orderResponse, designResponse] = await Promise.all([
+          supabase
+            .from("orders")
+            .select(
+              `
+              id,
+              order_no,
+              date,
+              bill_to:orders_bill_to_id_fkey (name),
+              ship_to:orders_ship_to_id_fkey (name),
+              broker:orders_broker_id_fkey (name),
+              transport:orders_transport_id_fkey (name),
+              remark
             `
-            id,
-            order_no,
-            date,
-            bill_to:orders_bill_to_id_fkey (name),
-            ship_to:orders_ship_to_id_fkey (name),
-            broker:orders_broker_id_fkey (name),
-            transport:orders_transport_id_fkey (name),
-            remark
-          `
-          )
-          .eq("id", orderId)
-          .single();
+            )
+            .eq("id", orderId)
+            .single(),
+          supabase.from("design_entries").select("*").eq("order_id", orderId),
+        ]);
 
-        if (error) throw error;
+        if (orderResponse.error) throw orderResponse.error;
+        if (designResponse.error) throw designResponse.error;
 
-        console.log("Fetched order details:", data);
-
+        const orderData = orderResponse.data;
         setOrderDetails({
-          id: data.id,
-          order_no: data.order_no,
-          date: data.date,
-          bill_to: (data.bill_to as unknown as RelatedEntity)?.name || "N/A",
-          ship_to: (data.ship_to as unknown as RelatedEntity)?.name || "N/A",
-          broker: (data.broker as unknown as RelatedEntity)?.name || "N/A",
-          transport: (data.transport as unknown as RelatedEntity)?.name || "N/A",
-          remark: data.remark || "N/A",
+          id: orderData.id,
+          order_no: orderData.order_no,
+          date: orderData.date,
+          bill_to:
+            (orderData.bill_to as unknown as RelatedEntity)?.name || "N/A",
+          ship_to:
+            (orderData.ship_to as unknown as RelatedEntity)?.name || "N/A",
+          broker: (orderData.broker as unknown as RelatedEntity)?.name || "N/A",
+          transport:
+            (orderData.transport as unknown as RelatedEntity)?.name || "N/A",
+          remark: orderData.remark || "N/A",
         });
 
-        const { data: designData, error: designError } = await supabase
-          .from("design_entries")
-          .select("*")
-          .eq("order_id", orderId);
-
-        if (designError) throw designError;
-
-        console.log("Fetched design entries:", designData);
-
-        setDesignEntries(designData);
+        setDesignEntries(designResponse.data);
       } catch (error) {
         console.error("Error fetching order details:", error);
+        setError("Failed to fetch order details");
+      } finally {
+        setIsLoading(false);
       }
     };
 
     fetchOrderDetails();
   }, [orderId]);
 
-  if (!orderDetails) {
+  useEffect(() => {
+    if (orderDetails && designEntries.length > 0) {
+      handleGenerateHTML();
+    }
+  }, [orderDetails, designEntries, handleGenerateHTML]);
+
+  if (isLoading) {
     return <div>Loading...</div>;
+  }
+
+  if (error) {
+    return <div>Error: {error}</div>;
   }
 
   return (
     <div className="p-4">
-      <h1 className="text-2xl font-bold mb-4">Order Preview</h1>
-      <div className="space-y-4">
-        <p>
-          <strong>Order No:</strong> {orderDetails.order_no}
-        </p>
-        <p>
-          <strong>Date:</strong>{" "}
-          {format(parseISO(orderDetails.date), "dd/MM/yyyy")}
-        </p>
-        <p>
-          <strong>Bill To:</strong> {orderDetails.bill_to}
-        </p>
-        <p>
-          <strong>Ship To:</strong> {orderDetails.ship_to}
-        </p>
-        <p>
-          <strong>Broker:</strong> {orderDetails.broker}
-        </p>
-        <p>
-          <strong>Transport:</strong> {orderDetails.transport}
-        </p>
-        <p>
-          <strong>Remark:</strong> {orderDetails.remark}
-        </p>
-
-        <h2 className="text-xl font-semibold mt-6 mb-2">Design Entries</h2>
-        {designEntries.length > 0 ? (
-          <ul className="space-y-4">
-            {designEntries.map((entry) => (
-              <li key={entry.id} className="border p-4 rounded">
-                <p>
-                  <strong>Design:</strong> {entry.design}
-                </p>
-                <p>
-                  <strong>Price:</strong> {entry.price}
-                </p>
-                <p>
-                  <strong>Remark:</strong> {entry.remark || "N/A"}
-                </p>
-                <details>
-                  <summary className="cursor-pointer">Shades</summary>
-                  <ul className="pl-4">
-                    {entry.shades.map(
-                      (shade, index) =>
-                        shade && (
-                          <li key={index}>
-                            Shade {index + 1}: {shade}
-                          </li>
-                        )
-                    )}
-                  </ul>
-                </details>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p>No design entries found.</p>
+      <Card className="max-w-md mx-auto shadow-lg p-6">
+        <h1 className="text-2xl font-bold mb-4">Order Preview</h1>
+        {orderDetails && (
+          <div className="mb-4 text-lg font-semibold">
+            {orderDetails.bill_to}
+          </div>
         )}
-      </div>
+        <Button onClick={handleGenerateHTML} className="mb-2">
+          Regenerate Preview
+        </Button>
+        <Button onClick={handlePrint} disabled={!generatedHtml}>
+          Print Order Form
+        </Button>
+      </Card>
     </div>
   );
 }
