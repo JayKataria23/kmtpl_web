@@ -54,11 +54,7 @@ function OrderPreviewPage() {
 
     const html = generateHTML(orderForPreview);
     setGeneratedHtml(html);
-    const printWindow = window.open("", "_blank");
-    if (printWindow) {
-      printWindow.document.write(html);
-      printWindow.document.close();
-    }
+
     // Store generated HTML in state
   }, [orderDetails, designEntries]);
 
@@ -162,6 +158,20 @@ function OrderPreviewPage() {
           Print Order Form
         </Button>
       </Card>
+      {generatedHtml && (
+        <iframe
+          srcDoc={generatedHtml}
+          title="Generated HTML Preview"
+          style={{
+            width: "100%",
+            height: "800px",
+            border: "1px solid #ccc",
+            marginTop: "20px",
+            display: "flex",
+            zoom: 0.7,
+          }}
+        />
+      )}
     </div>
   );
 }
