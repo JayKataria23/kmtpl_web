@@ -3,15 +3,9 @@ import { useEffect, useState } from "react";
 import supabase from "@/utils/supabase";
 import { format, parseISO } from "date-fns";
 
-interface OrderDetails {
-  id: number;
-  order_no: string;
-  date: string;
-  bill_to: { id: number; name: string } | null;
-  ship_to: { id: number; name: string } | null;
-  broker: { id: number; name: string } | null;
-  transport: { id: number; name: string } | null;
-  remark: string;
+
+interface RelatedEntity {
+  name: string;
 }
 
 interface DesignEntry {
@@ -22,9 +16,20 @@ interface DesignEntry {
   shades: string[];
 }
 
+interface OrderData {
+  id: number;
+  order_no: string;
+  date: string;
+  bill_to: string;
+  ship_to: string;
+  broker: string;
+  transport: string;
+  remark: string;
+}
+
 function OrderPreviewPage() {
   const { orderId } = useParams<{ orderId: string }>();
-  const [orderDetails, setOrderDetails] = useState<OrderDetails | null>(null);
+  const [orderDetails, setOrderDetails] = useState<OrderData | null>(null);
   const [designEntries, setDesignEntries] = useState<DesignEntry[]>([]);
 
   useEffect(() => {
@@ -34,36 +39,44 @@ function OrderPreviewPage() {
       try {
         const { data, error } = await supabase
           .from("orders")
-          .select(`
+          .select(
+            `
             id,
             order_no,
             date,
-            bill_to:bill_to_id(id, name),
-            ship_to:ship_to_id(id, name),
-            broker:broker_id(id, name),
-            transport:transport_id(id, name),
+            bill_to:orders_bill_to_id_fkey (name),
+            ship_to:orders_ship_to_id_fkey (name),
+            broker:orders_broker_id_fkey (name),
+            transport:orders_transport_id_fkey (name),
             remark
-          `)
+          `
+          )
           .eq("id", orderId)
           .single();
 
         if (error) throw error;
 
+        console.log("Fetched order details:", data);
+
         setOrderDetails({
-          ...data,
-          bill_to: data.bill_to[0] || { id: 0, name: '' },
-          ship_to: data.ship_to[0] || { id: 0, name: '' },
-          broker: data.broker[0] || { id: 0, name: '' },
-          transport: data.transport[0] || { id: 0, name: '' },
+          id: data.id,
+          order_no: data.order_no,
+          date: data.date,
+          bill_to: (data.bill_to as unknown as RelatedEntity)?.name || "N/A",
+          ship_to: (data.ship_to as unknown as RelatedEntity)?.name || "N/A",
+          broker: (data.broker as unknown as RelatedEntity)?.name || "N/A",
+          transport: (data.transport as unknown as RelatedEntity)?.name || "N/A",
+          remark: data.remark || "N/A",
         });
 
-        // Fetch design entries
         const { data: designData, error: designError } = await supabase
           .from("design_entries")
           .select("*")
           .eq("order_id", orderId);
 
         if (designError) throw designError;
+
+        console.log("Fetched design entries:", designData);
 
         setDesignEntries(designData);
       } catch (error) {
@@ -82,28 +95,54 @@ function OrderPreviewPage() {
     <div className="p-4">
       <h1 className="text-2xl font-bold mb-4">Order Preview</h1>
       <div className="space-y-4">
-        <p><strong>Order No:</strong> {orderDetails.order_no}</p>
-        <p><strong>Date:</strong> {format(parseISO(orderDetails.date), "dd/MM/yyyy")}</p>
-        <p><strong>Bill To:</strong> {orderDetails.bill_to?.name || "N/A"}</p>
-        <p><strong>Ship To:</strong> {orderDetails.ship_to?.name || "N/A"}</p>
-        <p><strong>Broker:</strong> {orderDetails.broker?.name || "N/A"}</p>
-        <p><strong>Transport:</strong> {orderDetails.transport?.name || "N/A"}</p>
-        <p><strong>Remark:</strong> {orderDetails.remark || "N/A"}</p>
+        <p>
+          <strong>Order No:</strong> {orderDetails.order_no}
+        </p>
+        <p>
+          <strong>Date:</strong>{" "}
+          {format(parseISO(orderDetails.date), "dd/MM/yyyy")}
+        </p>
+        <p>
+          <strong>Bill To:</strong> {orderDetails.bill_to}
+        </p>
+        <p>
+          <strong>Ship To:</strong> {orderDetails.ship_to}
+        </p>
+        <p>
+          <strong>Broker:</strong> {orderDetails.broker}
+        </p>
+        <p>
+          <strong>Transport:</strong> {orderDetails.transport}
+        </p>
+        <p>
+          <strong>Remark:</strong> {orderDetails.remark}
+        </p>
 
         <h2 className="text-xl font-semibold mt-6 mb-2">Design Entries</h2>
         {designEntries.length > 0 ? (
           <ul className="space-y-4">
             {designEntries.map((entry) => (
               <li key={entry.id} className="border p-4 rounded">
-                <p><strong>Design:</strong> {entry.design}</p>
-                <p><strong>Price:</strong> {entry.price}</p>
-                <p><strong>Remark:</strong> {entry.remark || "N/A"}</p>
+                <p>
+                  <strong>Design:</strong> {entry.design}
+                </p>
+                <p>
+                  <strong>Price:</strong> {entry.price}
+                </p>
+                <p>
+                  <strong>Remark:</strong> {entry.remark || "N/A"}
+                </p>
                 <details>
                   <summary className="cursor-pointer">Shades</summary>
                   <ul className="pl-4">
-                    {entry.shades.map((shade, index) => (
-                      shade && <li key={index}>Shade {index + 1}: {shade}</li>
-                    ))}
+                    {entry.shades.map(
+                      (shade, index) =>
+                        shade && (
+                          <li key={index}>
+                            Shade {index + 1}: {shade}
+                          </li>
+                        )
+                    )}
                   </ul>
                 </details>
               </li>
