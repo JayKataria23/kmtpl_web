@@ -20,6 +20,7 @@ interface Order {
   shipTo: string;
   shipToAddress: string;
   remark: string;
+  created_by: string;
 }
 
 function splitOrder(order: Order): Order[] {
@@ -171,7 +172,7 @@ export function generateHTML(order: Order): string {
           </div>
           <div style="display: flex; flex-direction: row; border-top: 1px solid #000; font-size: x-large;">
             <div style="width: 5%; border-right: 1px solid #000; text-align: center"></div>
-            <div style="width: 12%; border-right: 1px solid #000; text-align: center"></div>
+            <div style="width: 12%; border-right: 1px solid #000; text-align: center">${part.created_by}</div>
             <div style="width: 71%; border-right: 1px solid #000; font-weight: bold; text-align: right; padding-right: 2;">Total</div>
             <div style="width: 4%; border-right: 1px solid #000; font-weight: bold; text-align: center;">
               ${part.designs.reduce(

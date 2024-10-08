@@ -381,6 +381,7 @@ export default function OrderForm() {
           orderDetails.shipTo !== null ? orderDetails.shipTo.toString() : "",
         billToAddress: orderDetails.billToAddress?.toString() ?? "",
         shipToAddress: orderDetails.shipToAddress?.toString() ?? "",
+        created_by: userName,
       };
       const html = generateHTML(orderDetailsFixed);
       console.log(orderDetails);

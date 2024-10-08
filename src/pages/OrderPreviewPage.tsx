@@ -26,6 +26,7 @@ interface OrderData {
   broker: string;
   transport: string;
   remark: string;
+  created_by: string;
 }
 
 function OrderPreviewPage() {
@@ -50,6 +51,7 @@ function OrderPreviewPage() {
       shipTo: orderDetails.ship_to,
       shipToAddress: "N/A",
       remark: orderDetails.remark,
+      created_by: orderDetails.created_by,
     };
 
     const html = generateHTML(orderForPreview);
@@ -90,7 +92,8 @@ function OrderPreviewPage() {
               ship_to:orders_ship_to_id_fkey (name),
               broker:orders_broker_id_fkey (name),
               transport:orders_transport_id_fkey (name),
-              remark
+              remark,
+              created_by
             `
             )
             .eq("id", orderId)
@@ -114,6 +117,7 @@ function OrderPreviewPage() {
           transport:
             (orderData.transport as unknown as RelatedEntity)?.name || "N/A",
           remark: orderData.remark || "N/A",
+          created_by: orderData.created_by || "N/A",
         });
 
         setDesignEntries(designResponse.data);
