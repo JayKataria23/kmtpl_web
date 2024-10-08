@@ -26,7 +26,7 @@ import supabase from "@/utils/supabase";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import InputWithAutocomplete from "@/components/custom/InputWithAutocomplete";
- // Add this import at the top of your file
+// Add this import at the top of your file
 import { useUser } from "@clerk/clerk-react"; // Import useAuth
 
 interface DesignEntry {
@@ -82,6 +82,8 @@ export default function OrderForm() {
   const [orderNo, setOrderNo] = useState<string>("");
   const { user } = useUser(); // Get the user object
   const userName = user?.fullName || user?.firstName || "Unknown User"; // Get the user's name
+  const [isOrderSaved, setIsOrderSaved] = useState(false); // New state to track if the order is saved
+  const [orderId, setOrderId] = useState<string | null>(null); // New state to store the order ID
 
   useEffect(() => {
     fetchBrokers();
@@ -471,14 +473,14 @@ export default function OrderForm() {
             transport_id: selectedTransport,
             remark: orderDetails.remark,
             created_by: userName, // Add the created_by field
-            // pdf: null, // Removed any reference to pdf
           },
         ])
         .select();
 
       if (orderError) throw orderError;
 
-      const orderId = orderData[0].id;
+      const orderId = orderData[0].id; // Get the order ID
+      setOrderId(orderId); // Set the order ID in the state
 
       // Insert design entries
       const designEntriesData = orderDetails.designs.map((design) => ({
@@ -499,6 +501,8 @@ export default function OrderForm() {
         title: "Order Saved",
         description: `Order ${orderDetails.orderNo} has been saved successfully.`,
       });
+
+      setIsOrderSaved(true); // Set order as saved
     } catch (error) {
       console.error("Error saving order details:", error);
       toast({
@@ -574,7 +578,9 @@ export default function OrderForm() {
   };
 
   const handleShare = async () => {
-    console.log("Sharing")
+    const message = `Check out this order: https://kmtpl.netlify.app/order-preview/${orderId}`; // Updated share link format
+    const url = `https://wa.me/?text=${encodeURIComponent(message)}`; // WhatsApp API URL
+    window.open(url, "_blank"); // Open in a new tab
   };
 
   return (
@@ -790,7 +796,11 @@ export default function OrderForm() {
           <Button onClick={handlePreview} className="flex items-center">
             <Printer className="mr-2 h-4 w-4" /> Preview
           </Button>
-          <Button onClick={handleShare} className="flex items-center">
+          <Button
+            onClick={handleShare}
+            className="flex items-center"
+            disabled={!isOrderSaved}
+          >
             <Share2 className="mr-2 h-4 w-4" /> Share
           </Button>
           <Button onClick={handleSave} className="flex items-center">

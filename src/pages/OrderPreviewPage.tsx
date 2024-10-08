@@ -151,9 +151,6 @@ function OrderPreviewPage() {
             {orderDetails.bill_to}
           </div>
         )}
-        <Button onClick={handleGenerateHTML} className="mb-2">
-          Regenerate Preview
-        </Button>
         <Button onClick={handlePrint} disabled={!generatedHtml}>
           Print Order Form
         </Button>
