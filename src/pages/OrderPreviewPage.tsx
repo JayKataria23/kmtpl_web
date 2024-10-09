@@ -4,6 +4,7 @@ import supabase from "@/utils/supabase";
 import { generateHTML } from "@/utils/generateHTML"; // Import the ge
 import { Button } from "@/components/ui";
 import { Card } from "@/components/ui/card";
+import { Share2 } from "lucide-react";
 
 interface RelatedEntity {
   name: string;
@@ -146,6 +147,13 @@ function OrderPreviewPage() {
     return <div>Error: {error}</div>;
   }
 
+  const handleShare = async () => {
+    if (!orderDetails) return;
+    const message = `K. M. Textiles Pvt. Ltd.\nOrder No. : ${orderDetails.order_no}\n https://kmtpl.netlify.app/order-preview/${orderId}`; // Updated share link format
+    const url = `https://wa.me/?text=${encodeURIComponent(message)}`; // WhatsApp API URL
+    window.open(url, "_blank"); // Open in a new tab
+  };
+
   return (
     <div className="p-4">
       <Card className="max-w-md mx-auto shadow-lg p-6">
@@ -155,9 +163,14 @@ function OrderPreviewPage() {
             {orderDetails.bill_to}
           </div>
         )}
-        <Button onClick={handlePrint} disabled={!generatedHtml}>
-          Print Order Form
-        </Button>
+        <div className="flex space-x-2"> {/* Added a flex container with spacing */}
+          <Button onClick={handlePrint} disabled={!generatedHtml}>
+            Print Order Form
+          </Button>
+          <Button onClick={handleShare} className="flex items-center">
+            <Share2 className="mr-2 h-4 w-4" /> Share
+          </Button>
+        </div>
       </Card>
       {generatedHtml && (
         <iframe

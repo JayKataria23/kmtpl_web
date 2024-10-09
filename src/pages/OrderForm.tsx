@@ -579,7 +579,7 @@ export default function OrderForm() {
   };
 
   const handleShare = async () => {
-    const message = `Check out this order: https://kmtpl.netlify.app/order-preview/${orderId}`; // Updated share link format
+    const message = `K. M. Textiles Pvt. Ltd.\nOrder No. : ${orderNo} https://kmtpl.netlify.app/order-preview/${orderId}`; // Updated share link format
     const url = `https://wa.me/?text=${encodeURIComponent(message)}`; // WhatsApp API URL
     window.open(url, "_blank"); // Open in a new tab
   };
