@@ -37,7 +37,7 @@ interface Option {
 interface DesignEntry {
   id: string;
   design: string;
-  price: string;
+  price: number | string; // Updated to allow number
   remark: string;
   shades: string[];
 }
@@ -285,7 +285,7 @@ export function EditOrderModal({
 
   const handleSaveDesign = () => {
     if (currentEntry) {
-      if (!currentEntry.price || currentEntry.price.trim() === '') {
+      if (currentEntry.price === undefined || currentEntry.price === null || (typeof currentEntry.price === 'string' && currentEntry.price.trim() === '')) {
         toast({
           title: "Error",
           description: "Please enter a price for the design before saving.",

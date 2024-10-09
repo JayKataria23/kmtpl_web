@@ -47,9 +47,9 @@ function OrderPreviewPage() {
       broker: orderDetails.broker,
       transport: orderDetails.transport,
       billTo: orderDetails.bill_to,
-      billToAddress: "N/A",
+      billToAddress: "",
       shipTo: orderDetails.ship_to,
-      shipToAddress: "N/A",
+      shipToAddress: "",
       remark: orderDetails.remark,
       created_by: orderDetails.created_by,
     };
@@ -169,7 +169,7 @@ function OrderPreviewPage() {
             border: "1px solid #ccc",
             marginTop: "20px",
             display: "flex",
-            zoom: 0.7,
+            zoom: 0.65,
           }}
         />
       )}

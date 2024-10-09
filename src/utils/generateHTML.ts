@@ -146,11 +146,9 @@ export function generateHTML(order: Order): string {
           <div style="border-bottom: 1px solid #000; display: flex; flex-direction: row;">
             <div style="width: 55%; border-right: 1px solid #000; font-size: smalll; ">
               <b>To:</b> ${part.billTo}<br />
-              ${part.billToAddress}<br />
             </div>
             <div style="width: 45%; font-size: small">
               <b>Delivery:</b> ${part.shipTo}<br />
-              ${part.shipToAddress}<br />
             </div>
           </div>
           <div style="border-bottom: 1px solid #000; display: flex; flex-direction: row;">
