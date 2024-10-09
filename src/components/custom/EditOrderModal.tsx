@@ -285,7 +285,12 @@ export function EditOrderModal({
 
   const handleSaveDesign = () => {
     if (currentEntry) {
-      if (currentEntry.price === undefined || currentEntry.price === null || (typeof currentEntry.price === 'string' && currentEntry.price.trim() === '')) {
+      if (
+        currentEntry.price === undefined ||
+        currentEntry.price === null ||
+        (typeof currentEntry.price === "string" &&
+          currentEntry.price.trim() === "")
+      ) {
         toast({
           title: "Error",
           description: "Please enter a price for the design before saving.",
@@ -545,46 +550,44 @@ export function EditOrderModal({
             </DialogContent>
           </Dialog>
 
-          {designEntries.length > 0 && (
-            <div>
-              <Label>Saved Designs</Label>
-              <div className="mt-2 space-y-2">
-                {designEntries.map((entry) => (
-                  <div
-                    key={entry.id}
-                    className="flex items-center justify-between p-2 bg-gray-100 rounded"
+          {/* Scrollable area for design entries */}
+          <ScrollArea className="max-h-60 overflow-y-auto">
+            {" "}
+            {/* Adjust max height as needed */}
+            {designEntries.map((entry) => (
+              <div
+                key={entry.id}
+                className="flex justify-between p-2 bg-gray-100 rounded mb-2"
+              >
+                <div>
+                  <span>
+                    {entry.design} - Price: {entry.price || "N/A"}
+                  </span>
+                  {entry.remark && (
+                    <p className="text-sm text-gray-600">
+                      Remark: {entry.remark}
+                    </p>
+                  )}
+                </div>
+                <div className="space-x-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleEditDesign(entry.id)}
                   >
-                    <div>
-                      <span>
-                        {entry.design} - Price: {entry.price || "N/A"}
-                      </span>
-                      {entry.remark && (
-                        <p className="text-sm text-gray-600">
-                          Remark: {entry.remark}
-                        </p>
-                      )}
-                    </div>
-                    <div className="space-x-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleEditDesign(entry.id)}
-                      >
-                        Edit
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDeleteDesign(entry.id)}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
+                    Edit
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleDeleteDesign(entry.id)}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
-            </div>
-          )}
+            ))}
+          </ScrollArea>
 
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="remark" className="text-right">
