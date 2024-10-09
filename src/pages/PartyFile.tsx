@@ -19,6 +19,7 @@ interface DesignDetail {
   shades: number[];
   totalMeters: number;
   remark: string;
+  canceled: boolean;
 }
 
 function PartyFile() {
@@ -55,11 +56,12 @@ function PartyFile() {
       if (error) throw error;
 
       const designDetails: DesignDetail[] = data.map(
-        (entry: { design_name: string; shades: string; remark: string }) => ({
+        (entry: { design_name: string; shades: string; remark: string, canceled: boolean }) => ({
           design: entry.design_name,
           shades: entry.shades,
           totalMeters: entry.shades,
           remark: entry.remark,
+          canceled: entry.canceled,
         })
       );
 
@@ -95,7 +97,7 @@ function PartyFile() {
                         <tr
                           key={orderIndex}
                           className={
-                            orderIndex % 2 === 0 ? "bg-white" : "bg-gray-50"
+                            order.canceled ? "bg-red-100" : (orderIndex % 2 === 0 ? "bg-white" : "bg-gray-50")
                           }
                         >
                           <td className="px-2 py-4 w-2/3 text-sm font-medium text-gray-900">
