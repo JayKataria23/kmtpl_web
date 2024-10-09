@@ -7,7 +7,6 @@ import {
   ChevronRight,
   X,
   Home,
-  Share2, // Add this import
 } from "lucide-react";
 import {
   Button,
@@ -21,7 +20,6 @@ import {
   ScrollArea,
   Toaster,
 } from "@/components/ui";
-import { generateHTML } from "../utils/generateHTML"; // Import the generateHTML function
 import supabase from "@/utils/supabase";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -301,103 +299,6 @@ export default function OrderForm() {
     });
   };
 
-  const handlePreview = async () => {
-    const orderDetails: OrderDetails = {
-      orderNo: orderNo,
-      date: formatDate(date),
-      billTo: selectedBillTo,
-      shipTo: selectedShipTo,
-      broker: selectedBroker,
-      transport: selectedTransport,
-      designs: designEntries,
-      remark: (document.getElementById("remark") as HTMLInputElement)?.value,
-    };
-
-    try {
-      // Fetch billTo details
-      if (selectedBillTo) {
-        const { data: billToData, error: billToError } = await supabase
-          .from("party_profiles")
-          .select("name, address")
-          .eq("id", selectedBillTo)
-          .single();
-
-        if (billToError) throw billToError;
-
-        orderDetails.billTo = billToData.name;
-        orderDetails.billToAddress = billToData.address;
-      }
-
-      // Fetch shipTo details
-      if (selectedShipTo) {
-        const { data: shipToData, error: shipToError } = await supabase
-          .from("party_profiles")
-          .select("name, address")
-          .eq("id", selectedShipTo)
-          .single();
-
-        if (shipToError) throw shipToError;
-
-        orderDetails.shipTo = shipToData.name;
-        orderDetails.shipToAddress = shipToData.address;
-      }
-      // Fetch broker details
-      if (selectedBroker) {
-        const { data: brokerData, error: brokerError } = await supabase
-          .from("brokers")
-          .select("name")
-          .eq("id", selectedBroker)
-          .single();
-
-        if (brokerError) throw brokerError;
-
-        orderDetails.broker = brokerData.name;
-      }
-
-      // Fetch transport details
-      if (selectedTransport) {
-        const { data: transportData, error: transportError } = await supabase
-          .from("transport_profiles")
-          .select("name")
-          .eq("id", selectedTransport)
-          .single();
-
-        if (transportError) throw transportError;
-
-        orderDetails.transport = transportData.name;
-      }
-
-      const orderDetailsFixed = {
-        ...orderDetails,
-        broker:
-          orderDetails.broker !== null ? orderDetails.broker.toString() : "",
-        transport:
-          orderDetails.transport !== null
-            ? orderDetails.transport.toString()
-            : "",
-        billTo:
-          orderDetails.billTo !== null ? orderDetails.billTo.toString() : "",
-        shipTo:
-          orderDetails.shipTo !== null ? orderDetails.shipTo.toString() : "",
-        billToAddress: orderDetails.billToAddress?.toString() ?? "",
-        shipToAddress: orderDetails.shipToAddress?.toString() ?? "",
-        created_by: userName,
-      };
-      const html = generateHTML(orderDetailsFixed);
-      console.log(orderDetails);
-      const previewWindow = window.open("", "_blank");
-      if (previewWindow) {
-        previewWindow.document.write(html);
-        previewWindow.document.close();
-      } else {
-        console.error("Failed to open preview window");
-      }
-    } catch (error) {
-      console.error("Error fetching party details:", error);
-      // Optionally, you can show an error message to the user
-    }
-  };
-
   const handleSave = async () => {
     const orderDetails: OrderDetails = {
       orderNo: orderNo,
@@ -576,12 +477,6 @@ export default function OrderForm() {
       default:
         return "";
     }
-  };
-
-  const handleShare = async () => {
-    const message = `K. M. Textiles Pvt. Ltd.\nOrder No. : ${orderNo} https://kmtpl.netlify.app/order-preview/${orderId}`; // Updated share link format
-    const url = `https://wa.me/?text=${encodeURIComponent(message)}`; // WhatsApp API URL
-    window.open(url, "_blank"); // Open in a new tab
   };
 
   return (
@@ -794,16 +689,14 @@ export default function OrderForm() {
           <Input id="remark" />
         </div>
         <div className="flex justify-between pt-4">
-          <Button onClick={handlePreview} className="flex items-center">
-            <Printer className="mr-2 h-4 w-4" /> Preview
-          </Button>
           <Button
-            onClick={handleShare}
+            onClick={() => navigate(`/order-preview/${orderId}`)}
             className="flex items-center"
             disabled={!isOrderSaved}
           >
-            <Share2 className="mr-2 h-4 w-4" /> Share
+            <Printer className="mr-2 h-4 w-4" /> Preview
           </Button>
+
           <Button onClick={handleSave} className="flex items-center">
             <Save className="mr-2 h-4 w-4" /> Save
           </Button>

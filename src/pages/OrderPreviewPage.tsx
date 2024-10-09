@@ -178,11 +178,11 @@ function OrderPreviewPage() {
           title="Generated HTML Preview"
           style={{
             width: "100%",
-            height: "800px",
+            height: "950px",
             border: "1px solid #ccc",
             marginTop: "20px",
             display: "flex",
-            zoom: 0.65,
+            zoom: 0.5,
           }}
         />
       )}
