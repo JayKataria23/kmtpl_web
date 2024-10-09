@@ -32,6 +32,7 @@ interface PartyProfile {
   contact_number: string | null;
   broker_id: number | null;
   transport_id: number | null;
+  pincode: string | null;
 }
 
 interface Broker {
@@ -57,6 +58,7 @@ export default function PartyProfilePage() {
     contact_number: null,
     broker_id: null,
     transport_id: null,
+    pincode: null,
   });
   const [isEditing, setIsEditing] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -101,6 +103,7 @@ export default function PartyProfilePage() {
         contact_number: null,
         broker_id: null,
         transport_id: null,
+        pincode: null,
       }
     );
     setIsEditing(!!party);
@@ -239,7 +242,7 @@ export default function PartyProfilePage() {
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
-            {["name", "gstin", "address", "contact_number"].map((field) => (
+            {["name", "gstin", "address", "contact_number", "pincode"].map((field) => (
               <div key={field} className="space-y-2">
                 <Label htmlFor={field}>
                   {field.charAt(0).toUpperCase() + field.slice(1)}
@@ -303,7 +306,7 @@ export default function PartyProfilePage() {
             <CardContent className="pt-6 flex flex-col h-full">
               <div className="flex-grow">
                 <h3 className="text-lg font-semibold mb-2">{party.name}</h3>
-                {["gstin", "address", "contact_number"].map((field) => (
+                {["gstin", "address", "contact_number", "pincode"].map((field) => (
                   <p key={field} className="text-sm text-gray-500">
                     {field.charAt(0).toUpperCase() + field.slice(1)}:{" "}
                     {party[field as keyof PartyProfile] || "N/A"}
