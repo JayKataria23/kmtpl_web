@@ -13,6 +13,7 @@ interface Order {
   date: string;
   party_name: string;
   remark: string | null;
+  canceled: boolean;
 }
 
 interface OrderFromDB {
@@ -21,6 +22,7 @@ interface OrderFromDB {
   date: string;
   remark: string | null;
   bill_to: { name: string } | null;
+  canceled: boolean;
 }
 
 export default function OrderList() {
@@ -40,6 +42,7 @@ export default function OrderList() {
           order_no, 
           date, 
           remark,
+          canceled, 
           bill_to:bill_to_id(name)
         `
         )
@@ -54,6 +57,7 @@ export default function OrderList() {
           order_no: order.order_no,
           date: order.date,
           remark: order.remark,
+          canceled: order.canceled, // Include canceled in the formatted orders
           party_name: order.bill_to?.name || "N/A",
         })
       );
@@ -81,18 +85,21 @@ export default function OrderList() {
 
   const handleDelete = async (id: number) => {
     try {
-      const { error } = await supabase.from("orders").delete().eq("id", id);
+      const { error } = await supabase
+        .from("orders")
+        .update({ canceled: true }) // Update the canceled column to true
+        .eq("id", id);
       if (error) throw error;
       toast({
         title: "Success",
-        description: "Order deleted successfully",
+        description: "Order canceled successfully", // Update success message
       });
       fetchOrders();
     } catch (error) {
       console.error("Error deleting order:", error);
       toast({
         title: "Error",
-        description: `Failed to delete order: ${
+        description: `Failed to cancel order: ${
           error instanceof Error ? error.message : "Unknown error"
         }`,
         variant: "destructive",
@@ -109,6 +116,30 @@ export default function OrderList() {
     navigate(`/order-preview/${orderId}`); // Navigate to OpenPreviewPage with orderId
   };
 
+  const handleUndo = async (id: number) => {
+    try {
+      const { error } = await supabase
+        .from("orders")
+        .update({ canceled: false }) // Update the canceled column to false
+        .eq("id", id);
+      if (error) throw error;
+      toast({
+        title: "Success",
+        description: "Order restored successfully", // Update success message
+      });
+      fetchOrders(); // Refresh the order list
+    } catch (error) {
+      console.error("Error restoring order:", error);
+      toast({
+        title: "Error",
+        description: `Failed to restore order: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`,
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="container mx-auto mt-8 p-4 max-w-4xl">
       <Button onClick={() => navigate("/")} className="mb-6">
@@ -119,7 +150,7 @@ export default function OrderList() {
         {orders.map((order) => (
           <div
             key={order.id}
-            className="p-4 bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-200"
+            className={`p-4 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-200 ${order.canceled ? 'bg-red-100' : 'bg-white'}`} // Conditional background color
           >
             <div className="flex justify-between items-center mb-2">
               <div className="flex items-center space-x-4">
@@ -139,13 +170,23 @@ export default function OrderList() {
                 >
                   Edit
                 </Button>
-                <Button
-                  onClick={() => handleDelete(order.id)}
-                  variant="destructive"
-                  size="sm"
-                >
-                  Delete
-                </Button>
+                {order.canceled ? ( // Conditional rendering for buttons
+                  <Button
+                    onClick={() => handleUndo(order.id)} // Call handleUndo to restore the order
+                    variant="outline"
+                    size="sm"
+                  >
+                    Undo
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={() => handleDelete(order.id)}
+                    variant="destructive"
+                    size="sm"
+                  >
+                    Delete
+                  </Button>
+                )}
               </div>
             </div>
             <div className="text-sm font-medium text-gray-700">
