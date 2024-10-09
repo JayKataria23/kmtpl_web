@@ -551,7 +551,7 @@ export function EditOrderModal({
           </Dialog>
 
           {/* Scrollable area for design entries */}
-          <ScrollArea className="max-h-60 overflow-y-auto">
+          <ScrollArea className="max-h-50 overflow-y-auto">
             {" "}
             {/* Adjust max height as needed */}
             {designEntries.map((entry) => (
