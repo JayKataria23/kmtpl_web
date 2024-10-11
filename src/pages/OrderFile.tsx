@@ -18,6 +18,7 @@ import {
   DrawerTitle,
   DrawerTrigger,
 } from "@/components/ui/drawer";
+import { useToast } from "@/hooks/use-toast"; // Import useToast at the top
 
 interface DesignCount {
   design: string;
@@ -44,6 +45,7 @@ function OrderFile() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [drawerEntries, setDrawerEntries] = useState<DrawerEntry[]>([]);
   const navigate = useNavigate();
+  const { toast } = useToast(); // Initialize toast
 
   useEffect(() => {
     fetchDesignCounts();
@@ -90,7 +92,6 @@ function OrderFile() {
       );
 
       setDesignOrders((prev) => ({ ...prev, [design]: orderDetails }));
-      console.log(designOrders);
     } catch (error) {
       console.error("Error fetching order details:", error);
     }
@@ -98,7 +99,6 @@ function OrderFile() {
 
   const handleAddToDrawer = (order: OrderDetail, design: string) => {
     setDrawerEntries((prev) => [...prev, { ...order, design, id: order.id }]); // Include id in the drawer entry
-    console.log(drawerEntries);
   };
 
   const handleRemoveFromDrawer = (id: number) => {
@@ -109,6 +109,39 @@ function OrderFile() {
   const sortedDrawerEntries = useMemo(() => {
     return [...drawerEntries].sort((a, b) => a.design.localeCompare(b.design));
   }, [drawerEntries]);
+
+  const handleSendBhiwandi = async () => {
+    try {
+      const today = new Date().toISOString().split("T")[0]; // Get today's date in YYYY-MM-DD format
+      const idsToUpdate = drawerEntries.map((entry) => entry.id); // Extract the IDs from drawerEntries
+
+      const { data, error } = await supabase
+        .from("design_entries")
+        .update({ bhiwandi_date: today }) // Set the bhiwandi_date to today
+        .in("id", idsToUpdate); // Update only the entries with the specified IDs
+
+      if (error) throw error;
+
+      console.log("Successfully updated Bhiwandi dates:", data);
+      toast({
+        // Add success toast
+        title: "Success",
+        description: `Successfully sent ${idsToUpdate.length} entries to Bhiwandi.`,
+      });
+      fetchDesignCounts();
+      setDrawerEntries([]);
+    } catch (error) {
+      console.error("Error sending to Bhiwandi:", error);
+      toast({
+        // Add error toast
+        title: "Error",
+        description: `Failed to send entries to Bhiwandi: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`,
+        variant: "destructive",
+      });
+    }
+  };
 
   return (
     <div className="container mx-auto mt-10 p-4 relative">
@@ -173,6 +206,13 @@ function OrderFile() {
             ))}
           </div>
           <DrawerFooter>
+            <Button
+              onClick={handleSendBhiwandi} // Call the function when clicked
+              className="mr-2" // Optional: Add some margin
+              disabled={drawerEntries.length === 0} // Disable if no items in drawer
+            >
+              Send to Bhiwandi
+            </Button>
             <DrawerClose asChild>
               <Button variant="outline">Close</Button>
             </DrawerClose>
