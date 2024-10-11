@@ -9,6 +9,7 @@ import PartyFile from "./pages/PartyFile";
 import PartyProfilePage from "./pages/PartyProfilePage";
 import BrokerTransportPage from "./pages/BrokerTransportPage";
 import OrderList from "./pages/OrderList";
+import BhiwandiList from "./pages/BhiwandiList"; // Import the new page
 import {
   AuthenticateWithRedirectCallback,
   ClerkProvider,
@@ -79,6 +80,14 @@ createRoot(document.getElementById("root")!).render(
             element={
               <ProtectedRoute>
                 <OrderList />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/bhiwandi-list" // Add the new route
+            element={
+              <ProtectedRoute>
+                <BhiwandiList />
               </ProtectedRoute>
             }
           />

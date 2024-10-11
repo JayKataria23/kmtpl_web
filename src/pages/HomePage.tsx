@@ -51,6 +51,13 @@ export default function HomePage() {
         >
           Order List
         </Button>
+        <br />
+        <Button
+          className="w-64 text-lg"
+          onClick={() => navigate("/bhiwandi-list")}
+        >
+          Bhiwandi List
+        </Button>
       </div>
     </div>
   );
