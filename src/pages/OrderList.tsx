@@ -83,29 +83,7 @@ export default function OrderList() {
     setIsEditModalOpen(true);
   };
 
-  const handleDelete = async (id: number) => {
-    try {
-      const { error } = await supabase
-        .from("orders")
-        .update({ canceled: true }) // Update the canceled column to true
-        .eq("id", id);
-      if (error) throw error;
-      toast({
-        title: "Success",
-        description: "Order canceled successfully", // Update success message
-      });
-      fetchOrders();
-    } catch (error) {
-      console.error("Error deleting order:", error);
-      toast({
-        title: "Error",
-        description: `Failed to cancel order: ${
-          error instanceof Error ? error.message : "Unknown error"
-        }`,
-        variant: "destructive",
-      });
-    }
-  };
+  
 
   const handleOrderUpdated = () => {
     fetchOrders();
@@ -116,29 +94,7 @@ export default function OrderList() {
     navigate(`/order-preview/${orderId}`); // Navigate to OpenPreviewPage with orderId
   };
 
-  const handleUndo = async (id: number) => {
-    try {
-      const { error } = await supabase
-        .from("orders")
-        .update({ canceled: false }) // Update the canceled column to false
-        .eq("id", id);
-      if (error) throw error;
-      toast({
-        title: "Success",
-        description: "Order restored successfully", // Update success message
-      });
-      fetchOrders(); // Refresh the order list
-    } catch (error) {
-      console.error("Error restoring order:", error);
-      toast({
-        title: "Error",
-        description: `Failed to restore order: ${
-          error instanceof Error ? error.message : "Unknown error"
-        }`,
-        variant: "destructive",
-      });
-    }
-  };
+  
 
   return (
     <div className="container mx-auto mt-8 p-4 max-w-4xl">
@@ -170,23 +126,7 @@ export default function OrderList() {
                 >
                   Edit
                 </Button>
-                {order.canceled ? ( // Conditional rendering for buttons
-                  <Button
-                    onClick={() => handleUndo(order.id)} // Call handleUndo to restore the order
-                    variant="outline"
-                    size="sm"
-                  >
-                    Undo
-                  </Button>
-                ) : (
-                  <Button
-                    onClick={() => handleDelete(order.id)}
-                    variant="destructive"
-                    size="sm"
-                  >
-                    Delete
-                  </Button>
-                )}
+                
               </div>
             </div>
             <div className="text-sm font-medium text-gray-700">

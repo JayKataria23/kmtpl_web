@@ -27,6 +27,7 @@ interface OrderDetails {
   broker_id: number | null;
   transport_id: number | null;
   remark: string;
+  canceled: boolean;
 }
 
 interface Option {
@@ -56,6 +57,7 @@ export function EditOrderModal({
     broker_id: null,
     transport_id: null,
     remark: "",
+    canceled: false,
   });
   const [partyOptions, setPartyOptions] = useState<Option[]>([]);
   const [brokerOptions, setBrokerOptions] = useState<Option[]>([]);
@@ -78,7 +80,8 @@ export function EditOrderModal({
           bill_to:bill_to_id(id, name),
           ship_to:ship_to_id(id, name),
           broker:broker_id(id, name),
-          transport:transport_id(id, name)
+          transport:transport_id(id, name),
+          canceled
         `
         )
         .eq("id", orderId)
@@ -92,6 +95,7 @@ export function EditOrderModal({
         ship_to_id: data.ship_to?.id || null,
         broker_id: data.broker?.id || null,
         transport_id: data.transport?.id || null,
+        canceled: data.canceled || false,
       });
     } catch (error) {
       console.error("Error fetching order details:", error);
@@ -398,11 +402,80 @@ export function EditOrderModal({
     setIsDesignDialogOpen(true);
   };
 
+  const handleDelete = async (id: number | null) => {
+    try {
+      const { error } = await supabase
+        .from("orders")
+        .update({ canceled: true }) // Update the canceled column to true
+        .eq("id", id);
+      if (error) throw error;
+      toast({
+        title: "Success",
+        description: "Order canceled successfully", // Update success message
+      });
+      onOrderUpdated();
+      onClose();
+    } catch (error) {
+      console.error("Error deleting order:", error);
+      toast({
+        title: "Error",
+        description: `Failed to cancel order: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleUndo = async (id: number | null) => {
+    try {
+      const { error } = await supabase
+        .from("orders")
+        .update({ canceled: false }) // Update the canceled column to false
+        .eq("id", id);
+      if (error) throw error;
+      toast({
+        title: "Success",
+        description: "Order restored successfully", // Update success message
+      }); // Refresh the order list
+      onOrderUpdated();
+      fetchOrderDetails();
+    } catch (error) {
+      console.error("Error restoring order:", error);
+      toast({
+        title: "Error",
+        description: `Failed to restore order: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`,
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Edit Order #{orderDetails.order_no}</DialogTitle>
+          <div className="flex justify-between">
+            {orderId && orderDetails.canceled ? ( // Conditional rendering for buttons
+              <Button
+                onClick={() => handleUndo(orderId)} // Call handleUndo to restore the order
+                variant="outline"
+                size="sm"
+              >
+                Undo
+              </Button>
+            ) : (
+              <Button
+                onClick={() => handleDelete(orderId)} // Call handleDelete to cancel the order
+                variant="destructive"
+                size="sm"
+              >
+                Delete
+              </Button>
+            )}
+          </div>
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="grid grid-cols-4 items-center gap-4">
