@@ -11,14 +11,8 @@ interface BhiwandiEntry {
 // Utility function to format the date
 const formatDate = (dateString: string): string => {
   const date = new Date(dateString);
-  const options: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'long', year: 'numeric' };
-  const formattedDate = date.toLocaleDateString('en-US', options);
-  
-  // Add ordinal suffix to the day
-  const day = date.getDate();
-  const suffix = day % 10 === 1 && day !== 11 ? 'st' : day % 10 === 2 && day !== 12 ? 'nd' : day % 10 === 3 && day !== 13 ? 'rd' : 'th';
-  
-  return formattedDate.replace(day.toString(), day + suffix);
+  const options: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short', year: 'numeric' }; // Change month to 'short'
+  return date.toLocaleDateString('en-US', options); // Return formatted date
 };
 
 const BhiwandiList = () => {
