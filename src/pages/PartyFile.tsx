@@ -20,6 +20,7 @@ interface DesignDetail {
   totalMeters: number;
   remark: string;
   canceled: boolean;
+  bhiwandi_date: string;
 }
 
 function PartyFile() {
@@ -56,12 +57,13 @@ function PartyFile() {
       if (error) throw error;
 
       const designDetails: DesignDetail[] = data.map(
-        (entry: { design_name: string; shades: string; remark: string, canceled: boolean }) => ({
+        (entry: { design_name: string; shades: string; remark: string, canceled: boolean, bhiwandi_date: string }) => ({
           design: entry.design_name,
           shades: entry.shades,
           totalMeters: entry.shades,
           remark: entry.remark,
           canceled: entry.canceled,
+          bhiwandi_date: entry.bhiwandi_date,
         })
       );
 
@@ -77,7 +79,7 @@ function PartyFile() {
         Back to Home
       </Button>
       <Accordion type="single" collapsible className="w-full">
-        {partyCounts.map((item, index) => (
+        {partyCounts.sort((a, b) => a.party_name.localeCompare(b.party_name)).map((item, index) => (
           <AccordionItem key={index} value={`item-${index}`}>
             <AccordionTrigger
               className="text-md flex justify-between items-center w-full"
@@ -93,11 +95,29 @@ function PartyFile() {
                 <div className="overflow-x-auto ">
                   <table className="w-full divide-y divide-gray-200">
                     <tbody>
-                      {partyOrders[item.party_name].map((order, orderIndex) => (
+                      {partyOrders[item.party_name]
+                        ?.sort((a, b) => {
+                          const designA = a.design.match(/(\D+)(\d*)/);
+                          const designB = b.design.match(/(\D+)(\d*)/);
+                          
+                          // Handle cases where designA or designB is null
+                          if (!designA && !designB) return 0;
+                          if (!designA) return 1;
+                          if (!designB) return -1;
+
+                          const nameComparison = designA[1].localeCompare(designB[1]);
+                          if (nameComparison !== 0) return nameComparison;
+
+                          // Sort numerically
+                          const numA = parseInt(designA[2] || '0');
+                          const numB = parseInt(designB[2] || '0');
+                          return numA - numB;
+                        }) // Sort alphabetically by design and then numerically by number
+                        .map((order, orderIndex) => (
                         <tr
                           key={orderIndex}
                           className={
-                            order.canceled ? "bg-red-100" : (orderIndex % 2 === 0 ? "bg-white" : "bg-gray-50")
+                            order.bhiwandi_date ? "bg-yellow-50" : (order.canceled ? "bg-red-100" : (orderIndex % 2 === 0 ? "bg-white" : "bg-gray-50"))
                           }
                         >
                           <td className="px-2 py-4 w-2/3 text-sm font-medium text-gray-900">

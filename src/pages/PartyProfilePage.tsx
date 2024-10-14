@@ -84,7 +84,7 @@ export default function PartyProfilePage() {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setCurrentParty((prev) => ({ ...prev, [name]: value || null }));
+    setCurrentParty((prev) => ({ ...prev, [name]: value ? value.toUpperCase() : null })); // Convert to uppercase
   };
 
   const handleSelectChange = (name: string, value: string) => {
@@ -115,9 +115,9 @@ export default function PartyProfilePage() {
     const operation = isEditing
       ? supabase
           .from("party_profiles")
-          .update(currentParty)
+          .update({ ...currentParty, name: currentParty.name.toUpperCase() }) // Convert name to uppercase
           .eq("id", currentParty.id)
-      : supabase.from("party_profiles").insert(currentParty);
+      : supabase.from("party_profiles").insert({ ...currentParty, name: currentParty.name.toUpperCase() }); // Convert name to uppercase
 
     const { error } = await operation;
     if (error) {
@@ -278,7 +278,7 @@ export default function PartyProfilePage() {
                 >
                   <SelectTrigger className="w-full">
                     <SelectValue
-                      placeholder={`Select a ${select.label.toLowerCase()}`}
+                  placeholder={`Select a ${select.label.toLowerCase()}`}
                     />
                   </SelectTrigger>
                   <SelectContent>

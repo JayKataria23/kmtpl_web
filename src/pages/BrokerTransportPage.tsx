@@ -76,7 +76,7 @@ export default function BrokerTransportPage() {
     if (newBroker.trim()) {
       const { data, error } = await supabase
         .from("brokers")
-        .insert({ name: newBroker.trim() })
+        .insert({ name: newBroker.trim().toUpperCase() }) // Convert to uppercase
         .select();
       if (error) {
         toast({
@@ -99,7 +99,7 @@ export default function BrokerTransportPage() {
     if (newTransport.trim()) {
       const { data, error } = await supabase
         .from("transport_profiles")
-        .insert({ name: newTransport.trim() })
+        .insert({ name: newTransport.trim().toUpperCase() }) // Convert to uppercase
         .select();
       if (error) {
         toast({
@@ -122,7 +122,7 @@ export default function BrokerTransportPage() {
     if (newDesign.trim()) {
       const { data, error } = await supabase
         .from("designs")
-        .insert({ title: newDesign.trim() })
+        .insert({ title: newDesign.trim().toUpperCase() }) // Convert to uppercase
         .select();
       if (error) {
         toast({
