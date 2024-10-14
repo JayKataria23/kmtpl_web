@@ -52,6 +52,14 @@ function splitOrder(order: Order): Order[] {
   return parts;
 }
 
+const formatDate = (dateString: string): string => {
+  const date = new Date(dateString);
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0'); // Months are zero-based
+  const year = date.getFullYear();
+  return `${day}-${month}-${year}`;
+};
+
 export function generateHTML(order: Order): string {
   const parts = splitOrder(order);
 
@@ -93,7 +101,7 @@ export function generateHTML(order: Order): string {
           </div>
           ${
             design.remark
-              ? `<div style="color: red; font-size: small; padding-left: 5%; border: 1px solid #000;">${design.remark}</div>`
+              ? `<div style="color: red; font-size: 16px; padding-left: 5%; border: 1px solid #000;">${design.remark}</div>`
               : ""
           }
         </div>
@@ -131,7 +139,7 @@ export function generateHTML(order: Order): string {
             <div style="width: 45%; ">
             <div style="  display: flex; justify-content: space-around; font-size: 20px;">
                 <span>Order No.: <b>${part.orderNo}</b></span>
-                <span>Date: <b>${part.date}</b></span>
+                <span>Date: <b>${formatDate(part.date)}</b></span>
               </div>
               <div style="display: flex; flex-direction: row; font-size: small">
               <div style="width: 25%; text-align: right">
@@ -147,21 +155,21 @@ export function generateHTML(order: Order): string {
               </div>
             </div>
           </div>
-          <div style="border-bottom: 1px solid #000; display: flex; flex-direction: row; min-height:50px;">
-            <div style="width: 55%; border-right: 1px solid #000; font-size: smalll; ">
+          <div style="border-bottom: 1px solid #000; display: flex; flex-direction: row;  ">
+            <div style="width: 55%; border-right: 1px solid #000; font-size: small;min-height:50px;align-content: center;">
               <b>To: <span style="font-size: large">${
                 part.billTo
               }</span></b><br />
             </div>
-            <div style="width: 45%; font-size: small">
+            <div style="width: 45%; font-size: small;min-height:50px;align-content: center;">
               <b>Delivery: <span style="font-size: large">${
                 part.shipTo
               }</span></b><br />
             </div>
           </div>
           <div style="border-bottom: 1px solid #000; display: flex; flex-direction: row; min-height: 30px;">
-            <div style="width: 10%">Remark:</div>
-            <div style="width: 90%; word-wrap: break-word; font-weight: bold; color: red;">
+            <div style="width: 10%; text-align: center; align-content: center">Remark:</div>
+            <div style="width: 90%; word-wrap: break-word; font-weight: bold; color: red; align-content: center;">
               ${part.remark}
             </div>
           </div>
