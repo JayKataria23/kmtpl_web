@@ -159,7 +159,7 @@ export function generateHTML(order: Order): string {
               }</span></b><br />
             </div>
           </div>
-          <div style="border-bottom: 1px solid #000; display: flex; flex-direction: row;">
+          <div style="border-bottom: 1px solid #000; display: flex; flex-direction: row; min-height: 30px;">
             <div style="width: 10%">Remark:</div>
             <div style="width: 90%; word-wrap: break-word; font-weight: bold; color: red;">
               ${part.remark}
