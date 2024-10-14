@@ -128,29 +128,35 @@ export function generateHTML(order: Order): string {
               <i class="fa fa-whatsapp" style="margin-left: 10px"></i>:+91 8097301148 <br />
               EMAIL : k.m.textilespvtltd@gmail.com
             </div>
-            <div style="width: 45%; display: flex; flex-direction: row; font-size: small">
+            <div style="width: 45%; ">
+            <div style="  display: flex; justify-content: space-around; font-size: 20px;">
+                <span>Order No.: <b>${part.orderNo}</b></span>
+                <span>Date: <b>${part.date}</b></span>
+              </div>
+              <div style="display: flex; flex-direction: row; font-size: small">
               <div style="width: 25%; text-align: right">
-                Order No. :<br />
-                Date : <br />
                 Broker : <br />
                 Transport :
               </div>
+              
               <div style="width: 75%; text-align: left; padding-left: 2; font-weight: bold">
-                ${part.orderNo} <br />
-                ${part.date} <br />
+              
                 ${part.broker} <br />
                 ${part.transport}
               </div>
+              </div>
             </div>
           </div>
-          <div style="border-bottom: 1px solid #000; display: flex; flex-direction: row;">
+          <div style="border-bottom: 1px solid #000; display: flex; flex-direction: row; min-height:50px;">
             <div style="width: 55%; border-right: 1px solid #000; font-size: smalll; ">
               <b>To: <span style="font-size: large">${
                 part.billTo
               }</span></b><br />
             </div>
             <div style="width: 45%; font-size: small">
-              <b>Delivery:</b> ${part.shipTo}<br />
+              <b>Delivery: <span style="font-size: large">${
+                part.shipTo
+              }</span></b><br />
             </div>
           </div>
           <div style="border-bottom: 1px solid #000; display: flex; flex-direction: row;">
@@ -159,7 +165,7 @@ export function generateHTML(order: Order): string {
               ${part.remark}
             </div>
           </div>
-          <div style="height: 740px; overflow: hidden">
+          <div style="height: 800px; overflow: hidden">
             <div style="border-bottom: 1px solid #000; display: flex; flex-direction: row; font-size: x-large;">
               <div style="width: 5%; border-right: 1px solid #000; font-weight: bold; text-align: center; font-size: small">S/n.</div>
               <div style="width: 12%; border-right: 1px solid #000; font-weight: bold; text-align: center; font-size: small">Design</div>
@@ -172,9 +178,9 @@ export function generateHTML(order: Order): string {
           </div>
           <div style="display: flex; flex-direction: row; border-top: 1px solid #000; font-size: x-large;">
             <div style="width: 5%; border-right: 1px solid #000; text-align: center"></div>
-            <div style="width: 12%; border-right: 1px solid #000; text-align: center; font-size: 0.875rem; display: flex; align-items: center;">Prepared By</div>
+            <div style="width: 12%; border-right: 1px solid #000; text-align: center; font-size: 0.875rem; display: flex; align-items: center; padding-left: 2px;">Prepared By</div>
             <div style="width: 71%; border-right: 1px solid #000;  display: flex; justify-content: space-between; padding-right: 2; ">
-            <span style="font-weight: normal; font-size: medium; align-items: center; display: flex;">${
+            <span style="font-weight: normal; font-size: medium; align-items: center; display: flex; padding-left: 2px;">${
               part.created_by
             }</span><span style="font-weight: bold; font-size: x-large">Total</span></div>
             <div style="width: 4%; border-right: 1px solid #000; font-weight: bold; text-align: center;">

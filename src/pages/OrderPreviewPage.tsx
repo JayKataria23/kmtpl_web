@@ -178,7 +178,7 @@ function OrderPreviewPage() {
           title="Generated HTML Preview"
           style={{
             width: "100%",
-            height: "950px",
+            height: "1070px",
             border: "1px solid #ccc",
             marginTop: "20px",
             display: "flex",
