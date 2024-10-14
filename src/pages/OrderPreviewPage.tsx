@@ -149,7 +149,7 @@ function OrderPreviewPage() {
 
   const handleShare = async () => {
     if (!orderDetails) return;
-    const message = `K. M. Textiles Pvt. Ltd.\nOrder No. : ${orderDetails.order_no}\n https://kmtpl.netlify.app/order-preview/${orderId}`; // Updated share link format
+    const message = `${orderDetails.bill_to}\nOrder No. : ${orderDetails.order_no}\n https://kmtpl.netlify.app/order-preview/${orderId}`; // Updated share link format
     const url = `https://wa.me/?text=${encodeURIComponent(message)}`; // WhatsApp API URL
     window.open(url, "_blank"); // Open in a new tab
   };

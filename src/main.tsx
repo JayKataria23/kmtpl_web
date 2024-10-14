@@ -18,6 +18,7 @@ import ProtectedRoute from "./pages/ProtectedRoute";
 import SignInPage from "./pages/sign-in";
 import SignUpPage from "./pages/sign-up";
 import OrderPreviewPage from "./pages/OrderPreviewPage";
+import BhiwandiListPrint from "./pages/BhiwandiListPrint";
 
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
@@ -88,6 +89,14 @@ createRoot(document.getElementById("root")!).render(
             element={
               <ProtectedRoute>
                 <BhiwandiList />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/bhiwandi-list-print"
+            element={
+              <ProtectedRoute>
+                <BhiwandiListPrint />
               </ProtectedRoute>
             }
           />

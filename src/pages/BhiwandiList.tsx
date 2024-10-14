@@ -167,7 +167,9 @@ const BhiwandiList = () => {
               <AccordionContent className="p-4 border rounded mt-2">
                 <div>
                   <Button
-                    onClick={() => window.open("/path/to/pdf", "_blank")}
+                    onClick={() => {
+                      navigate("/bhiwandi-list-print", { state: { designEntries } }); // Navigate to BhiwandiListPrint with designEntries
+                    }}
                     className="mb-4"
                   >
                     Open PDF
