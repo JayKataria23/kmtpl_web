@@ -620,6 +620,7 @@ export default function OrderForm() {
                               onChange={(e) =>
                                 handleShadeChange(i, e.target.value)
                               }
+                              type="number"
                               className="col-span-3"
                             />
                             <Button

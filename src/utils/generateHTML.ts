@@ -145,7 +145,9 @@ export function generateHTML(order: Order): string {
           </div>
           <div style="border-bottom: 1px solid #000; display: flex; flex-direction: row;">
             <div style="width: 55%; border-right: 1px solid #000; font-size: smalll; ">
-              <b>To:</b> ${part.billTo}<br />
+              <b>To: <span style="font-size: large">${
+                part.billTo
+              }</span></b><br />
             </div>
             <div style="width: 45%; font-size: small">
               <b>Delivery:</b> ${part.shipTo}<br />
@@ -170,10 +172,11 @@ export function generateHTML(order: Order): string {
           </div>
           <div style="display: flex; flex-direction: row; border-top: 1px solid #000; font-size: x-large;">
             <div style="width: 5%; border-right: 1px solid #000; text-align: center"></div>
-            <div style="width: 12%; border-right: 1px solid #000; text-align: center; font-size: 0.875rem;">${
+            <div style="width: 12%; border-right: 1px solid #000; text-align: center; font-size: 0.875rem; display: flex; align-items: center;">Prepared By</div>
+            <div style="width: 71%; border-right: 1px solid #000;  display: flex; justify-content: space-between; padding-right: 2; ">
+            <span style="font-weight: normal; font-size: medium; align-items: center; display: flex;">${
               part.created_by
-            }</div>
-            <div style="width: 71%; border-right: 1px solid #000; font-weight: bold; text-align: right; padding-right: 2;">Total</div>
+            }</span><span style="font-weight: bold; font-size: x-large">Total</span></div>
             <div style="width: 4%; border-right: 1px solid #000; font-weight: bold; text-align: center;">
               ${part.designs.reduce(
                 (total, design) =>
