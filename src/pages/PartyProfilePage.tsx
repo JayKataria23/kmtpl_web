@@ -5,13 +5,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Delete } from "lucide-react";
 
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Toaster } from "@/components/ui/toaster";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent } from "@/components/ui/card";
@@ -65,6 +58,8 @@ export default function PartyProfilePage() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState<string>(""); // State for search query
+  const [selectedBroker, setSelectedBroker] = useState<string>(""); // New state for selected broker text
+  const [selectedTransport, setSelectedTransport] = useState<string>(""); // New state for selected transport text
 
   const fetchData = useCallback(async () => {
     const [partiesData, brokersData, transportData] = await Promise.all([
@@ -84,14 +79,10 @@ export default function PartyProfilePage() {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setCurrentParty((prev) => ({ ...prev, [name]: value ? value.toUpperCase() : null })); // Convert to uppercase
-  };
-
-  const handleSelectChange = (name: string, value: string) => {
     setCurrentParty((prev) => ({
       ...prev,
-      [name]: value === "null" ? null : parseInt(value),
-    }));
+      [name]: value ? value : null,
+    })); // Convert to uppercase
   };
 
   const handleOpenModal = (party?: PartyProfile) => {
@@ -115,9 +106,24 @@ export default function PartyProfilePage() {
     const operation = isEditing
       ? supabase
           .from("party_profiles")
-          .update({ ...currentParty, name: currentParty.name.toUpperCase() }) // Convert name to uppercase
+          .update({
+            ...currentParty,
+            name: currentParty.name.toUpperCase(),
+            broker_id:
+              brokers.find((b) => b.name === selectedBroker)?.id || null,
+            transport_id:
+              transportProfiles.find((t) => t.name === selectedTransport)?.id ||
+              null,
+          }) // Convert name to uppercase
           .eq("id", currentParty.id)
-      : supabase.from("party_profiles").insert({ ...currentParty, name: currentParty.name.toUpperCase() }); // Convert name to uppercase
+      : supabase.from("party_profiles").insert({
+          ...currentParty,
+          name: currentParty.name.toUpperCase(),
+          broker_id: brokers.find((b) => b.name === selectedBroker)?.id || null,
+          transport_id:
+            transportProfiles.find((t) => t.name === selectedTransport)?.id ||
+            null,
+        }); // Convert name to uppercase
 
     const { error } = await operation;
     if (error) {
@@ -242,20 +248,22 @@ export default function PartyProfilePage() {
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
-            {["name", "gstin", "address", "contact_number", "pincode"].map((field) => (
-              <div key={field} className="space-y-2">
-                <Label htmlFor={field}>
-                  {field.charAt(0).toUpperCase() + field.slice(1)}
-                </Label>
-                <Input
-                  id={field}
-                  name={field}
-                  value={currentParty[field as keyof PartyProfile] || ""}
-                  onChange={handleInputChange}
-                  required={field === "name"}
-                />
-              </div>
-            ))}
+            {["name", "gstin", "address", "contact_number", "pincode"].map(
+              (field) => (
+                <div key={field} className="space-y-2">
+                  <Label htmlFor={field}>
+                    {field.charAt(0).toUpperCase() + field.slice(1)}
+                  </Label>
+                  <Input
+                    id={field}
+                    name={field}
+                    value={currentParty[field as keyof PartyProfile] || ""}
+                    onChange={handleInputChange}
+                    required={field === "name"}
+                  />
+                </div>
+              )
+            )}
             {[
               { name: "broker_id", options: brokers, label: "Broker" },
               {
@@ -266,30 +274,28 @@ export default function PartyProfilePage() {
             ].map((select) => (
               <div key={select.name} className="space-y-2">
                 <Label htmlFor={select.name}>{select.label}</Label>
-                <Select
-                  onValueChange={(value) =>
-                    handleSelectChange(select.name, value)
-                  }
+                <Input
+                  id={select.name}
                   value={
-                    currentParty[
-                      select.name as keyof PartyProfile
-                    ]?.toString() || "null"
-                  }
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue
-                  placeholder={`Select a ${select.label.toLowerCase()}`}
-                    />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="null">None</SelectItem>
-                    {select.options.map((option) => (
-                      <SelectItem key={option.id} value={option.id.toString()}>
-                        {option.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                    select.name === "broker_id"
+                      ? selectedBroker
+                      : selectedTransport
+                  } // Use selectedBroker for broker input and selectedTransport for transport input
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (select.name === "broker_id") {
+                      setSelectedBroker(value); // Update selected broker text
+                    } else if (select.name === "transport_id") {
+                      setSelectedTransport(value); // Update selected transport text
+                    }
+                  }}
+                  list={`${select.name}-options`}
+                />
+                <datalist id={`${select.name}-options`}>
+                  {select.options.map((option) => (
+                    <option key={option.id} value={option.name} />
+                  ))}
+                </datalist>
               </div>
             ))}
             <Button type="submit" className="w-full">
@@ -306,12 +312,14 @@ export default function PartyProfilePage() {
             <CardContent className="pt-6 flex flex-col h-full">
               <div className="flex-grow">
                 <h3 className="text-lg font-semibold mb-2">{party.name}</h3>
-                {["gstin", "address", "contact_number", "pincode"].map((field) => (
-                  <p key={field} className="text-sm text-gray-500">
-                    {field.charAt(0).toUpperCase() + field.slice(1)}:{" "}
-                    {party[field as keyof PartyProfile] || "N/A"}
-                  </p>
-                ))}
+                {["gstin", "address", "contact_number", "pincode"].map(
+                  (field) => (
+                    <p key={field} className="text-sm text-gray-500">
+                      {field.charAt(0).toUpperCase() + field.slice(1)}:{" "}
+                      {party[field as keyof PartyProfile] || "N/A"}
+                    </p>
+                  )
+                )}
                 <p className="text-sm text-gray-500">
                   Broker:{" "}
                   {brokers.find((b) => b.id === party.broker_id)?.name || "N/A"}
