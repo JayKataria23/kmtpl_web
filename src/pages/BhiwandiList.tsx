@@ -2,12 +2,14 @@ import { useEffect, useState } from "react"; // Import useEffect and useState
 import { Button } from "@/components/ui/button"; // Import Button
 import { useNavigate } from "react-router-dom"; // Import useNavigate
 import supabase from "@/utils/supabase";
+import { useToast } from "@/hooks/use-toast";
 import {
   Accordion,
   AccordionItem,
   AccordionTrigger,
   AccordionContent,
 } from "@/components/ui/accordion"; // Import Shadcn Accordion components
+import { Toaster } from "@/components/ui";
 
 interface BhiwandiEntry {
   bhiwandi_date: string; // Date from the database
@@ -32,6 +34,7 @@ interface GroupedEntry {
   price: string;
   remark: string;
   shades: string[];
+  design_entry_id: number;
 }
 
 interface GroupedOrder {
@@ -58,6 +61,7 @@ const BhiwandiList = () => {
   const [bhiwandiEntries, setBhiwandiEntries] = useState<BhiwandiEntry[]>([]); // State to hold Bhiwandi entries
   const [designEntries, setDesignEntries] = useState<GroupedOrder[]>([]); // State to hold design entries for the selected date
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   useEffect(() => {
     fetchBhiwandiEntries(); // Fetch Bhiwandi entries on component mount
@@ -93,6 +97,7 @@ const BhiwandiList = () => {
         ship_to_party,
         broker_name,
         transporter_name,
+        design_entry_id,
         design,
         price,
         remark,
@@ -114,7 +119,7 @@ const BhiwandiList = () => {
 
       // Get the existing group and push the design entry into it
       const group = grouped.get(order_id)!;
-      group.entries.push({ design, price, remark, shades });
+      group.entries.push({ design, price, remark, shades, design_entry_id });
     });
 
     return Array.from(grouped.values()); // Return the grouped orders as an array
@@ -131,10 +136,36 @@ const BhiwandiList = () => {
 
       // Group the entries by order_id
       const groupedEntries = groupByOrderId(data); // Group the fetched design entries
+      console.log(data);
 
-      setDesignEntries(groupedEntries); 
+      setDesignEntries(groupedEntries);
     } catch (error) {
       console.error("Error fetching design entries:", error);
+    }
+  };
+
+  const handleDelete = async (design_entry_id: number) => {
+    try {
+      // Update the design entry to set bhiwandi_date to null
+      const { error } = await supabase
+        .from("design_entries")
+        .update({ bhiwandi_date: null }) // Set bhiwandi_date to null
+        .eq("id", design_entry_id);
+
+      if (error) throw error;
+      fetchBhiwandiEntries();
+      toast({
+        title: "Success!",
+        description: "Design entry deleted from Bhiwandi List",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: `Failed to delete design entry from Bhiwandi List: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`,
+        variant: "destructive",
+      });
     }
   };
 
@@ -168,7 +199,9 @@ const BhiwandiList = () => {
                 <div>
                   <Button
                     onClick={() => {
-                      navigate("/bhiwandi-list-print", { state: { designEntries } }); // Navigate to BhiwandiListPrint with designEntries
+                      navigate("/bhiwandi-list-print", {
+                        state: { designEntries },
+                      }); // Navigate to BhiwandiListPrint with designEntries
                     }}
                     className="mb-4"
                   >
@@ -179,31 +212,66 @@ const BhiwandiList = () => {
                       key={index}
                       className={index % 2 === 0 ? "bg-white" : "bg-gray-100"}
                     >
-                      <p style={{ textAlign: "left" }}><strong>Bill To:</strong> {entry.bill_to_party}</p>
-                      <p style={{ textAlign: "left" }}><strong>Ship To:</strong> {entry.ship_to_party}</p>
-                      <p style={{ textAlign: "left" }}><strong>Broker:</strong> {entry.broker_name}</p>
-                      <p style={{ textAlign: "left" }}><strong>Transport:</strong> {entry.transporter_name}</p>
+                      <p style={{ textAlign: "left" }}>
+                        <strong>Bill To:</strong> {entry.bill_to_party}
+                      </p>
+                      <p style={{ textAlign: "left" }}>
+                        <strong>Ship To:</strong> {entry.ship_to_party}
+                      </p>
+                      <p style={{ textAlign: "left" }}>
+                        <strong>Broker:</strong> {entry.broker_name}
+                      </p>
+                      <p style={{ textAlign: "left" }}>
+                        <strong>Transport:</strong> {entry.transporter_name}
+                      </p>
                       <div>
                         {entry.entries.map((designEntry, designIndex) => (
-                          <div key={designIndex} className="flex justify-between border-b p-4">
-                            <div className="text-left w-2/3">
-                              <p className="font-semibold text-base md:text-lg">Design: {designEntry.design}</p>
-                              <p className="text-sm md:text-base">Price: {designEntry.price}</p>
-                              <p className="text-sm md:text-base">Remark: {designEntry.remark || "N/A"}</p>
+                          <div
+                            key={designIndex}
+                            className="flex justify-between border-b p-4"
+                          >
+                            <div className="text-left w-3/6">
+                              <p className="font-semibold text-base md:text-lg">
+                                Design: {designEntry.design}
+                              </p>
+                              <p className="text-sm md:text-base">
+                                Price: {designEntry.price}
+                              </p>
+                              <p className="text-sm md:text-base">
+                                Remark: {designEntry.remark || "N/A"}
+                              </p>
                             </div>
-                            <div className="text-right w-1/3">
-                              <p className="font-semibold text-base md:text-lg">Shades:</p>
+                            <div className="text-left w-2/6">
+                              <p className="font-semibold text-base md:text-lg">
+                                Shades:
+                              </p>
                               {designEntry.shades.length > 0 ? (
                                 designEntry.shades.map((meters, idx) =>
                                   meters ? (
-                                    <div key={idx} className="text-sm md:text-base">
+                                    <div
+                                      key={idx}
+                                      className="text-sm md:text-base"
+                                    >
                                       {idx + 1}: {meters} m
                                     </div>
                                   ) : null
                                 )
                               ) : (
-                                <p className="text-sm md:text-base">No shades available</p>
+                                <p className="text-sm md:text-base">
+                                  No shades available
+                                </p>
                               )}
+                            </div>
+                            <div className="w-1/6 flex items-center justify-center">
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                onClick={() =>
+                                  handleDelete(designEntry.design_entry_id)
+                                }
+                              >
+                                X
+                              </Button>
                             </div>
                           </div>
                         ))}
@@ -216,6 +284,7 @@ const BhiwandiList = () => {
           ))}
         </Accordion>
       </div>
+      <Toaster />
     </div>
   );
 };
