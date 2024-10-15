@@ -1,14 +1,29 @@
-import { useLocation } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Share2 } from "lucide-react";
+import supabase from "@/utils/supabase";
+
+interface Entry {
+  design_entry_id: number;
+  design: string;
+  price: string;
+  remark: string;
+  shades: string[];
+  bill_to_party: string;
+  ship_to_party: string;
+  broker_name: string;
+  transporter_name: string;
+  order_id: string;
+}
 
 interface GroupedEntry {
   design: string;
   price: string;
   remark: string;
   shades: string[];
+  design_entry_id: number;
 }
 
 interface GroupedOrder {
@@ -21,14 +36,72 @@ interface GroupedOrder {
 }
 
 function BhiwandiListPrint() {
-  const location = useLocation();
-  const { designEntries } = location.state || { designEntries: [] };
+  const { date } = useParams<{ date: string }>();
+  const [designEntries, setDesignEntries] = useState<GroupedOrder[]>([]);
   const [generatedHtml, setGeneratedHtml] = useState<string | null>(null);
 
-  // Log all design entries
+  useEffect(() => {
+    const fetchDesignEntries = async (date: string) => {
+      try {
+        const { data, error } = await supabase.rpc(
+          "get_design_entries_by_bhiwandi_date",
+          { input_date: date }
+        );
+
+        if (error) throw error;
+
+        // Group the entries by order_id
+        const groupedEntries = groupByOrderId(data);
+
+        setDesignEntries(groupedEntries);
+      } catch (error) {
+        console.error("Error fetching design entries:", error);
+      }
+    };
+    fetchDesignEntries(date as string); // Ensure fetchDesignEntries is defined in the scope
+  }, [date]); // Added fetchDesignEntries to the dependency array
+
   useEffect(() => {
     handleGenerateHTML(designEntries);
   }, [designEntries]);
+
+  function groupByOrderId(entries: Entry[]): GroupedOrder[] {
+    const grouped = new Map<string, GroupedOrder>();
+
+    entries.forEach((entry) => {
+      const {
+        order_id,
+        bill_to_party,
+        ship_to_party,
+        broker_name,
+        transporter_name,
+        design_entry_id,
+        design,
+        price,
+        remark,
+        shades,
+      } = entry;
+
+      // Check if the order_id already exists in the map
+      if (!grouped.has(order_id)) {
+        // Create a new GroupedOrder if it doesn't exist
+        grouped.set(order_id, {
+          order_id,
+          bill_to_party,
+          ship_to_party,
+          broker_name,
+          transporter_name,
+          entries: [], // Initialize with an empty entries array
+        });
+      }
+
+      // Get the existing group and push the design entry into it
+      const group = grouped.get(order_id)!;
+      group.entries.push({ design, price, remark, shades, design_entry_id });
+    });
+
+    return Array.from(grouped.values()); // Return the grouped orders as an array
+  }
 
   const handleGenerateHTML = (designEntries: GroupedOrder[]) => {
     let html =
@@ -96,7 +169,7 @@ function BhiwandiListPrint() {
 
   const handleShare = () => {
     const currentUrl = window.location.href; // Get the current page URL
-    const message = `Check out this PDF: ${currentUrl}`;
+    const message = `Bhiwandi List: ${currentUrl}`;
     const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, "_blank");
   };

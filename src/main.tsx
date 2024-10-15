@@ -93,11 +93,9 @@ createRoot(document.getElementById("root")!).render(
             }
           />
           <Route
-            path="/bhiwandi-list-print"
+            path="/bhiwandi-list-print/:date"
             element={
-              <ProtectedRoute>
                 <BhiwandiListPrint />
-              </ProtectedRoute>
             }
           />
           <Route path="/sign-in" element={<SignInPage />} />

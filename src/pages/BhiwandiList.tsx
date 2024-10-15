@@ -135,8 +135,7 @@ const BhiwandiList = () => {
       if (error) throw error;
 
       // Group the entries by order_id
-      const groupedEntries = groupByOrderId(data); // Group the fetched design entries
-      console.log(data);
+      const groupedEntries = groupByOrderId(data);
 
       setDesignEntries(groupedEntries);
     } catch (error) {
@@ -199,9 +198,7 @@ const BhiwandiList = () => {
                 <div>
                   <Button
                     onClick={() => {
-                      navigate("/bhiwandi-list-print", {
-                        state: { designEntries },
-                      }); // Navigate to BhiwandiListPrint with designEntries
+                      navigate(`/bhiwandi-list-print/:${entry.bhiwandi_date}`); // Navigate to BhiwandiListPrint with designEntries
                     }}
                     className="mb-4"
                   >
