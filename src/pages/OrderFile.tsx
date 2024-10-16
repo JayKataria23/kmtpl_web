@@ -115,7 +115,8 @@ function OrderFile() {
 
   const handleSendBhiwandi = async () => {
     try {
-      const today = new Date().toDateString(); 
+      const today = new Date(new Date().getTime() + 5.5 * 60 * 60 * 1000).toISOString(); // Adjust to IST and convert to ISO string
+      
       const idsToUpdate = drawerEntries.map((entry) => entry.id); // Extract the IDs from drawerEntries
 
       const { data, error } = await supabase

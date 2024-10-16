@@ -40,6 +40,26 @@ function BhiwandiListPrint() {
   const [designEntries, setDesignEntries] = useState<GroupedOrder[]>([]);
   const [generatedHtml, setGeneratedHtml] = useState<string | null>(null);
 
+  const formatDate = (dateString: string): string => {
+    console.log(dateString);
+    const date = new Date(dateString.substring(1));
+    const optionsDate: Intl.DateTimeFormatOptions = {
+      day: "numeric",
+      month: "long", // Change month to 'long'
+      year: "numeric",
+    };
+    const optionsTime: Intl.DateTimeFormatOptions = {
+      hour: "numeric",
+      minute: "numeric",
+      hour12: false, // Set hour12 to false for 24-hour format
+    };
+
+    const formattedDate = date.toLocaleDateString("en-US", optionsDate); // Format date
+    const formattedTime = date.toLocaleTimeString("en-US", optionsTime); // Format time
+
+    return `${formattedDate} ${formattedTime}`; // Return combined formatted date and time
+  };
+
   useEffect(() => {
     const fetchDesignEntries = async (date: string) => {
       try {
@@ -62,8 +82,75 @@ function BhiwandiListPrint() {
   }, [date]); // Added fetchDesignEntries to the dependency array
 
   useEffect(() => {
-    handleGenerateHTML(designEntries);
-  }, [designEntries]);
+    const handleGenerateHTML = (designEntries: GroupedOrder[]) => {
+      let html = `<div style="display: flex; justify-content: space-between; align-items: center; padding-right: 10px; ">
+        <h1 style='font-size: 24px;'>Order Preview</h1>
+        <p style='font-size: 18px; line-height: 0.5;'>${formatDate(
+          date as string
+        )}</p>
+      </div>`;
+
+      // Loop through designEntries to create HTML structure
+      designEntries.forEach((entry: GroupedOrder, entryIndex: number) => {
+        // Specify the type of entry
+        html += `
+        <div style="margin-bottom: 20px; background-color: ${
+          entryIndex % 2 === 0 ? "#f9f9f9" : "#ffffff"
+        }; padding: 10px; border: 1px solid #ccc; border-radius: 5px;">
+          <p style="font-size: 18px; line-height: 0.5;"><strong>Bill To:</strong> ${
+            entry.bill_to_party
+          }</p>
+          <p style="font-size: 18px; line-height: 0.5;"><strong>Ship To:</strong> ${
+            entry.ship_to_party
+          }</p>
+          <p style="font-size: 18px; line-height: 0.5;"><strong>Broker:</strong> ${
+            entry.broker_name
+          }</p>
+          <p style="font-size: 18px; line-height: 0.5;"><strong>Transport:</strong> ${
+            entry.transporter_name
+          }</p>
+      `;
+
+        // Loop through each design entry
+        entry.entries.forEach((designEntry) => {
+          html += `
+          <div style="display: flex; justify-content: space-between; margin-top: 10px; border: 1px solid #ccc; padding: 10px; border-radius: 5px;">
+            <div style="flex: 1;">
+              <p style="font-size: 18px; line-height: 0.5;"><strong>Design:</strong> ${
+                designEntry.design
+              }</p>
+              <p style="font-size: 18px; line-height: 0.5;"><strong>Price:</strong> ${
+                designEntry.price
+              }</p>
+              <p style="font-size: 18px; line-height: 0.5;"><strong>Remark:</strong> ${
+                designEntry.remark || "N/A"
+              }</p>
+            </div>
+            <div style="flex: 1; text-align: left;">
+              <p style="font-size: 18px; line-height: 0.5;"><strong>Shades:</strong></p>
+              <div>
+                ${designEntry.shades
+                  .filter((shade) => shade) // Filter out empty shades
+                  .map(
+                    (shade, idx) =>
+                      `<div style="font-size: 16px; line-height: 1;">${
+                        idx + 1
+                      }: ${shade} m</div>`
+                  )
+                  .join("")}
+              </div>
+            </div>
+          </div>
+        `;
+        });
+
+        html += "</div>"; // Close the entry div
+      });
+
+      return html;
+    };
+    setGeneratedHtml(handleGenerateHTML(designEntries));
+  }, [designEntries, date]);
 
   function groupByOrderId(entries: Entry[]): GroupedOrder[] {
     const grouped = new Map<string, GroupedOrder>();
@@ -102,70 +189,6 @@ function BhiwandiListPrint() {
 
     return Array.from(grouped.values()); // Return the grouped orders as an array
   }
-
-  const handleGenerateHTML = (designEntries: GroupedOrder[]) => {
-    let html =
-      "<h1 style='font-size: 24px; margin-bottom: 20px;'>Order Preview</h1>";
-
-    // Loop through designEntries to create HTML structure
-    designEntries.forEach((entry: GroupedOrder, entryIndex: number) => {
-      // Specify the type of entry
-      html += `
-        <div style="margin-bottom: 20px; background-color: ${
-          entryIndex % 2 === 0 ? "#f9f9f9" : "#ffffff"
-        }; padding: 10px; border: 1px solid #ccc; border-radius: 5px;">
-          <p style="font-size: 18px; line-height: 0.5;"><strong>Bill To:</strong> ${
-            entry.bill_to_party
-          }</p>
-          <p style="font-size: 18px; line-height: 0.5;"><strong>Ship To:</strong> ${
-            entry.ship_to_party
-          }</p>
-          <p style="font-size: 18px; line-height: 0.5;"><strong>Broker:</strong> ${
-            entry.broker_name
-          }</p>
-          <p style="font-size: 18px; line-height: 0.5;"><strong>Transport:</strong> ${
-            entry.transporter_name
-          }</p>
-      `;
-
-      // Loop through each design entry
-      entry.entries.forEach((designEntry) => {
-        html += `
-          <div style="display: flex; justify-content: space-between; margin-top: 10px; border: 1px solid #ccc; padding: 10px; border-radius: 5px;">
-            <div style="flex: 1;">
-              <p style="font-size: 18px; line-height: 0.5;"><strong>Design:</strong> ${
-                designEntry.design
-              }</p>
-              <p style="font-size: 18px; line-height: 0.5;"><strong>Price:</strong> ${
-                designEntry.price
-              }</p>
-              <p style="font-size: 18px; line-height: 0.5;"><strong>Remark:</strong> ${
-                designEntry.remark || "N/A"
-              }</p>
-            </div>
-            <div style="flex: 1; text-align: left;">
-              <p style="font-size: 18px; line-height: 0.5;"><strong>Shades:</strong></p>
-              <div>
-                ${designEntry.shades
-                  .filter((shade) => shade) // Filter out empty shades
-                  .map(
-                    (shade, idx) =>
-                      `<div style="font-size: 16px; line-height: 1;">${
-                        idx + 1
-                      }: ${shade} m</div>`
-                  )
-                  .join("")}
-              </div>
-            </div>
-          </div>
-        `;
-      });
-
-      html += "</div>"; // Close the entry div
-    });
-
-    setGeneratedHtml(html);
-  };
 
   const handleShare = () => {
     const currentUrl = window.location.href; // Get the current page URL

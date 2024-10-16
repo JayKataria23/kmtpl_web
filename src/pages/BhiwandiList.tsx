@@ -49,12 +49,21 @@ interface GroupedOrder {
 // Utility function to format the date
 const formatDate = (dateString: string): string => {
   const date = new Date(dateString);
-  const options: Intl.DateTimeFormatOptions = {
+  const optionsDate: Intl.DateTimeFormatOptions = {
     day: "numeric",
-    month: "short",
+    month: "long", // Change month to 'long'
     year: "numeric",
-  }; // Change month to 'short'
-  return date.toLocaleDateString("en-US", options); // Return formatted date
+  };
+  const optionsTime: Intl.DateTimeFormatOptions = {
+    hour: "numeric",
+    minute: "numeric",
+    hour12: false, // Set hour12 to false for 24-hour format
+  };
+  
+  const formattedDate = date.toLocaleDateString("en-US", optionsDate); // Format date
+  const formattedTime = date.toLocaleTimeString("en-US", optionsTime); // Format time
+  
+  return `${formattedDate} ${formattedTime}`; // Return combined formatted date and time
 };
 
 const BhiwandiList = () => {
@@ -75,7 +84,7 @@ const BhiwandiList = () => {
 
       const formattedData: BhiwandiEntry[] = data.map(
         (item: { bhiwandi_date: string; count: number }) => ({
-          bhiwandi_date: formatDate(item.bhiwandi_date), // Format the date
+          bhiwandi_date: item.bhiwandi_date, // Format the date
           count: item.count,
         })
       );
@@ -187,7 +196,7 @@ const BhiwandiList = () => {
               >
                 <div>
                   <span className="text-lg font-semibold">
-                    {entry.bhiwandi_date}
+                    {formatDate(entry.bhiwandi_date)}
                   </span>
                   <span className="text-sm text-gray-500 ml-2">
                     Count: {entry.count}
