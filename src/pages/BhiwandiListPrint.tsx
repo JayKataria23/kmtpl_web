@@ -179,10 +179,6 @@ function BhiwandiListPrint() {
       <Card className="max-w-md mx-auto shadow-lg p-6">
         <h1 className="text-2xl font-bold mb-4">Bhiwandi List Print</h1>
         <div className="flex justify-between mb-4">
-          <Button onClick={handleShare} className="flex-1 mr-2">
-            <Share2 className="mr-2 h-4 w-4" />
-            Share
-          </Button>
           <Button
             onClick={() => {
               const iframe = document.querySelector("iframe");
@@ -190,9 +186,13 @@ function BhiwandiListPrint() {
                 iframe.contentWindow?.print();
               }
             }}
-            className="flex-1 ml-2"
+            className="flex-1 mr-2"
           >
             Print
+          </Button>
+          <Button onClick={handleShare} className="flex-1 ml-2">
+            <Share2 className="mr-2 h-4 w-4" />
+            Share
           </Button>
         </div>
       </Card>

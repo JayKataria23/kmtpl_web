@@ -117,7 +117,7 @@ function PartyFile() {
                         <tr
                           key={orderIndex}
                           className={
-                            order.bhiwandi_date ? "bg-yellow-50" : (order.canceled ? "bg-red-100" : (orderIndex % 2 === 0 ? "bg-white" : "bg-gray-50"))
+                            order.bhiwandi_date ? "bg-yellow-100" : (order.canceled ? "bg-red-100" : (orderIndex % 2 === 0 ? "bg-white" : "bg-gray-50"))
                           }
                         >
                           <td className="px-2 py-4 w-2/3 text-sm font-medium text-gray-900">

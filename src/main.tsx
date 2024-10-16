@@ -19,6 +19,7 @@ import SignInPage from "./pages/sign-in";
 import SignUpPage from "./pages/sign-up";
 import OrderPreviewPage from "./pages/OrderPreviewPage";
 import BhiwandiListPrint from "./pages/BhiwandiListPrint";
+import DispatchList from "./pages/DispatchList";
 
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
@@ -93,10 +94,16 @@ createRoot(document.getElementById("root")!).render(
             }
           />
           <Route
-            path="/bhiwandi-list-print/:date"
+            path="/dispatch-list" // Add the new route
             element={
-                <BhiwandiListPrint />
+              <ProtectedRoute>
+                <DispatchList />
+              </ProtectedRoute>
             }
+          />
+          <Route
+            path="/bhiwandi-list-print/:date"
+            element={<BhiwandiListPrint />}
           />
           <Route path="/sign-in" element={<SignInPage />} />
           <Route path="/sign-up" element={<SignUpPage />} />

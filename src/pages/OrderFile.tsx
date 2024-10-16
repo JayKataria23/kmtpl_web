@@ -30,6 +30,7 @@ interface OrderDetail {
   shades: number[];
   order_remark: string;
   id: number; // Add id to OrderDetail interface
+  price: number;
 }
 
 interface DrawerEntry extends OrderDetail {
@@ -83,11 +84,13 @@ function OrderFile() {
           party_name: string;
           shades: [];
           order_remark: string | null;
+          price: number;
         }) => ({
           partyName: entry.party_name,
           shades: entry.shades,
           order_remark: entry.order_remark, // Existing line
           id: entry.id, // Add this line to include id
+          price: entry.price,
         })
       );
 
@@ -130,6 +133,7 @@ function OrderFile() {
       });
       fetchDesignCounts();
       setDrawerEntries([]);
+      setIsDrawerOpen(false);
     } catch (error) {
       console.error("Error sending to Bhiwandi:", error);
       toast({
@@ -176,8 +180,9 @@ function OrderFile() {
                         <td className="px-2 py-4 w-4/6 text-sm font-medium text-gray-900">
                           <div className="break-words">{entry.partyName}</div>
                           <div className="text-xs text-gray-500 mt-1">
-                            {entry.order_remark}
+                            Remark: {entry.order_remark}
                           </div>
+                          <div className="text-xs text-gray-500 mt-1">Price: {entry.price}</div>
                         </td>
                         <td className="px-2 py-4 w-2/6 text-sm text-gray-500">
                           {entry.shades.map((meters, idx) =>
@@ -261,9 +266,12 @@ function OrderFile() {
                               </div>
                               {order.order_remark && (
                                 <div className="text-xs text-gray-500 mt-1">
-                                  {order.order_remark}
+                                  Remark: {order.order_remark}
                                 </div>
                               )}
+                              <div className="text-xs text-gray-500 mt-1">
+                                Price: {order.price}
+                              </div>
                             </td>
                             <td className="px-2 py-4 w-2/6 text-sm text-gray-500">
                               {order.shades.map((meters, index) =>
@@ -277,7 +285,7 @@ function OrderFile() {
                             <td className="px-2 py-4 w-1/6">
                               {isSelected ? (
                                 <Button
-                                  className="ml-2 rounded-full w-8 h-8 text-white"
+                                  className="ml-2 rounded-full w-10 h-10 text-lg text-white"
                                   onClick={() =>
                                     handleRemoveFromDrawer(order.id)
                                   }
@@ -289,7 +297,7 @@ function OrderFile() {
                                   onClick={() =>
                                     handleAddToDrawer(order, item.design)
                                   }
-                                  className="ml-2 rounded-full w-8 h-8 bg-yellow-500 active:bg-yellow-500 visited:bg-yellow-500 hover:bg-yellow-500"
+                                  className="ml-2 rounded-full w-10 h-10 bg-yellow-500 active:bg-yellow-500 visited:bg-yellow-500 hover:bg-yellow-500 text-lg"
                                 >
                                   B
                                 </Button>

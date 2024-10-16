@@ -7,57 +7,66 @@ export default function HomePage() {
 
   return (
     <div className="container mx-auto mt-10 text-center">
-      <img src={KMLogo} alt="KM Logo" className="mx-auto mb-8 w-48 h-auto" />
+      <img src={KMLogo} alt="KM Logo" className="mx-auto mb-8 w-36 h-auto" />
 
-      <div className="space-y-4">
+      <div className="space-y-6">
         <Button
-          className="w-64 text-lg"
+          className="w-64 text-lg h-12"
           onClick={() => navigate("/order-form")}
         >
           Order Form
         </Button>
         <br />
         <Button
-          className="w-64 text-lg"
-          onClick={() => navigate("/order-file")}
-        >
-          Design Wise Order
-        </Button>
-        <br />
-        <Button
-          className="w-64 text-lg"
-          onClick={() => navigate("/party-file")}
-        >
-          Party Wise Order
-        </Button>
-        <br />
-        <Button
-          className="w-64 text-lg"
-          onClick={() => navigate("/party-profiles")}
-        >
-          Party Profiles
-        </Button>
-        <br />
-        <Button
-          className="w-64 text-lg"
-          onClick={() => navigate("/broker-transport")}
-        >
-          Broker Transport Designs
-        </Button>
-        <br />
-        <Button
-          className="w-64 text-lg"
+          className="w-64 text-lg h-12"
           onClick={() => navigate("/order-list")}
         >
           Order List
         </Button>
         <br />
         <Button
-          className="w-64 text-lg"
+          className="w-64 text-lg h-12"
+          onClick={() => navigate("/order-file")}
+        >
+          Design Wise Order
+        </Button>
+        <br />
+        <Button
+          className="w-64 text-lg h-12"
+          onClick={() => navigate("/party-file")}
+        >
+          Party Wise Order
+        </Button>
+        <br />
+        <Button
+          className="w-64 text-lg h-12"
           onClick={() => navigate("/bhiwandi-list")}
         >
           Bhiwandi List
         </Button>
+        <br />
+        <Button
+          className="w-64 text-lg h-12"
+          onClick={() => navigate("/dispatch-list")}
+        >
+          Dispatch List
+        </Button>
+        <br />
+        <Button
+          className="w-64 text-lg h-12"
+          onClick={() => navigate("/party-profiles")}
+        >
+          Party Profiles
+        </Button>
+        <br />
+        <Button
+          className="w-64 text-lg h-12"
+          onClick={() => navigate("/broker-transport")}
+        >
+          Broker Transport Designs
+        </Button>
+
+        <br />
       </div>
     </div>
   );
