@@ -19,6 +19,7 @@ import {
   DrawerTrigger,
 } from "@/components/ui/drawer";
 import { useToast } from "@/hooks/use-toast"; // Import useToast at the top
+import { Toaster } from "@/components/ui";
 
 interface DesignCount {
   design: string;
@@ -46,7 +47,7 @@ function OrderFile() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [drawerEntries, setDrawerEntries] = useState<DrawerEntry[]>([]);
   const navigate = useNavigate();
-  const { toast } = useToast(); // Initialize toast
+  const { toast } = useToast();
 
   useEffect(() => {
     fetchDesignCounts();
@@ -115,8 +116,10 @@ function OrderFile() {
 
   const handleSendBhiwandi = async () => {
     try {
-      const today = new Date(new Date().getTime() + 5.5 * 60 * 60 * 1000).toISOString(); // Adjust to IST and convert to ISO string
-      
+      const today = new Date(
+        new Date().getTime() + 5.5 * 60 * 60 * 1000
+      ).toISOString(); // Adjust to IST and convert to ISO string
+
       const idsToUpdate = drawerEntries.map((entry) => entry.id); // Extract the IDs from drawerEntries
 
       const { data, error } = await supabase
@@ -183,7 +186,9 @@ function OrderFile() {
                           <div className="text-xs text-gray-500 mt-1">
                             Remark: {entry.order_remark}
                           </div>
-                          <div className="text-xs text-gray-500 mt-1">Price: {entry.price}</div>
+                          <div className="text-xs text-gray-500 mt-1">
+                            Price: {entry.price}
+                          </div>
                         </td>
                         <td className="px-2 py-4 w-2/6 text-sm text-gray-500">
                           {entry.shades.map((meters, idx) =>
@@ -317,6 +322,7 @@ function OrderFile() {
           </AccordionItem>
         ))}
       </Accordion>
+      <Toaster />
     </div>
   );
 }
