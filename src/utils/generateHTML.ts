@@ -54,8 +54,8 @@ function splitOrder(order: Order): Order[] {
 
 const formatDate = (dateString: string): string => {
   const date = new Date(dateString);
-  const day = String(date.getDate()).padStart(2, '0');
-  const month = String(date.getMonth() + 1).padStart(2, '0'); // Months are zero-based
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0"); // Months are zero-based
   const year = date.getFullYear();
   return `${day}-${month}-${year}`;
 };
@@ -90,7 +90,13 @@ export function generateHTML(order: Order): string {
               <p>${design.design}</p>
             </div>
             <div style="width: 71%; border-right: 1px solid #000; text-align: center; display: flex; flex-direction: row; flex-wrap: wrap;">
+            <div style="width: 100%; border-right: 1px solid #000; text-align: center; display: flex; flex-direction: row; flex-wrap: wrap;">
               ${shadesRow(design)}
+              
+            </div>
+            <div style="text-align: center; width: 100%;">
+              <b style="color: red; font-size: 16px;">${design.remark}</b>
+            </div>
             </div>
             <div style="width: 4%; border-right: 1px solid #000; text-align: center; word-wrap: break-word;">
               <p>${Object.values(design.shades).filter((s) => s).length}</p>
@@ -99,11 +105,7 @@ export function generateHTML(order: Order): string {
               <p>${design.price}</p>
             </div>
           </div>
-          ${
-            design.remark
-              ? `<div style="color: red; font-size: 16px; padding-left: 5%; border: 1px solid #000;">${design.remark}</div>`
-              : ""
-          }
+          
         </div>
         `;
       })
@@ -186,9 +188,9 @@ export function generateHTML(order: Order): string {
           </div>
           <div style="display: flex; flex-direction: row; border-top: 1px solid #000; font-size: x-large;">
             <div style="width: 5%; border-right: 1px solid #000; text-align: center"></div>
-            <div style="width: 12%; border-right: 1px solid #000; text-align: center; font-size: 0.875rem; display: flex; align-items: center; padding-left: 2px;">Prepared By</div>
+            <div style="width: 12%; border-right: 1px solid #000; text-align: center; font-size: 0.875rem; display: flex; align-items: center; padding-left: 2px;"></div>
             <div style="width: 71%; border-right: 1px solid #000;  display: flex; justify-content: space-between; padding-right: 2; ">
-            <span style="font-weight: normal; font-size: medium; align-items: center; display: flex; padding-left: 2px;">${
+            <span style="font-weight: normal; font-size: medium; align-items: center; display: flex; padding-left: 2px;">Prepared By: ${
               part.created_by
             }</span><span style="font-weight: bold; font-size: x-large">Total</span></div>
             <div style="width: 4%; border-right: 1px solid #000; font-weight: bold; text-align: center;">
