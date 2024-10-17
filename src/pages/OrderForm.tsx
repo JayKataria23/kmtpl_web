@@ -197,6 +197,28 @@ export default function OrderForm() {
     });
   };
 
+  const handleAddDesign = async (newDesign: string) => {
+    if (newDesign.trim()) {
+      const { data, error } = await supabase
+        .from("designs")
+        .insert({ title: newDesign.trim().toUpperCase() }) // Convert to uppercase
+        .select();
+      if (error) {
+        toast({
+          title: "Error",
+          description: "Failed to add design",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Success",
+          description: `Design "${data[0].title}" added successfully`,
+        });
+        fetchDesigns();
+      }
+    }
+  };
+
   const handleDesignSelect = (design: string) => {
     setCurrentEntry({
       id: Date.now().toString(),
@@ -574,7 +596,12 @@ export default function OrderForm() {
                     ))}
                   </datalist>
                 </div>
-                {currentEntry && designs.includes(currentEntry.design) && (
+                {currentEntry && !designs.includes(currentEntry.design) && (
+                  <Button onClick={() => handleAddDesign(currentEntry.design.toUpperCase())}>
+                    Add Design
+                  </Button>
+                )}
+                {currentEntry && designs.includes(currentEntry.design.toUpperCase()) && (
                   <>
                     <div className="grid grid-cols-4 items-center gap-4">
                       <Label htmlFor="price" className="text-right">
