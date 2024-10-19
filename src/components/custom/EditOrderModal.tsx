@@ -255,7 +255,7 @@ export function EditOrderModal({
       design,
       price: "",
       remark: "",
-      shades: Array(50).fill(""),
+      shades: Array(51).fill(""),
     });
   };
 
@@ -617,28 +617,28 @@ export function EditOrderModal({
                       </div>
                       <ScrollArea className="h-[200px] w-full rounded-md border p-4">
                         <div className="grid gap-4">
-                          {Array.from({ length: 50 }, (_, i) => (
+                          {currentEntry.shades.length == 51 && (
                             <div
-                              key={i}
+                              key={"allColour"}
                               className="grid grid-cols-5 items-center gap-2"
                             >
                               <Label
-                                htmlFor={`shade-${i}`}
+                                htmlFor={`allColour`}
                                 className="text-right col-span-1"
                               >
-                                Shade {i + 1}
+                                All Colours
                               </Label>
                               <Input
-                                id={`shade-${i}`}
-                                value={currentEntry.shades[i]}
-                                onChange={(e) =>
-                                  handleShadeChange(i, e.target.value)
-                                }
+                                id={`allColours`}
+                                value={currentEntry.shades[50]}
+                                onChange={(e) => {
+                                  handleShadeChange(50, e.target.value);
+                                }}
                                 type="number"
                                 className="col-span-3"
                               />
                               <Button
-                                onClick={() => handleShadeIncrement(i)}
+                                onClick={() => handleShadeIncrement(50)}
                                 variant="outline"
                                 size="sm"
                                 className="col-span-1"
@@ -646,7 +646,38 @@ export function EditOrderModal({
                                 +50
                               </Button>
                             </div>
-                          ))}
+                          )}
+                          {(!currentEntry.shades[50]||currentEntry.shades[50]=="") &&
+                            Array.from({ length: 50 }, (_, i) => (
+                              <div
+                                key={i}
+                                className="grid grid-cols-5 items-center gap-2"
+                              >
+                                <Label
+                                  htmlFor={`shade-${i}`}
+                                  className="text-right col-span-1"
+                                >
+                                  Shade {i + 1}
+                                </Label>
+                                <Input
+                                  id={`shade-${i}`}
+                                  value={currentEntry.shades[i]}
+                                  onChange={(e) =>
+                                    handleShadeChange(i, e.target.value)
+                                  }
+                                  type="number"
+                                  className="col-span-3"
+                                />
+                                <Button
+                                  onClick={() => handleShadeIncrement(i)}
+                                  variant="outline"
+                                  size="sm"
+                                  className="col-span-1"
+                                >
+                                  +50
+                                </Button>
+                              </div>
+                            ))}
                         </div>
                       </ScrollArea>
                       <Button onClick={handleSaveDesign} className="mt-4">

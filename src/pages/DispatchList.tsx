@@ -193,13 +193,15 @@ function DispatchList() {
                     <div className="ml-4 w-1/3">
                       <strong>Shades:</strong>
                       <ul>
-                        {entry.shades.map((shade, idx) =>
-                          shade ? (
-                            <li key={idx}>
-                              {idx + 1}: {shade}m
-                            </li>
-                          ) : null
-                        )}
+                        {entry.shades[50] == "" || entry.shades.length == 50
+                          ? entry.shades.map((meters, idx) =>
+                              meters ? (
+                                <div key={idx}>
+                                  {idx + 1}: {meters}m
+                                </div>
+                              ) : null
+                            )
+                          : "All Colours: " + entry.shades[50] + "m"}
                       </ul>
                     </div>
                   </div>

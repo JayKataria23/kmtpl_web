@@ -64,46 +64,47 @@ export function generateHTML(order: Order): string {
   const parts = splitOrder(order);
 
   const shadesRow = (design: Design): string => {
-    console.log(design.shades);
+    if (design.shades[50] == "" || design.shades[50] == undefined) {
+      // Create a new variable to convert design.shades into the desired format
+      const formattedShades: { meters: string; shades: number[] }[] = [];
 
-    // Create a new variable to convert design.shades into the desired format
-    const formattedShades: { meters: string; shades: number[] }[] = [];
-
-    // Group shades by their values
-    Object.entries(design.shades).forEach(([index, shade]: [string, string]) => { // Use Object.entries to iterate
-      if (shade) {
-        const existingGroup = formattedShades.find(
-          (group) => group.meters === shade
-        );
-        if (existingGroup) {
-          existingGroup.shades.push(Number(index) + 1); // Add the index to the existing group
-        } else {
-          formattedShades.push({ meters: shade, shades: [Number(index) + 1] }); // Create a new group
+      // Group shades by their values
+      Object.entries(design.shades).forEach(
+        ([index, shade]: [string, string]) => {
+          // Use Object.entries to iterate
+          if (shade) {
+            const existingGroup = formattedShades.find(
+              (group) => group.meters === shade
+            );
+            if (existingGroup) {
+              existingGroup.shades.push(Number(index) + 1); // Add the index to the existing group
+            } else {
+              formattedShades.push({
+                meters: shade,
+                shades: [Number(index) + 1],
+              }); // Create a new group
+            }
+          }
         }
-      }
-    });
+      );
 
-    console.log(formattedShades); // Log the new variable
+      const shadesHTML = formattedShades
+        .map((group) => {
+          return ` <div><div style='border-bottom: 1px solid #000;'>${group.shades.join(
+            " - "
+          )}</div><div style='border-top: 1px solid #000;'>${
+            group.meters
+          } mtr</div></div>`;
+        })
+        .join("<div style='padding-left: 20px;'></div>"); // Join with line breaks for each group
 
-    // return Object.entries(design.shades)
-    //   .map(([index, shade]) => {
-    //     if (shade) {
-    //       return `<div style="width: 12.5%">
-    //                 <div>${parseInt(index) + 1}</div>
-    //                 <div>${shade}</div>
-    //               </div>`;
-    //     }
-    //     return "";
-    //   })
-    //   .join("");
-
-    const shadesHTML = formattedShades
-      .map((group) => {
-        return ` <div><div style='border-bottom: 1px solid #000;'>${group.shades.join(" - ")}</div><div style='border-top: 1px solid #000;'>${group.meters} mtr</div></div>`;
-      })
-      .join("<div style='padding-left: 20px;'></div>"); // Join with line breaks for each group
-
-    return shadesHTML;
+      return shadesHTML;
+    } else {
+      return `<div >
+                <div style='border-bottom: 1px solid #000;'>All Colours</div>
+                <div style='border-top: 1px solid #000;'>${design.shades[50]} mtr</div>
+              </div>`;
+    }
   };
 
   const generatePartHTML = (part: Order): string => {

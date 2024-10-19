@@ -233,13 +233,15 @@ function OrderFile() {
                           </div>
                         </td>
                         <td className="px-2 py-4 w-2/6 text-sm text-gray-500">
-                          {entry.shades.map((meters, idx) =>
-                            meters ? (
-                              <div key={idx}>
-                                {idx + 1}: {meters}m
-                              </div>
-                            ) : null
-                          )}
+                          {entry.shades[50] == 0 || entry.shades.length == 50
+                            ? entry.shades.map((meters, idx) =>
+                                meters ? (
+                                  <div key={idx}>
+                                    {idx + 1}: {meters}m
+                                  </div>
+                                ) : null
+                              )
+                            : "All Colours: " + entry.shades[50] + "m"}
                         </td>
                         <td className="px-2 py-4 w-1/6 text-right">
                           {" "}
@@ -342,13 +344,16 @@ function OrderFile() {
                               </div>
                             </td>
                             <td className="px-2 py-4 w-2/6 text-sm text-gray-500">
-                              {order.shades.map((meters, index) =>
-                                meters ? (
-                                  <div key={index}>
-                                    {index + 1}: {meters}m
-                                  </div>
-                                ) : null
-                              )}
+                              {order.shades[50] == 0 ||
+                              order.shades.length == 50
+                                ? order.shades.map((meters, idx) =>
+                                    meters ? (
+                                      <div key={idx}>
+                                        {idx + 1}: {meters}m
+                                      </div>
+                                    ) : null
+                                  )
+                                : "All Colours: " + order.shades[50] + "m"}
                             </td>
                             <td className="px-2 py-4 w-1/6">
                               {isSelected ? (

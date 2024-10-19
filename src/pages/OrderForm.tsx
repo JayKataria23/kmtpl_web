@@ -256,7 +256,7 @@ export default function OrderForm() {
       design,
       price: "",
       remark: "",
-      shades: Array(50).fill(""),
+      shades: Array(51).fill(""),
     });
   };
 
@@ -692,7 +692,35 @@ export default function OrderForm() {
                     </div>
                     <ScrollArea className="h-[200px] w-full rounded-md border p-4">
                       <div className="grid gap-4">
-                        {Array.from({ length: 50 }, (_, i) => (
+                        <div
+                          key={"allColour"}
+                          className="grid grid-cols-5 items-center gap-2"
+                        >
+                          <Label
+                            htmlFor={`allColour`}
+                            className="text-right col-span-1"
+                          >
+                            All Colours
+                          </Label>
+                          <Input
+                            id={`allColours`}
+                            value={currentEntry.shades[50]}
+                            onChange={(e) => {
+                              handleShadeChange(50, e.target.value);
+                            }}
+                            type="number"
+                            className="col-span-3"
+                          />
+                          <Button
+                            onClick={() => handleShadeIncrement(50)}
+                            variant="outline"
+                            size="sm"
+                            className="col-span-1"
+                          >
+                            +50
+                          </Button>
+                        </div>
+                        {currentEntry.shades[50] == "" && Array.from({ length: 50 }, (_, i) => (
                           <div
                             key={i}
                             className="grid grid-cols-5 items-center gap-2"

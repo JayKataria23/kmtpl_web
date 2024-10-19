@@ -59,10 +59,10 @@ const formatDate = (dateString: string): string => {
     minute: "numeric",
     hour12: false, // Set hour12 to false for 24-hour format
   };
-  
+
   const formattedDate = date.toLocaleDateString("en-US", optionsDate); // Format date
   const formattedTime = date.toLocaleTimeString("en-US", optionsTime); // Format time
-  
+
   return `${formattedDate} ${formattedTime}`; // Return combined formatted date and time
 };
 
@@ -252,15 +252,17 @@ const BhiwandiList = () => {
                                 Shades:
                               </p>
                               {designEntry.shades.length > 0 ? (
-                                designEntry.shades.map((meters, idx) =>
-                                  meters ? (
-                                    <div
-                                      key={idx}
-                                      className="text-sm md:text-base"
-                                    >
-                                      {idx + 1}: {meters} m
-                                    </div>
-                                  ) : null
+                                designEntry.shades[50] == "" ||
+                                designEntry.shades.length == 50 ? (
+                                  designEntry.shades.map((meters, idx) =>
+                                    meters ? (
+                                      <div key={idx}>
+                                        {idx + 1}: {meters}m
+                                      </div>
+                                    ) : null
+                                  )
+                                ) : (
+                                  "All Colours: " + designEntry.shades[50] + "m"
                                 )
                               ) : (
                                 <p className="text-sm md:text-base">

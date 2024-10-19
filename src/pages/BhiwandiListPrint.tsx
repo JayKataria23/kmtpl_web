@@ -129,15 +129,18 @@ function BhiwandiListPrint() {
             <div style="flex: 1; text-align: left;">
               <p style="font-size: 18px; line-height: 0.5;"><strong>Shades:</strong></p>
               <div>
-                ${designEntry.shades
-                  .map((shade, idx) => {
-                    return shade
-                      ? `<div style="font-size: 16px; line-height: 1;">${
-                          idx + 1
-                        }: ${shade} m</div>`
-                      : ""; // Return an empty string instead of null
-                  })
-                  .join("")}
+                ${
+                  designEntry.shades[50] == "" ||
+                  designEntry.shades.length == 50
+                    ? designEntry.shades.map((meters, idx) =>
+                        meters ? (
+                          <div key={idx}>
+                            {idx + 1}: {meters}m
+                          </div>
+                        ) : null
+                      )
+                    : "All Colours: " + designEntry.shades[50] + "m"
+                }
               </div>
             </div>
           </div>
