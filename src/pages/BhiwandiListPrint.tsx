@@ -114,34 +114,36 @@ function BhiwandiListPrint() {
       `;
 
         // Loop through each design entry
-        entry.entries.forEach((designEntry) => {
+        entry.entries.forEach((order) => {
+          console.log(order.shades);
           html += `
           <div style="display: flex; justify-content: space-between; margin-top: 10px; border: 1px solid #ccc; padding: 10px; border-radius: 5px;">
             <div style="flex: 1;">
               <p style="font-size: 18px; line-height: 0.5;"><strong>Design:</strong> ${
-                designEntry.design
+                order.design
               }</p>
-              <p style="font-size: 18px; line-height: 0.5;"><strong>Price: ${
-                designEntry.price
-              }</strong></p>
+              <p style="font-size: 18px; line-height: 0.5;"><strong>Price:</strong> ${
+                order.price
+              }</p>
               <p style="font-size: 18px; line-height: 0.5;"><strong>Remark:</strong> ${
-                designEntry.remark || "N/A"
+                order.remark || "N/A"
               }</p>
             </div>
             <div style="flex: 1; text-align: left;">
               <p style="font-size: 18px; line-height: 0.5;"><strong>Shades:</strong></p>
               <div>
                 ${
-                  designEntry.shades[50] == "" ||
-                  designEntry.shades.length == 50
-                    ? designEntry.shades.map((meters, idx) =>
-                        meters ? (
-                          <div key={idx}>
-                            {idx + 1}: {meters}m
-                          </div>
-                        ) : null
-                      )
-                    : "All Colours: " + designEntry.shades[50] + "m"
+                  order.shades[50]
+                    ? `All Colurs: ${order.shades[50]}`
+                    : order.shades
+                        .map((shade, idx) => {
+                          return shade
+                            ? `<div style="font-size: 16px; line-height: 1;">${
+                                idx + 1
+                              }: ${shade} m</div>`
+                            : ""; // Return an empty string instead of null
+                        })
+                        .join("")
                 }
               </div>
             </div>
