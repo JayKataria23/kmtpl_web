@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react"; // Add useMemo import
+import { useState, useEffect } from "react"; // Add useMemo import
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import supabase from "@/utils/supabase";
@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/drawer";
 import { useToast } from "@/hooks/use-toast"; // Import useToast at the top
 import { Toaster } from "@/components/ui";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 interface DesignCount {
   design: string;
@@ -48,6 +49,7 @@ function OrderFile() {
   const [drawerEntries, setDrawerEntries] = useState<DrawerEntry[]>([]);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [filter, setFilter] = useState<string>("all"); // State for filter
 
   useEffect(() => {
     fetchDesignCounts();
@@ -65,6 +67,23 @@ function OrderFile() {
           count: Number(item.count), // Convert BIGINT to number
         })
       );
+      formattedData.sort((a, b) => {
+        const nameA = a.design.toLowerCase();
+        const nameB = b.design.toLowerCase();
+
+        // Check if both names are purely numeric
+        const isANumeric = !isNaN(Number(nameA));
+        const isBNumeric = !isNaN(Number(nameB));
+
+        if (isANumeric && isBNumeric) return 0; // Both are numeric, consider equal
+        if (isANumeric) return 1; // Numeric comes after alphabets
+        if (isBNumeric) return -1; // Numeric comes after alphabets
+
+        if (nameA < nameB) return -1;
+        if (nameA > nameB) return 1;
+        return 0; // If they are equal
+      });
+
       setDesignCounts(formattedData);
     } catch (error) {
       console.error("Error fetching design counts:", error);
@@ -110,9 +129,6 @@ function OrderFile() {
   };
 
   // Sort the drawerEntries by design
-  const sortedDrawerEntries = useMemo(() => {
-    return [...drawerEntries].sort((a, b) => a.design.localeCompare(b.design));
-  }, [drawerEntries]);
 
   const handleSendBhiwandi = async () => {
     try {
@@ -151,6 +167,20 @@ function OrderFile() {
     }
   };
 
+  const filteredDesignCounts = () => {
+    if (filter === "all") {
+      return designCounts; // No filter applied
+    } else if (filter === "regular") {
+      return designCounts.filter(
+        (item) => !item.design.startsWith("D-") && !item.design.startsWith("P-")
+      ); // Filter out designs starting with "D-" or "P-"
+    } else {
+      return designCounts.filter(
+        (item) => item.design.startsWith("P-") || item.design.startsWith("D-")
+      ); // Filter out designs starting with "D-" or "P-"
+    }
+  };
+
   return (
     <div className="container mx-auto mt-10 p-4 relative">
       <Drawer open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
@@ -164,9 +194,10 @@ function OrderFile() {
               Entries added to Bhiwandi list
             </DrawerDescription>
           </DrawerHeader>
+
           <div className="p-4 overflow-y-auto max-h-[60vh]">
             {Object.entries(
-              sortedDrawerEntries.reduce((acc, entry) => {
+              drawerEntries.reduce((acc, entry) => {
                 if (!acc[entry.design]) acc[entry.design] = [];
                 acc[entry.design].push(entry);
                 return acc;
@@ -234,8 +265,25 @@ function OrderFile() {
       <Button onClick={() => navigate("/")} className="mb-4">
         Back to Home
       </Button>
+      <ToggleGroup
+        variant="outline"
+        type="single"
+        value={filter}
+        onValueChange={setFilter}
+        className="mb-4 mx-8 border" // Added border class
+      >
+        <ToggleGroupItem value="all" aria-label="Show all">
+          ALL
+        </ToggleGroupItem>
+        <ToggleGroupItem value="regular" aria-label="Show regular">
+          Regular
+        </ToggleGroupItem>
+        <ToggleGroupItem value="print" aria-label="Show print">
+          Print
+        </ToggleGroupItem>
+      </ToggleGroup>
       <Accordion type="single" collapsible className="w-full">
-        {designCounts.map((item, index) => (
+        {filteredDesignCounts().map((item, index) => (
           <AccordionItem key={index} value={`item-${index}`}>
             <AccordionTrigger
               className="text-lg flex justify-between items-center w-full"
