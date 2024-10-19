@@ -16,6 +16,7 @@ interface Entry {
   broker_name: string;
   transporter_name: string;
   order_id: string;
+  order_no: number;
 }
 
 interface GroupedEntry {
@@ -33,6 +34,7 @@ interface GroupedOrder {
   broker_name: string;
   transporter_name: string;
   entries: GroupedEntry[];
+  order_no: number;
 }
 
 function BhiwandiListPrint() {
@@ -103,8 +105,8 @@ function BhiwandiListPrint() {
           <p style="font-size: 18px; line-height: 0.5;"><strong>Ship To:</strong> ${
             entry.ship_to_party
           }</p>
-          <p style="font-size: 18px; line-height: 0.5;"><strong>Broker:</strong> ${
-            entry.broker_name
+          <p style="font-size: 18px; line-height: 0.5;"><strong>Order No.:</strong> ${
+            entry.order_no
           }</p>
           <p style="font-size: 18px; line-height: 0.5;"><strong>Transport:</strong> ${
             entry.transporter_name
@@ -170,6 +172,7 @@ function BhiwandiListPrint() {
         price,
         remark,
         shades,
+        order_no,
       } = entry;
 
       // Check if the order_id already exists in the map
@@ -177,6 +180,7 @@ function BhiwandiListPrint() {
         // Create a new GroupedOrder if it doesn't exist
         grouped.set(order_id, {
           order_id,
+          order_no,
           bill_to_party,
           ship_to_party,
           broker_name,

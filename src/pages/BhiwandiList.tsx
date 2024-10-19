@@ -27,6 +27,7 @@ interface Entry {
   broker_name: string;
   transporter_name: string;
   order_id: string;
+  order_no: number;
 }
 
 interface GroupedEntry {
@@ -44,6 +45,7 @@ interface GroupedOrder {
   broker_name: string;
   transporter_name: string;
   entries: GroupedEntry[];
+  order_no: number;
 }
 
 // Utility function to format the date
@@ -111,6 +113,7 @@ const BhiwandiList = () => {
         price,
         remark,
         shades,
+        order_no
       } = entry;
 
       // Check if the order_id already exists in the map
@@ -122,6 +125,7 @@ const BhiwandiList = () => {
           ship_to_party,
           broker_name,
           transporter_name,
+          order_no,
           entries: [], // Initialize with an empty entries array
         });
       }
@@ -225,7 +229,7 @@ const BhiwandiList = () => {
                         <strong>Ship To:</strong> {entry.ship_to_party}
                       </p>
                       <p style={{ textAlign: "left" }}>
-                        <strong>Broker:</strong> {entry.broker_name}
+                        <strong>Order No.:</strong> {entry.order_no}
                       </p>
                       <p style={{ textAlign: "left" }}>
                         <strong>Transport:</strong> {entry.transporter_name}
