@@ -240,7 +240,7 @@ const BhiwandiList = () => {
                               <p className="font-semibold text-base md:text-lg">
                                 Design: {designEntry.design}
                               </p>
-                              <p className="text-sm md:text-base">
+                              <p className="text-sm md:text-base font-semibold">
                                 Price: {designEntry.price}
                               </p>
                               <p className="text-sm md:text-base">

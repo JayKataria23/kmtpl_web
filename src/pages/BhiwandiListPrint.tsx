@@ -119,9 +119,9 @@ function BhiwandiListPrint() {
               <p style="font-size: 18px; line-height: 0.5;"><strong>Design:</strong> ${
                 designEntry.design
               }</p>
-              <p style="font-size: 18px; line-height: 0.5;"><strong>Price:</strong> ${
+              <p style="font-size: 18px; line-height: 0.5;"><strong>Price: ${
                 designEntry.price
-              }</p>
+              }</strong></p>
               <p style="font-size: 18px; line-height: 0.5;"><strong>Remark:</strong> ${
                 designEntry.remark || "N/A"
               }</p>
