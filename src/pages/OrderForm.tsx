@@ -108,7 +108,6 @@ export default function OrderForm() {
         .limit(1);
 
       if (error) throw error;
-      console.log(data);
       const lastOrderNo = data.length > 0 ? parseInt(data[0].order_no) : 0;
       const newOrderNo = (lastOrderNo + 1).toString();
       setOrderNo(newOrderNo);
@@ -211,8 +210,6 @@ export default function OrderForm() {
     if (error) throw error;
 
     setPriceList(data);
-    console.log(data);
-    console.log(partyId);
   };
 
   const handleDateChange = (amount: number, unit: "day" | "month" | "year") => {
@@ -655,6 +652,11 @@ export default function OrderForm() {
                           priceList.find(
                             (price) => price.design === currentEntry.design
                           )?.price
+                            ? "Old Price " +
+                              priceList.find(
+                                (price) => price.design === currentEntry.design
+                              )?.price
+                            : "Enter Price"
                         }
                         type="number"
                       />
