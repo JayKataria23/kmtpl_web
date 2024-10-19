@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Delete } from "lucide-react";
 
 import { Toaster } from "@/components/ui/toaster";
 import { useToast } from "@/hooks/use-toast";
@@ -180,7 +179,6 @@ export default function PartyProfilePage() {
     );
   }, [parties, searchQuery]);
 
-  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 
   return (
     <div className="container mx-auto mt-10 p-4">
@@ -199,46 +197,9 @@ export default function PartyProfilePage() {
           onChange={handleSearchChange}
         />
       </div>
-      {/* Alphabet selector as on-screen keyboard */}
-      <div className="flex flex-wrap justify-center mb-6">
-        {alphabet.map((letter) => (
-          <Button
-            key={letter}
-            onClick={() => setSearchQuery((x) => x + letter)} // Set search query to the clicked letter
-            variant="outline"
-            className="m-1"
-          >
-            {letter}
-          </Button>
-        ))}
-        <Button
-          key="space"
-          onClick={() => setSearchQuery((x) => x + " ")} // Add space to search query
-          variant="outline"
-          className="m-1"
-        >
-          Space
-        </Button>
-        <Button
-          key="clear"
-          onClick={() => setSearchQuery("")} // Clear search query
-          variant="outline"
-          className="m-1"
-        >
-          Clear
-        </Button>
-        <Button
-          key="backspace"
-          onClick={() => setSearchQuery((prev) => prev.slice(0, -1))} // Remove last character from search query
-          variant="outline"
-          className="m-1"
-        >
-          <Delete />
-        </Button>
-      </div>
 
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto max-w-[90vw]">
           <DialogHeader>
             <DialogTitle>
               {isEditing ? "Edit" : "Create New"} Party Profile

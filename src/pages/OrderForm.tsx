@@ -35,6 +35,11 @@ interface DesignEntry {
   shades: string[];
 }
 
+interface PriceEntry {
+  design: string;
+  price: string;
+}
+
 interface OrderDetails {
   orderNo: string;
   date: string;
@@ -83,6 +88,7 @@ export default function OrderForm() {
   const [isOrderSaved, setIsOrderSaved] = useState(false); // New state to track if the order is saved
   const [orderId, setOrderId] = useState<string | null>(null); // New state to store the order ID
   const [remarkOptions, setRemarkOptions] = useState<string[]>([]);
+  const [priceList, setPriceList] = useState<PriceEntry[]>([]);
 
   useEffect(() => {
     fetchBrokers();
@@ -192,6 +198,21 @@ export default function OrderForm() {
       console.error("Error fetching party options:", error);
       // Optionally, you can show an error message to the user
     }
+  };
+
+  const fetchPriceList = async (partyId: number) => {
+    const { data, error } = await supabase.rpc(
+      "get_latest_design_prices_by_party",
+      {
+        partyid: partyId,
+      }
+    );
+
+    if (error) throw error;
+
+    setPriceList(data);
+    console.log(data);
+    console.log(partyId);
   };
 
   const handleDateChange = (amount: number, unit: "day" | "month" | "year") => {
@@ -454,6 +475,7 @@ export default function OrderForm() {
 
   const handleBillToChange = (partyId: number) => {
     setSelectedBillTo(partyId);
+    fetchPriceList(partyId);
     const selectedParty = partyOptions.find((party) => party.id === partyId);
     if (selectedParty) {
       if (selectedParty.delivery_id) {
@@ -618,90 +640,93 @@ export default function OrderForm() {
                     Add Design
                   </Button>
                 )}
-                {currentEntry &&
-                  designs.includes(currentEntry.design.toUpperCase()) && (
-                    <>
-                      <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="price" className="text-right">
-                          Price
-                        </Label>
+                {currentEntry && designs.includes(currentEntry.design) && (
+                  <>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <Label htmlFor="price" className="text-right">
+                        Price
+                      </Label>
+                      <Input
+                        id="price"
+                        value={currentEntry.price}
+                        onChange={(e) => handlePriceChange(e.target.value)}
+                        className="col-span-3"
+                        placeholder={
+                          priceList.find(
+                            (price) => price.design === currentEntry.design
+                          )?.price
+                        }
+                        type="number"
+                      />
+                    </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <Label htmlFor="remark" className="text-right">
+                        Remark
+                      </Label>
+                      <div className="col-span-3 flex items-center">
                         <Input
-                          id="price"
-                          value={currentEntry.price}
-                          onChange={(e) => handlePriceChange(e.target.value)}
-                          className="col-span-3"
-                          placeholder="Enter price"
-                          type="number"
-                        />
-                      </div>
-                      <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="remark" className="text-right">
-                          Remark
-                        </Label>
-                        <div className="col-span-3 flex items-center">
-                          <Input
-                            id="remark"
-                            value={currentEntry.remark}
-                            onChange={(e) => handleRemarkChange(e.target.value)}
+                          id="remark"
+                          value={currentEntry.remark}
+                          onChange={(e) => handleRemarkChange(e.target.value)}
                           placeholder="Enter remark"
                           className="w-full"
-                            list="remarks"
-                          />
-                          <Button
-                            type="button"
-                            className="ml-2"
+                          list="remarks"
+                        />
+                        <Button
+                          type="button"
+                          className="ml-2"
                           size="icon"
                           variant="ghost"
-                            onClick={() => handleRemarkChange("")}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                          <datalist id="remarks">
-                            {remarkOptions.map((remark) => (
-                              <option key={remark} value={remark} />
-                            ))}
-                          </datalist>
-                        </div>
-                      </div>
-                      <ScrollArea className="h-[200px] w-full rounded-md border p-4">
-                        <div className="grid gap-4">
-                          {Array.from({ length: 50 }, (_, i) => (
-                            <div
-                              key={i}
-                              className="grid grid-cols-5 items-center gap-2"
-                            >
-                              <Label
-                                htmlFor={`shade-${i}`}
-                                className="text-right col-span-1"
-                              >
-                                Shade {i + 1}
-                              </Label>
-                              <Input
-                                id={`shade-${i}`}
-                                value={currentEntry.shades[i]}
-                                onChange={(e) =>
-                                  handleShadeChange(i, e.target.value)
-                                }
-                                type="number"
-                                className="col-span-3"
-                              />
-                              <Button
-                                onClick={() => handleShadeIncrement(i)}
-                                variant="outline"
-                                size="sm"
-                                className="col-span-1"
-                              >
-                                +50
-                              </Button>
-                            </div>
+                          onClick={() => handleRemarkChange("")}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                        <datalist id="remarks">
+                          {remarkOptions.map((remark) => (
+                            <option key={remark} value={remark} />
                           ))}
-                        </div>
-                      </ScrollArea>
-                      <Button onClick={handleSaveDesign} className="mt-4">
-                        Save Design
-                      </Button>
-                    </>
-                  )}
+                        </datalist>
+                      </div>
+                    </div>
+                    <ScrollArea className="h-[200px] w-full rounded-md border p-4">
+                      <div className="grid gap-4">
+                        {Array.from({ length: 50 }, (_, i) => (
+                          <div
+                            key={i}
+                            className="grid grid-cols-5 items-center gap-2"
+                          >
+                            <Label
+                              htmlFor={`shade-${i}`}
+                              className="text-right col-span-1"
+                            >
+                              Shade {i + 1}
+                            </Label>
+                            <Input
+                              id={`shade-${i}`}
+                              value={currentEntry.shades[i]}
+                              onChange={(e) =>
+                                handleShadeChange(i, e.target.value)
+                              }
+                              type="number"
+                              className="col-span-3"
+                            />
+                            <Button
+                              onClick={() => handleShadeIncrement(i)}
+                              variant="outline"
+                              size="sm"
+                              className="col-span-1"
+                            >
+                              +50
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    </ScrollArea>
+                    <Button onClick={handleSaveDesign} className="mt-4">
+                      Save Design
+                    </Button>
+                  </>
+                )}
               </div>
             </DialogContent>
           </Dialog>
