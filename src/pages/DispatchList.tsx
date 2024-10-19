@@ -120,11 +120,22 @@ function DispatchList() {
       return designCounts; // No filter applied
     } else if (filter === "regular") {
       return designCounts.filter(
-        (item) => !item.design.startsWith("D-") && !item.design.startsWith("P-")
+        (item) =>
+          !item.design.startsWith("D-") &&
+          !item.design.startsWith("P-") &&
+          !item.design.startsWith("WC-") &&
+          !item.design.startsWith("RLT-") &&
+          isNaN(Number(item.design))
       ); // Filter out designs starting with "D-" or "P-"
+    } else if (filter === "Design No.") {
+      return designCounts.filter((item) => !isNaN(Number(item.design))); // Filter out designs starting with "D-" or "P-"
     } else {
       return designCounts.filter(
-        (item) => item.design.startsWith("P-") || item.design.startsWith("D-")
+        (item) =>
+          item.design.startsWith("P-") ||
+          item.design.startsWith("D-") ||
+          item.design.startsWith("WC-") ||
+          item.design.startsWith("RLT-")
       ); // Filter out designs starting with "D-" or "P-"
     }
   };
@@ -142,7 +153,7 @@ function DispatchList() {
         type="single"
         value={filter}
         onValueChange={setFilter}
-        className="mb-4 mx-8 border" // Added border class
+        className="mb-4 mx-4 border" // Added border class
       >
         <ToggleGroupItem value="all" aria-label="Show all">
           ALL
@@ -152,6 +163,9 @@ function DispatchList() {
         </ToggleGroupItem>
         <ToggleGroupItem value="print" aria-label="Show print">
           Print
+        </ToggleGroupItem>
+        <ToggleGroupItem value="Design No." aria-label="Show Design No.">
+          Design No.
         </ToggleGroupItem>
       </ToggleGroup>
 
