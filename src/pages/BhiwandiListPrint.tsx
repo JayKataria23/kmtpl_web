@@ -130,13 +130,13 @@ function BhiwandiListPrint() {
               <p style="font-size: 18px; line-height: 0.5;"><strong>Shades:</strong></p>
               <div>
                 ${designEntry.shades
-                  .filter((shade) => shade) // Filter out empty shades
-                  .map(
-                    (shade, idx) =>
-                      `<div style="font-size: 16px; line-height: 1;">${
-                        idx + 1
-                      }: ${shade} m</div>`
-                  )
+                  .map((shade, idx) => {
+                    return shade
+                      ? `<div style="font-size: 16px; line-height: 1;">${
+                          idx + 1
+                        }: ${shade} m</div>`
+                      : ""; // Return an empty string instead of null
+                  })
                   .join("")}
               </div>
             </div>
