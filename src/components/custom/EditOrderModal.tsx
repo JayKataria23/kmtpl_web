@@ -17,6 +17,7 @@ interface EditOrderModalProps {
   onClose: () => void;
   orderId: number | null;
   onOrderUpdated: () => void;
+  className?: string;
 }
 
 interface OrderDetails {
@@ -48,6 +49,7 @@ export function EditOrderModal({
   onClose,
   orderId,
   onOrderUpdated,
+  className,
 }: EditOrderModalProps) {
   const [orderDetails, setOrderDetails] = useState<OrderDetails>({
     order_no: "",
@@ -67,11 +69,13 @@ export function EditOrderModal({
   const [designs, setDesigns] = useState<string[]>([]);
   const [isDesignDialogOpen, setIsDesignDialogOpen] = useState(false);
   const { toast } = useToast();
+  const [remarkOptions, setRemarkOptions] = useState<string[]>([]);
 
   const fetchOrderDetails = useCallback(async () => {
     if (!orderId) return;
 
     try {
+      fetchRemarkOptions();
       const { data, error } = await supabase
         .from("orders")
         .select(
@@ -149,6 +153,18 @@ export function EditOrderModal({
       });
     }
   }, [toast]);
+
+  const fetchRemarkOptions = async () => {
+    try {
+      const { data, error } = await supabase.from("REMARKS").select("content");
+
+      if (error) throw error;
+
+      setRemarkOptions(data.map((remark) => remark.content));
+    } catch (error) {
+      console.error("Error fetching remark options:", error);
+    }
+  };
 
   const fetchDesignEntries = useCallback(async () => {
     if (!orderId) return;
@@ -454,232 +470,251 @@ export function EditOrderModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>Edit Order #{orderDetails.order_no}</DialogTitle>
-          <div className="flex justify-between">
-            {orderId && orderDetails.canceled ? ( // Conditional rendering for buttons
-              <Button
-                onClick={() => handleUndo(orderId)} // Call handleUndo to restore the order
-                variant="outline"
-                size="sm"
-              >
-                Undo
-              </Button>
-            ) : (
-              <Button
-                onClick={() => handleDelete(orderId)} // Call handleDelete to cancel the order
-                variant="destructive"
-                size="sm"
-              >
-                Delete
-              </Button>
-            )}
-          </div>
-        </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="date" className="text-right">
-              Date
-            </Label>
-            <Input
-              id="date"
-              name="date"
-              type="date"
-              value={formatDate(orderDetails.date)}
-              onChange={(e) => handleDateChange(e.target.value)}
-              className="col-span-3"
-            />
-          </div>
-          {(
-            ["bill_to_id", "ship_to_id", "broker_id", "transport_id"] as const
-          ).map((field) => (
-            <div key={field} className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor={field} className="text-right">
-                {field
-                  .replace("_id", "")
-                  .replace("_", " ")
-                  .charAt(0)
-                  .toUpperCase() +
-                  field.replace("_id", "").replace("_", " ").slice(1)}
+      <DialogContent className={"sm:max-w-[425px] " + className}>
+        <ScrollArea className="h-[90vh]">
+          <DialogHeader>
+            <DialogTitle>Edit Order #{orderDetails.order_no}</DialogTitle>
+            <div className="flex justify-between">
+              {orderId && orderDetails.canceled ? ( // Conditional rendering for buttons
+                <Button
+                  onClick={() => handleUndo(orderId)} // Call handleUndo to restore the order
+                  variant="outline"
+                  size="sm"
+                >
+                  Undo
+                </Button>
+              ) : (
+                <Button
+                  onClick={() => handleDelete(orderId)} // Call handleDelete to cancel the order
+                  variant="destructive"
+                  size="sm"
+                >
+                  Delete
+                </Button>
+              )}
+            </div>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="date" className="text-right">
+                Date
               </Label>
-              <InputWithAutocomplete
-                label={field}
-                id={field}
-                value={getSelectedValue(field)}
-                onChange={(value) => handleSelectChange(field, value)}
-                options={getOptionsForField(field)}
-                placeholder={`Select ${field
-                  .replace("_id", "")
-                  .replace("_", " ")}`}
+              <Input
+                id="date"
+                name="date"
+                type="date"
+                value={formatDate(orderDetails.date)}
+                onChange={(e) => handleDateChange(e.target.value)}
                 className="col-span-3"
               />
             </div>
-          ))}
-          <div>
-            <Label>Designs</Label>
-            <Button className="w-full mt-2" onClick={handleAddDesign}>
-              Add Design
-            </Button>
-          </div>
-
-          <Dialog
-            open={isDesignDialogOpen}
-            onOpenChange={setIsDesignDialogOpen}
-          >
-            <DialogContent className="sm:max-w-[425px] top-[40%]">
-              <DialogHeader>
-                <DialogTitle>
-                  {currentEntry?.design
-                    ? `Edit ${currentEntry.design}`
-                    : "Add Design"}
-                </DialogTitle>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="design" className="text-right">
-                    Design
-                  </Label>
-                  <Input
-                    id="design"
-                    list="designs"
-                    value={currentEntry?.design || ""}
-                    onChange={(e) => handleDesignSelect(e.target.value)}
-                    className="col-span-3"
-                    placeholder="Search for a design"
-                  />
-                  <datalist id="designs">
-                    {designs.map((design) => (
-                      <option key={design} value={design} />
-                    ))}
-                  </datalist>
-                </div>
-                {currentEntry && designs.includes(currentEntry.design) && (
-                  <>
-                    <div className="grid grid-cols-4 items-center gap-4">
-                      <Label htmlFor="price" className="text-right">
-                        Price
-                      </Label>
-                      <Input
-                        id="price"
-                        value={currentEntry.price}
-                        onChange={(e) => handlePriceChange(e.target.value)}
-                        className="col-span-3"
-                        placeholder="Enter price"
-                        type="number"
-                      />
-                    </div>
-                    <div className="grid grid-cols-4 items-center gap-4">
-                      <Label htmlFor="remark" className="text-right">
-                        Remark
-                      </Label>
-                      <Input
-                        id="remark"
-                        value={currentEntry.remark}
-                        onChange={(e) => handleRemarkChange(e.target.value)}
-                        className="col-span-3"
-                        placeholder="Enter remark"
-                      />
-                    </div>
-                    <ScrollArea className="h-[200px] w-full rounded-md border p-4">
-                      <div className="grid gap-4">
-                        {Array.from({ length: 50 }, (_, i) => (
-                          <div
-                            key={i}
-                            className="grid grid-cols-5 items-center gap-2"
-                          >
-                            <Label
-                              htmlFor={`shade-${i}`}
-                              className="text-right col-span-1"
-                            >
-                              Shade {i + 1}
-                            </Label>
-                            <Input
-                              id={`shade-${i}`}
-                              value={currentEntry.shades[i]}
-                              onChange={(e) =>
-                                handleShadeChange(i, e.target.value)
-                              }
-                              type="number"
-                              className="col-span-3"
-                            />
-                            <Button
-                              onClick={() => handleShadeIncrement(i)}
-                              variant="outline"
-                              size="sm"
-                              className="col-span-1"
-                            >
-                              +50
-                            </Button>
-                          </div>
-                        ))}
-                      </div>
-                    </ScrollArea>
-                    <Button onClick={handleSaveDesign} className="mt-4">
-                      Save Design
-                    </Button>
-                  </>
-                )}
-              </div>
-            </DialogContent>
-          </Dialog>
-
-          {/* Scrollable area for design entries */}
-          <ScrollArea className="max-h-40 overflow-y-auto">
-            {designEntries.map((entry) => (
-              <div
-                key={entry.id}
-                className="flex justify-between p-2 bg-gray-100 rounded mb-2"
-              >
-                <div>
-                  <span>
-                    {entry.design} - Price: {entry.price || "N/A"}
-                  </span>
-                  {entry.remark && (
-                    <p className="text-sm text-gray-600">
-                      Remark: {entry.remark}
-                    </p>
-                  )}
-                </div>
-                <div className="space-x-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleEditDesign(entry.id)}
-                  >
-                    Edit
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleDeleteDesign(entry.id)}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
+            {(
+              ["bill_to_id", "ship_to_id", "broker_id", "transport_id"] as const
+            ).map((field) => (
+              <div key={field} className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor={field} className="text-right">
+                  {field
+                    .replace("_id", "")
+                    .replace("_", " ")
+                    .charAt(0)
+                    .toUpperCase() +
+                    field.replace("_id", "").replace("_", " ").slice(1)}
+                </Label>
+                <InputWithAutocomplete
+                  label={field}
+                  id={field}
+                  value={getSelectedValue(field)}
+                  onChange={(value) => handleSelectChange(field, value)}
+                  options={getOptionsForField(field)}
+                  placeholder={`Select ${field
+                    .replace("_id", "")
+                    .replace("_", " ")}`}
+                  className="col-span-3"
+                />
               </div>
             ))}
-          </ScrollArea>
+            <div>
+              <Label>Designs</Label>
+              <Button className="w-full mt-2" onClick={handleAddDesign}>
+                Add Design
+              </Button>
+            </div>
 
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="remark" className="text-right">
-              Remark
-            </Label>
-            <Input
-              id="remark"
-              name="remark"
-              value={orderDetails.remark || ""}
-              onChange={handleInputChange}
-              className="col-span-3"
-            />
+            <Dialog
+              open={isDesignDialogOpen}
+              onOpenChange={setIsDesignDialogOpen}
+            >
+              <DialogContent className="sm:max-w-[425px] top-[40%]">
+                <DialogHeader>
+                  <DialogTitle>
+                    {currentEntry?.design
+                      ? `Edit ${currentEntry.design}`
+                      : "Add Design"}
+                  </DialogTitle>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="design" className="text-right">
+                      Design
+                    </Label>
+                    <Input
+                      id="design"
+                      list="designs"
+                      value={currentEntry?.design || ""}
+                      onChange={(e) => handleDesignSelect(e.target.value)}
+                      className="col-span-3"
+                      placeholder="Search for a design"
+                    />
+                    <datalist id="designs">
+                      {designs.map((design) => (
+                        <option key={design} value={design} />
+                      ))}
+                    </datalist>
+                  </div>
+                  {currentEntry && designs.includes(currentEntry.design) && (
+                    <>
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="price" className="text-right">
+                          Price
+                        </Label>
+                        <Input
+                          id="price"
+                          value={currentEntry.price}
+                          onChange={(e) => handlePriceChange(e.target.value)}
+                          className="col-span-3"
+                          placeholder="Enter price"
+                          type="number"
+                        />
+                      </div>
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="remark" className="text-right">
+                          Remark
+                        </Label>
+                        <div className="col-span-3 flex items-center">
+                          <Input
+                            id="remark"
+                            value={currentEntry.remark}
+                            onChange={(e) => handleRemarkChange(e.target.value)}
+                            placeholder="Enter remark"
+                            className="w-full"
+                            list="remarks"
+                          />
+                          <Button
+                            type="button"
+                            className="ml-2"
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => handleRemarkChange("")}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                          <datalist id="remarks">
+                            {remarkOptions.map((remark) => (
+                              <option key={remark} value={remark} />
+                            ))}
+                          </datalist>
+                        </div>
+                      </div>
+                      <ScrollArea className="h-[200px] w-full rounded-md border p-4">
+                        <div className="grid gap-4">
+                          {Array.from({ length: 50 }, (_, i) => (
+                            <div
+                              key={i}
+                              className="grid grid-cols-5 items-center gap-2"
+                            >
+                              <Label
+                                htmlFor={`shade-${i}`}
+                                className="text-right col-span-1"
+                              >
+                                Shade {i + 1}
+                              </Label>
+                              <Input
+                                id={`shade-${i}`}
+                                value={currentEntry.shades[i]}
+                                onChange={(e) =>
+                                  handleShadeChange(i, e.target.value)
+                                }
+                                type="number"
+                                className="col-span-3"
+                              />
+                              <Button
+                                onClick={() => handleShadeIncrement(i)}
+                                variant="outline"
+                                size="sm"
+                                className="col-span-1"
+                              >
+                                +50
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      </ScrollArea>
+                      <Button onClick={handleSaveDesign} className="mt-4">
+                        Save Design
+                      </Button>
+                    </>
+                  )}
+                </div>
+              </DialogContent>
+            </Dialog>
+
+            {/* Scrollable area for design entries */}
+            <ScrollArea className="max-h-40 overflow-y-auto">
+              {designEntries.map((entry) => (
+                <div
+                  key={entry.id}
+                  className="flex justify-between p-2 bg-gray-100 rounded mb-2"
+                >
+                  <div>
+                    <span>
+                      {entry.design} - Price: {entry.price || "N/A"}
+                    </span>
+                    {entry.remark && (
+                      <p className="text-sm text-gray-600">
+                        Remark: {entry.remark}
+                      </p>
+                    )}
+                  </div>
+                  <div className="space-x-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleEditDesign(entry.id)}
+                    >
+                      Edit
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDeleteDesign(entry.id)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </ScrollArea>
+
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="remark" className="text-right">
+                Remark
+              </Label>
+              <Input
+                id="remark"
+                name="remark"
+                value={orderDetails.remark || ""}
+                onChange={handleInputChange}
+                className="col-span-3"
+              />
+            </div>
           </div>
-        </div>
-        <div className="flex justify-end space-x-2">
-          <Button variant="outline" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button onClick={handleSubmit}>Save Changes</Button>
-        </div>
+          <div className="flex justify-end space-x-2">
+            <Button variant="outline" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button onClick={handleSubmit}>Save Changes</Button>
+          </div>
+        </ScrollArea>
       </DialogContent>
     </Dialog>
   );

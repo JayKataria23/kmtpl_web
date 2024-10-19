@@ -106,7 +106,9 @@ export default function OrderList() {
         {orders.map((order) => (
           <div
             key={order.id}
-            className={`p-4 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-200 ${order.canceled ? 'bg-red-100' : 'bg-white'}`} // Conditional background color
+            className={`p-4 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-200 ${
+              order.canceled ? "bg-red-100" : "bg-white"
+            }`} // Conditional background color
           >
             <div className="flex justify-between items-center mb-2">
               <div className="flex items-center space-x-4">
@@ -126,7 +128,6 @@ export default function OrderList() {
                 >
                   Edit
                 </Button>
-                
               </div>
             </div>
             <div className="text-sm font-medium text-gray-700">

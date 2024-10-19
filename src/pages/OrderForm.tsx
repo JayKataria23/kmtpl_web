@@ -82,12 +82,14 @@ export default function OrderForm() {
   const userName = user?.fullName || user?.firstName || "Unknown User"; // Get the user's name
   const [isOrderSaved, setIsOrderSaved] = useState(false); // New state to track if the order is saved
   const [orderId, setOrderId] = useState<string | null>(null); // New state to store the order ID
+  const [remarkOptions, setRemarkOptions] = useState<string[]>([]);
 
   useEffect(() => {
     fetchBrokers();
     fetchDesigns();
     fetchTransportOptions();
     fetchPartyOptions();
+    fetchRemarkOptions();
     generateUniqueOrderNo();
   }, []);
 
@@ -162,6 +164,17 @@ export default function OrderForm() {
     } catch (error) {
       console.error("Error fetching designs:", error);
       // Optionally, you can show an error message to the user
+    }
+  };
+  const fetchRemarkOptions = async () => {
+    try {
+      const { data, error } = await supabase.from("REMARKS").select("content");
+
+      if (error) throw error;
+
+      setRemarkOptions(data.map((remark) => remark.content));
+    } catch (error) {
+      console.error("Error fetching remark options:", error);
     }
   };
 
@@ -597,76 +610,98 @@ export default function OrderForm() {
                   </datalist>
                 </div>
                 {currentEntry && !designs.includes(currentEntry.design) && (
-                  <Button onClick={() => handleAddDesign(currentEntry.design.toUpperCase())}>
+                  <Button
+                    onClick={() =>
+                      handleAddDesign(currentEntry.design.toUpperCase())
+                    }
+                  >
                     Add Design
                   </Button>
                 )}
-                {currentEntry && designs.includes(currentEntry.design.toUpperCase()) && (
-                  <>
-                    <div className="grid grid-cols-4 items-center gap-4">
-                      <Label htmlFor="price" className="text-right">
-                        Price
-                      </Label>
-                      <Input
-                        id="price"
-                        value={currentEntry.price}
-                        onChange={(e) => handlePriceChange(e.target.value)}
-                        className="col-span-3"
-                        placeholder="Enter price"
-                        type="number"
-                      />
-                    </div>
-                    <div className="grid grid-cols-4 items-center gap-4">
-                      <Label htmlFor="remark" className="text-right">
-                        Remark
-                      </Label>
-                      <Input
-                        id="remark"
-                        value={currentEntry.remark}
-                        onChange={(e) => handleRemarkChange(e.target.value)}
-                        className="col-span-3"
-                        placeholder="Enter remark"
-                      />
-                    </div>
-                    <ScrollArea className="h-[200px] w-full rounded-md border p-4">
-                      <div className="grid gap-4">
-                        {Array.from({ length: 50 }, (_, i) => (
-                          <div
-                            key={i}
-                            className="grid grid-cols-5 items-center gap-2"
-                          >
-                            <Label
-                              htmlFor={`shade-${i}`}
-                              className="text-right col-span-1"
-                            >
-                              Shade {i + 1}
-                            </Label>
-                            <Input
-                              id={`shade-${i}`}
-                              value={currentEntry.shades[i]}
-                              onChange={(e) =>
-                                handleShadeChange(i, e.target.value)
-                              }
-                              type="number"
-                              className="col-span-3"
-                            />
-                            <Button
-                              onClick={() => handleShadeIncrement(i)}
-                              variant="outline"
-                              size="sm"
-                              className="col-span-1"
-                            >
-                              +50
-                            </Button>
-                          </div>
-                        ))}
+                {currentEntry &&
+                  designs.includes(currentEntry.design.toUpperCase()) && (
+                    <>
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="price" className="text-right">
+                          Price
+                        </Label>
+                        <Input
+                          id="price"
+                          value={currentEntry.price}
+                          onChange={(e) => handlePriceChange(e.target.value)}
+                          className="col-span-3"
+                          placeholder="Enter price"
+                          type="number"
+                        />
                       </div>
-                    </ScrollArea>
-                    <Button onClick={handleSaveDesign} className="mt-4">
-                      Save Design
-                    </Button>
-                  </>
-                )}
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="remark" className="text-right">
+                          Remark
+                        </Label>
+                        <div className="col-span-3 flex items-center">
+                          <Input
+                            id="remark"
+                            value={currentEntry.remark}
+                            onChange={(e) => handleRemarkChange(e.target.value)}
+                          placeholder="Enter remark"
+                          className="w-full"
+                            list="remarks"
+                          />
+                          <Button
+                            type="button"
+                            className="ml-2"
+                          size="icon"
+                          variant="ghost"
+                            onClick={() => handleRemarkChange("")}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                          <datalist id="remarks">
+                            {remarkOptions.map((remark) => (
+                              <option key={remark} value={remark} />
+                            ))}
+                          </datalist>
+                        </div>
+                      </div>
+                      <ScrollArea className="h-[200px] w-full rounded-md border p-4">
+                        <div className="grid gap-4">
+                          {Array.from({ length: 50 }, (_, i) => (
+                            <div
+                              key={i}
+                              className="grid grid-cols-5 items-center gap-2"
+                            >
+                              <Label
+                                htmlFor={`shade-${i}`}
+                                className="text-right col-span-1"
+                              >
+                                Shade {i + 1}
+                              </Label>
+                              <Input
+                                id={`shade-${i}`}
+                                value={currentEntry.shades[i]}
+                                onChange={(e) =>
+                                  handleShadeChange(i, e.target.value)
+                                }
+                                type="number"
+                                className="col-span-3"
+                              />
+                              <Button
+                                onClick={() => handleShadeIncrement(i)}
+                                variant="outline"
+                                size="sm"
+                                className="col-span-1"
+                              >
+                                +50
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      </ScrollArea>
+                      <Button onClick={handleSaveDesign} className="mt-4">
+                        Save Design
+                      </Button>
+                    </>
+                  )}
               </div>
             </DialogContent>
           </Dialog>
