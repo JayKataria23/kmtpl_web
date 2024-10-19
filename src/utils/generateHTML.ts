@@ -64,17 +64,46 @@ export function generateHTML(order: Order): string {
   const parts = splitOrder(order);
 
   const shadesRow = (design: Design): string => {
-    return Object.entries(design.shades)
-      .map(([index, shade]) => {
-        if (shade) {
-          return `<div style="width: 12.5%">
-                    <div>${parseInt(index) + 1}</div>
-                    <div>${shade}</div>
-                  </div>`;
+    console.log(design.shades);
+
+    // Create a new variable to convert design.shades into the desired format
+    const formattedShades: { meters: string; shades: number[] }[] = [];
+
+    // Group shades by their values
+    Object.entries(design.shades).forEach(([index, shade]: [string, string]) => { // Use Object.entries to iterate
+      if (shade) {
+        const existingGroup = formattedShades.find(
+          (group) => group.meters === shade
+        );
+        if (existingGroup) {
+          existingGroup.shades.push(Number(index) + 1); // Add the index to the existing group
+        } else {
+          formattedShades.push({ meters: shade, shades: [Number(index) + 1] }); // Create a new group
         }
-        return "";
+      }
+    });
+
+    console.log(formattedShades); // Log the new variable
+
+    // return Object.entries(design.shades)
+    //   .map(([index, shade]) => {
+    //     if (shade) {
+    //       return `<div style="width: 12.5%">
+    //                 <div>${parseInt(index) + 1}</div>
+    //                 <div>${shade}</div>
+    //               </div>`;
+    //     }
+    //     return "";
+    //   })
+    //   .join("");
+
+    const shadesHTML = formattedShades
+      .map((group) => {
+        return ` <div><div style='border-bottom: 1px solid #000;'>${group.shades.join(" - ")}</div><div style='border-top: 1px solid #000;'>${group.meters} mtr</div></div>`;
       })
-      .join("");
+      .join("<div style='padding-left: 20px;'></div>"); // Join with line breaks for each group
+
+    return shadesHTML;
   };
 
   const generatePartHTML = (part: Order): string => {
@@ -90,7 +119,7 @@ export function generateHTML(order: Order): string {
               <p>${design.design}</p>
             </div>
             <div style="width: 71%; border-right: 1px solid #000; text-align: center; display: flex; flex-direction: row; flex-wrap: wrap;">
-            <div style="width: 100%; border-right: 1px solid #000; text-align: center; display: flex; flex-direction: row; flex-wrap: wrap;">
+            <div style="width: 100%; font-size: 16px; text-align: center; display: flex; flex-direction: row; flex-wrap: wrap; padding-left: 8px;">
               ${shadesRow(design)}
               
             </div>
