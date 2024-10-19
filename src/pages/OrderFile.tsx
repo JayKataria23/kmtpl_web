@@ -75,7 +75,9 @@ function OrderFile() {
         const isANumeric = !isNaN(Number(nameA));
         const isBNumeric = !isNaN(Number(nameB));
 
-        if (isANumeric && isBNumeric) return 0; // Both are numeric, consider equal
+        if (isANumeric && isBNumeric) {
+          return Number(nameA) - Number(nameB); // Sort numerically if both are numeric
+        }
         if (isANumeric) return 1; // Numeric comes after alphabets
         if (isBNumeric) return -1; // Numeric comes after alphabets
 
