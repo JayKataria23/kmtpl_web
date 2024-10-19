@@ -27,6 +27,8 @@ export default function BrokerTransportPage() {
   const [newBroker, setNewBroker] = useState("");
   const [newTransport, setNewTransport] = useState("");
   const [newDesign, setNewDesign] = useState("");
+  const [remarkOptions, setRemarkOptions] = useState<string[]>([]);
+  const [newRemark, setNewRemark] = useState("");
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -34,6 +36,7 @@ export default function BrokerTransportPage() {
     fetchBrokers();
     fetchTransports();
     fetchDesigns();
+    fetchRemarkOptions();
   }, []);
 
   const fetchBrokers = async () => {
@@ -69,6 +72,17 @@ export default function BrokerTransportPage() {
       console.error("Error fetching designs:", error);
     } else {
       setDesigns(data);
+    }
+  };
+  const fetchRemarkOptions = async () => {
+    try {
+      const { data, error } = await supabase.from("REMARKS").select("content");
+
+      if (error) throw error;
+
+      setRemarkOptions(data.map((remark) => remark.content));
+    } catch (error) {
+      console.error("Error fetching remark options:", error);
     }
   };
 
@@ -141,6 +155,27 @@ export default function BrokerTransportPage() {
     }
   };
 
+  const addRemark = async () => {
+    if (newRemark.trim()) {
+      const { error } = await supabase
+        .from("REMARKS")
+        .insert({ content: newRemark.trim().toUpperCase() });
+      if (error) {
+        toast({
+          title: "Error",
+          description: "Failed to add remark",
+          variant: "destructive",
+        });
+      } else {
+        fetchRemarkOptions();
+        toast({
+          title: "Success",
+          description: `Remark "${newRemark.trim()}" added successfully`,
+        });
+      }
+    }
+  };
+
   const deleteBroker = async (id: number) => {
     const { error } = await supabase.from("brokers").delete().eq("id", id);
     if (error) {
@@ -159,7 +194,10 @@ export default function BrokerTransportPage() {
   };
 
   const deleteTransport = async (id: number) => {
-    const { error } = await supabase.from("transport_profiles").delete().eq("id", id);
+    const { error } = await supabase
+      .from("transport_profiles")
+      .delete()
+      .eq("id", id);
     if (error) {
       toast({
         title: "Error",
@@ -192,6 +230,26 @@ export default function BrokerTransportPage() {
     }
   };
 
+  const deleteRemark = async (remark: string) => {
+    const { error } = await supabase
+      .from("REMARKS")
+      .delete()
+      .eq("content", remark);
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete remark",
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Success",
+        description: "Remark deleted successfully",
+      });
+      fetchRemarkOptions();
+    }
+  };
+
   return (
     <div className="container mx-auto mt-10 p-4">
       <Button onClick={() => navigate("/")} className="mb-4">
@@ -218,9 +276,18 @@ export default function BrokerTransportPage() {
               <AccordionContent>
                 <ul className="space-y-2">
                   {brokers.map((broker) => (
-                    <li key={broker.id} className="flex justify-between items-center bg-gray-100 p-2 rounded">
+                    <li
+                      key={broker.id}
+                      className="flex justify-between items-center bg-gray-100 p-2 rounded"
+                    >
                       <span>{broker.name}</span>
-                      <Button onClick={() => deleteBroker(broker.id)} variant="destructive" size="sm">Delete</Button>
+                      <Button
+                        onClick={() => deleteBroker(broker.id)}
+                        variant="destructive"
+                        size="sm"
+                      >
+                        Delete
+                      </Button>
                     </li>
                   ))}
                 </ul>
@@ -248,9 +315,18 @@ export default function BrokerTransportPage() {
               <AccordionContent>
                 <ul className="space-y-2">
                   {transports.map((transport) => (
-                    <li key={transport.id} className="flex justify-between items-center bg-gray-100 p-2 rounded">
+                    <li
+                      key={transport.id}
+                      className="flex justify-between items-center bg-gray-100 p-2 rounded"
+                    >
                       <span>{transport.name}</span>
-                      <Button onClick={() => deleteTransport(transport.id)} variant="destructive" size="sm">Delete</Button>
+                      <Button
+                        onClick={() => deleteTransport(transport.id)}
+                        variant="destructive"
+                        size="sm"
+                      >
+                        Delete
+                      </Button>
                     </li>
                   ))}
                 </ul>
@@ -278,9 +354,57 @@ export default function BrokerTransportPage() {
               <AccordionContent>
                 <ul className="space-y-2">
                   {designs.map((design) => (
-                    <li key={design.id} className="flex justify-between items-center bg-gray-100 p-2 rounded">
+                    <li
+                      key={design.id}
+                      className="flex justify-between items-center bg-gray-100 p-2 rounded"
+                    >
                       <span>{design.title}</span>
-                      <Button onClick={() => deleteDesign(design.id)} variant="destructive" size="sm">Delete</Button>
+                      <Button
+                        onClick={() => deleteDesign(design.id)}
+                        variant="destructive"
+                        size="sm"
+                      >
+                        Delete
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+        </div>
+        <div>
+          <h2 className="text-2xl font-bold mb-4">Remarks</h2>
+          <div className="space-y-2 mb-4">
+            <Label htmlFor="newDesign">Add New Remark</Label>
+            <div className="flex space-x-2">
+              <Input
+                id="newRemark"
+                value={newRemark}
+                onChange={(e) => setNewRemark(e.target.value)}
+                placeholder="Enter Remark"
+              />
+              <Button onClick={addRemark}>Add</Button>
+            </div>
+          </div>
+          <Accordion type="single" collapsible className="w-full">
+            <AccordionItem value="designs">
+              <AccordionTrigger>Existing Designs</AccordionTrigger>
+              <AccordionContent>
+                <ul className="space-y-2">
+                  {remarkOptions.map((remark) => (
+                    <li
+                      key={remark}
+                      className="flex justify-between items-center bg-gray-100 p-2 rounded"
+                    >
+                      <span>{remark}</span>
+                      <Button
+                        onClick={() => deleteRemark(remark)}
+                        variant="destructive"
+                        size="sm"
+                      >
+                        Delete
+                      </Button>
                     </li>
                   ))}
                 </ul>
