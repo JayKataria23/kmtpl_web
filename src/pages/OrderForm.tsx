@@ -377,6 +377,8 @@ export default function OrderForm() {
 
         orderDetails.billTo = billToData.name;
         orderDetails.billToAddress = billToData.address;
+      } else {
+        throw new Error("Bill To is required");
       }
 
       if (selectedShipTo) {
