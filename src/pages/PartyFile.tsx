@@ -52,6 +52,7 @@ function PartyFile() {
     SelectedDesignDetail[]
   >([]);
   const { toast } = useToast();
+  const [openAccordionItems, setOpenAccordionItems] = useState<string[]>([]);
 
   useEffect(() => {
     fetchPartyCounts();
@@ -135,17 +136,17 @@ function PartyFile() {
       const { error } = await supabase.rpc(
         "update_design_entries_dispatch_date",
         {
-          dispatch_info: updates, // Changed from party_input to party_name_input
+          dispatch_info: updates,
         }
       );
       if (error) throw error;
-      setSelectedEntries([]); // Clear selected entries after dispatch
-      setIsDrawerOpen(false); // Close the drawer after dispatch
+      setSelectedEntries([]);
+      setIsDrawerOpen(false);
       fetchPartyCounts();
+      setOpenAccordionItems([]); // Close all accordions
       toast({
-        // Add success toast
         title: "Success",
-        description: `Successfully sent ${updates.length} entries to Dispatch.`,
+        description: "Entries dispatched successfully",
       });
     } catch (error) {
       toast({
@@ -254,7 +255,12 @@ function PartyFile() {
         Back to Home
       </Button>
 
-      <Accordion type="single" collapsible className="w-full">
+      <Accordion 
+        type="multiple" 
+        value={openAccordionItems}
+        onValueChange={setOpenAccordionItems}
+        className="w-full"
+      >
         {partyCounts
           .sort((a, b) => a.party_name.localeCompare(b.party_name))
           .map((item, index) => (

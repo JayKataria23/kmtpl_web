@@ -50,6 +50,7 @@ function OrderFile() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [filter, setFilter] = useState<string>("all"); // State for filter
+  const [openAccordionItems, setOpenAccordionItems] = useState<string[]>([]);
 
   useEffect(() => {
     fetchDesignCounts();
@@ -136,30 +137,29 @@ function OrderFile() {
     try {
       const today = new Date(
         new Date().getTime() + 5.5 * 60 * 60 * 1000
-      ).toISOString(); // Adjust to IST and convert to ISO string
+      ).toISOString();
 
-      const idsToUpdate = drawerEntries.map((entry) => entry.id); // Extract the IDs from drawerEntries
+      const idsToUpdate = drawerEntries.map((entry) => entry.id);
 
       const { data, error } = await supabase
         .from("design_entries")
-        .update({ bhiwandi_date: today }) // Set the bhiwandi_date to today
-        .in("id", idsToUpdate); // Update only the entries with the specified IDs
+        .update({ bhiwandi_date: today })
+        .in("id", idsToUpdate);
 
       if (error) throw error;
 
       console.log("Successfully updated Bhiwandi dates:", data);
       toast({
-        // Add success toast
         title: "Success",
         description: `Successfully sent ${idsToUpdate.length} entries to Bhiwandi.`,
       });
       fetchDesignCounts();
       setDrawerEntries([]);
       setIsDrawerOpen(false);
+      setOpenAccordionItems([]); // Close all accordions
     } catch (error) {
       console.error("Error sending to Bhiwandi:", error);
       toast({
-        // Add error toast
         title: "Error",
         description: `Failed to send entries to Bhiwandi: ${
           error instanceof Error ? error.message : "Unknown error"
@@ -300,7 +300,13 @@ function OrderFile() {
           Design No.
         </ToggleGroupItem>
       </ToggleGroup>
-      <Accordion type="single" collapsible className="w-full">
+      <Accordion
+        type="multiple"
+        
+        className="w-full"
+        value={openAccordionItems}
+        onValueChange={setOpenAccordionItems}
+      >
         {filteredDesignCounts().map((item, index) => (
           <AccordionItem key={index} value={`item-${index}`}>
             <AccordionTrigger
