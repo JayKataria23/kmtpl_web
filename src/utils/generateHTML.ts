@@ -35,7 +35,7 @@ function splitOrder(order: Order): Order[] {
     ).length;
     const designRows = Math.ceil(nonEmptyShades / 8);
 
-    if (currentRows + designRows > 12) {
+    if (currentRows + designRows > 15) {
       parts.push(currentPart);
       currentPart = { ...order, designs: [] };
       currentRows = 0;
@@ -62,6 +62,7 @@ const formatDate = (dateString: string): string => {
 
 export function generateHTML(order: Order): string {
   const parts = splitOrder(order);
+  let overallIndex = 0;
 
   const shadesRow = (design: Design): string => {
     if (design.shades[50] == "" || design.shades[50] == undefined) {
@@ -107,14 +108,15 @@ export function generateHTML(order: Order): string {
     }
   };
 
-  const generatePartHTML = (part: Order): string => {
+  const generatePartHTML = (part: Order, startIndex: number): string => {
     const designsHTML = part.designs
       .map((design, index) => {
+        const currentIndex = startIndex + index;
         return `
         <div style="border-bottom: 1px solid #000;">
           <div style="display: flex; flex-direction: row;">
             <div style="width: 5%; border-right: 1px solid #000; text-align: center; word-wrap: break-word;">
-              <p>${index + 1}</p>
+              <p>${currentIndex + 1}</p>
             </div>
             <div style="width: 12%; border-right: 1px solid #000; text-align: center; word-wrap: break-word; font-weight: bold;">
               <p>${design.design}</p>
@@ -122,10 +124,9 @@ export function generateHTML(order: Order): string {
             <div style="width: 71%; border-right: 1px solid #000; text-align: center; display: flex; flex-direction: row; flex-wrap: wrap;">
             <div style="width: 100%; font-size: 16px; text-align: center; display: flex; flex-direction: row; flex-wrap: wrap; padding-left: 8px;">
               ${shadesRow(design)}
-              
             </div>
-            <div style="text-align: center; width: 100%;">
-              <b style="color: red; font-size: 16px;">${design.remark}</b>
+            <div style="text-align: center; width: 100%;  color: #f00; font-weight: bold;">
+              ${design.remark}
             </div>
             </div>
             <div style="width: 4%; border-right: 1px solid #000; text-align: center; word-wrap: break-word;">
@@ -237,5 +238,11 @@ export function generateHTML(order: Order): string {
     </html>`;
   };
 
-  return parts.map((part) => generatePartHTML(part)).join("");
+  return parts
+    .map((part) => {
+      const partHTML = generatePartHTML(part, overallIndex);
+      overallIndex += part.designs.length;
+      return partHTML;
+    })
+    .join("");
 }
