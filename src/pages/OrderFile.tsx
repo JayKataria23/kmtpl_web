@@ -19,7 +19,7 @@ import {
   DrawerTrigger,
 } from "@/components/ui/drawer";
 import { useToast } from "@/hooks/use-toast"; // Import useToast at the top
-import { Toaster } from "@/components/ui";
+import { Input, Toaster } from "@/components/ui";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 interface DesignCount {
@@ -33,6 +33,8 @@ interface OrderDetail {
   order_remark: string;
   id: number; // Add id to OrderDetail interface
   price: number;
+  part: boolean;
+  entry_remark: string;
 }
 
 interface DrawerEntry extends OrderDetail {
@@ -108,12 +110,16 @@ function OrderFile() {
           shades: [];
           order_remark: string | null;
           price: number;
+          part: boolean;
+          entry_remark: string | null;
         }) => ({
           partyName: entry.party_name,
           shades: entry.shades,
           order_remark: entry.order_remark, // Existing line
           id: entry.id, // Add this line to include id
           price: entry.price,
+          part: entry.part,
+          entry_remark: entry.entry_remark,
         })
       );
 
@@ -124,7 +130,7 @@ function OrderFile() {
   };
 
   const handleAddToDrawer = (order: OrderDetail, design: string) => {
-    setDrawerEntries((prev) => [...prev, { ...order, design, id: order.id }]); // Include id in the drawer entry
+    setDrawerEntries((prev) => [...prev, { ...order, design, id: order.id }]);
   };
 
   const handleRemoveFromDrawer = (id: number) => {
@@ -194,6 +200,14 @@ function OrderFile() {
     }
   };
 
+  const handleEntryRemarkChange = (id: number, value: string) => {
+    setDrawerEntries((prev) =>
+      prev.map((entry) =>
+        entry.id === id ? { ...entry, entry_remark: value } : entry
+      )
+    );
+  };
+
   return (
     <div className="container mx-auto mt-10 p-4 relative">
       <Drawer open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
@@ -227,11 +241,27 @@ function OrderFile() {
                       >
                         <td className="px-2 py-4 w-4/6 text-sm font-medium text-gray-900">
                           <div className="break-words">{entry.partyName}</div>
-                          <div className="text-xs text-gray-500 mt-1">
-                            Remark: {entry.order_remark}
-                          </div>
+                          {entry.order_remark && (
+                            <div className="text-xs text-gray-500 mt-1">
+                              Remark: {entry.order_remark}
+                            </div>
+                          )}
                           <div className="text-xs text-gray-500 mt-1">
                             Price: {entry.price}
+                          </div>
+                          <div className="text-xs text-gray-500 mt-1">
+                            Remark:{" "}
+                            <Input
+                              value={entry.entry_remark}
+                              onChange={(e) =>
+                                handleEntryRemarkChange(
+                                  entry.id,
+                                  e.target.value
+                                )
+                              }
+                            ></Input>
+                            <Button className="m-2">Clear</Button>
+                            {/* <Button onClick={() => handleUpdateEntryRemark(entry.id)}>Update</Button> */}
                           </div>
                         </td>
                         <td className="px-2 py-4 w-2/6 text-sm text-gray-500">
@@ -302,7 +332,6 @@ function OrderFile() {
       </ToggleGroup>
       <Accordion
         type="multiple"
-        
         className="w-full"
         value={openAccordionItems}
         onValueChange={setOpenAccordionItems}
@@ -323,70 +352,81 @@ function OrderFile() {
                 <div className="overflow-x-auto">
                   <table className="w-full divide-y divide-gray-200">
                     <tbody>
-                      {designOrders[item.design].map((order, orderIndex) => {
-                        const isSelected = drawerEntries.some(
-                          (entry) => entry.id === order.id
-                        );
-                        return (
-                          <tr
-                            key={order.id}
-                            className={
-                              isSelected
-                                ? "bg-yellow-100"
-                                : orderIndex % 2 === 0
-                                ? "bg-white"
-                                : "bg-gray-50"
-                            }
-                          >
-                            <td className="px-2 py-4 w-3/6 text-sm font-medium text-gray-900">
-                              <div className="break-words">
-                                {order.partyName}
-                              </div>
-                              {order.order_remark && (
-                                <div className="text-xs text-gray-500 mt-1">
-                                  Remark: {order.order_remark}
+                      {designOrders[item.design]
+                        .sort((a, b) => Number(b.part) - Number(a.part)) // Sort orders with part = true at the top
+                        .map((order, orderIndex) => {
+                          const isSelected = drawerEntries.some(
+                            (entry) => entry.id === order.id
+                          );
+                          return (
+                            <tr
+                              key={order.id}
+                              className={
+                                isSelected
+                                  ? "bg-yellow-100"
+                                  : orderIndex % 2 === 0
+                                  ? "bg-white"
+                                  : "bg-gray-50"
+                              }
+                            >
+                              <td className="px-2 py-4 w-3/6 text-sm font-medium text-gray-900">
+                                <div
+                                  className={`break-words ${
+                                    order.part ? "text-red-500" : ""
+                                  }`}
+                                >
+                                  {order.partyName}
                                 </div>
-                              )}
-                              <div className="text-xs text-gray-500 mt-1">
-                                Price: {order.price}
-                              </div>
-                            </td>
-                            <td className="px-2 py-4 w-2/6 text-sm text-gray-500">
-                              {order.shades[50] == 0 ||
-                              order.shades.length == 50
-                                ? order.shades.map((meters, idx) =>
-                                    meters ? (
-                                      <div key={idx}>
-                                        {idx + 1}: {meters}m
-                                      </div>
-                                    ) : null
-                                  )
-                                : "All Colours: " + order.shades[50] + "m"}
-                            </td>
-                            <td className="px-2 py-4 w-1/6">
-                              {isSelected ? (
-                                <Button
-                                  className="ml-2 rounded-full w-10 h-10 text-lg text-white"
-                                  onClick={() =>
-                                    handleRemoveFromDrawer(order.id)
-                                  }
-                                >
-                                  X
-                                </Button>
-                              ) : (
-                                <Button
-                                  onClick={() =>
-                                    handleAddToDrawer(order, item.design)
-                                  }
-                                  className="ml-2 rounded-full w-10 h-10 bg-yellow-500 active:bg-yellow-500 visited:bg-yellow-500 hover:bg-yellow-500 text-lg"
-                                >
-                                  B
-                                </Button>
-                              )}
-                            </td>
-                          </tr>
-                        );
-                      })}
+                                {order.order_remark && (
+                                  <div className="text-xs text-gray-500 mt-1">
+                                    Order Remark: {order.order_remark}
+                                  </div>
+                                )}
+                                <div className="text-xs text-gray-500 mt-1">
+                                  Price: {order.price}
+                                </div>
+                                {order.entry_remark && (
+                                  <div className="text-xs text-gray-500 mt-1">
+                                    Entry Remark: {order.entry_remark}
+                                  </div>
+                                )}
+                              </td>
+                              <td className="px-2 py-4 w-2/6 text-sm text-gray-500">
+                                {order.shades[50] == 0 ||
+                                order.shades.length == 50
+                                  ? order.shades.map((meters, idx) =>
+                                      meters ? (
+                                        <div key={idx}>
+                                          {idx + 1}: {meters}m
+                                        </div>
+                                      ) : null
+                                    )
+                                  : "All Colours: " + order.shades[50] + "m"}
+                              </td>
+                              <td className="px-2 py-4 w-1/6">
+                                {isSelected ? (
+                                  <Button
+                                    className="ml-2 rounded-full w-10 h-10 text-lg text-white"
+                                    onClick={() =>
+                                      handleRemoveFromDrawer(order.id)
+                                    }
+                                  >
+                                    X
+                                  </Button>
+                                ) : (
+                                  <Button
+                                    onClick={() =>
+                                      handleAddToDrawer(order, item.design)
+                                    }
+                                    className="ml-2 rounded-full w-10 h-10 bg-yellow-500 active:bg-yellow-500 visited:bg-yellow-500 hover:bg-yellow-500 text-lg"
+                                  >
+                                    B
+                                  </Button>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
                     </tbody>
                   </table>
                 </div>
