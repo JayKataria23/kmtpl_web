@@ -20,6 +20,7 @@ import {
   DrawerDescription,
 } from "@/components/ui/drawer";
 import { Toaster } from "@/components/ui";
+import AddPartOrder from "@/components/custom/AddPartOrder"; // Import the AddPartOrder component
 
 interface PartyCount {
   party_name: string; // Changed from 'party' to 'party_name'
@@ -35,6 +36,7 @@ interface DesignDetail {
   bhiwandi_date: string;
   price: number;
   design_entry_id: number;
+  party_name: string;
 }
 
 interface SelectedDesignDetail extends DesignDetail {
@@ -53,6 +55,10 @@ function PartyFile() {
   >([]);
   const { toast } = useToast();
   const [openAccordionItems, setOpenAccordionItems] = useState<string[]>([]);
+  const [isAddPartOrderOpen, setIsAddPartOrderOpen] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState<DesignDetail | null>(
+    null
+  );
 
   useEffect(() => {
     fetchPartyCounts();
@@ -109,13 +115,16 @@ function PartyFile() {
 
   // Function to toggle the drawer
 
-  const addToDrawer = (entry: DesignDetail) => {
+  const addToDrawer = (entry: DesignDetail, party_name: string) => {
     const lastEntryDate =
       selectedEntries.length > 0
         ? selectedEntries[selectedEntries.length - 1].date
         : new Date().toISOString().split("T")[0]; // Use today's date if no entries
 
-    setSelectedEntries((prev) => [...prev, { ...entry, date: lastEntryDate }]);
+    setSelectedEntries((prev) => [
+      ...prev,
+      { ...entry, date: lastEntryDate, party_name: party_name },
+    ]);
 
     setIsDrawerOpen(true);
   };
@@ -161,7 +170,23 @@ function PartyFile() {
 
   return (
     <div className="container mx-auto mt-10 p-4 relative">
-      <Drawer open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
+      <AddPartOrder
+        open={isAddPartOrderOpen}
+        onClose={() => setIsAddPartOrderOpen(false)}
+        design_entry_id={selectedOrder?.design_entry_id.toString() || ""}
+        design_name={selectedOrder?.design || ""}
+        party_name={selectedOrder?.party_name || ""}
+        price={selectedOrder?.price || 0}
+        setSelectedEntries={setSelectedEntries}
+        selectedEntries={selectedEntries}
+      />
+      <Drawer
+        open={isDrawerOpen}
+        onOpenChange={() => {
+          setIsDrawerOpen(open=>!open);
+          setOpenAccordionItems([]);
+        }}
+      >
         <DrawerTrigger asChild>
           <Button className="absolute top-4 right-4">Dispatch</Button>
         </DrawerTrigger>
@@ -181,7 +206,7 @@ function PartyFile() {
                     <tr>
                       <td className="px-2 py-4 w-3/6 text-sm font-medium text-gray-900">
                         <div className="break-words">
-                          {entry.design}
+                          {entry.party_name}
                           {entry.remark && (
                             <>
                               <br />
@@ -225,7 +250,18 @@ function PartyFile() {
                       </td>
                       <td className="px-2 py-4 w-1/6 text-sm text-gray-500">
                         <Button
-                          className="ml-2 bg-green-500 active:bg-green-500 visited:bg-green-500 hover:bg-green-500 rounded-full w-10 h-10 text-lg text-white"
+                          className="ml-2 rounded-full w-10 h-10 text-lg text-white my-1"
+                          onClick={() => {
+                            setIsAddPartOrderOpen(true);
+                            setSelectedOrder(entry);
+                            console.log(entry);
+                            console.log();
+                          }}
+                        >
+                          P
+                        </Button>
+                        <Button
+                          className="ml-2 my-1 bg-green-500 active:bg-green-500 visited:bg-green-500 hover:bg-green-500 rounded-full w-10 h-10 text-lg text-white"
                           onClick={() => removeFromDrawer(entry)} // Add function to remove entry from drawer
                         >
                           X
@@ -255,8 +291,8 @@ function PartyFile() {
         Back to Home
       </Button>
 
-      <Accordion 
-        type="multiple" 
+      <Accordion
+        type="multiple"
         value={openAccordionItems}
         onValueChange={setOpenAccordionItems}
         className="w-full"
@@ -357,7 +393,7 @@ function PartyFile() {
                                   ) : (
                                     <Button
                                       className="ml-2 bg-green-500 active:bg-green-500 visited:bg-green-500 hover:bg-green-500 rounded-full w-10 h-10 text-lg text-white"
-                                      onClick={() => addToDrawer(order)} // Add entry to drawer on click
+                                      onClick={() => addToDrawer(order, item.party_name)} // Add entry to drawer on click
                                     >
                                       D
                                     </Button>

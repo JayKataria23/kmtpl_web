@@ -174,6 +174,7 @@ function OrderPreviewPage() {
       </Card>
       {generatedHtml && (
         <iframe
+          className="lg:max-w-[50%] lg:ml-[25%] "
           srcDoc={generatedHtml}
           title="Generated HTML Preview"
           style={{
