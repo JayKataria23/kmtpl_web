@@ -154,6 +154,28 @@ export function EditOrderModal({
     }
   }, [toast]);
 
+  const handleAddDesignToDB = async (newDesign: string) => {
+    if (newDesign.trim()) {
+      const { data, error } = await supabase
+        .from("designs")
+        .insert({ title: newDesign.trim().toUpperCase() }) // Convert to uppercase
+        .select();
+      if (error) {
+        toast({
+          title: "Error",
+          description: "Failed to add design",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Success",
+          description: `Design "${data[0].title}" added successfully`,
+        });
+        fetchDesigns();
+      }
+    }
+  };
+
   const fetchRemarkOptions = async () => {
     try {
       const { data, error } = await supabase.from("REMARKS").select("content");
@@ -372,22 +394,73 @@ export function EditOrderModal({
 
       if (error) throw error;
 
-      // Update design entries
-      await supabase.from("design_entries").delete().eq("order_id", orderId);
-
-      const designEntriesData = designEntries.map((design) => ({
-        order_id: orderId,
-        design: design.design,
-        price: design.price,
-        remark: design.remark,
-        shades: design.shades,
-      }));
-
-      const { error: designEntriesError } = await supabase
+      // Fetch existing design entries from the database
+      const { data: existingEntries, error: fetchError } = await supabase
         .from("design_entries")
-        .insert(designEntriesData);
+        .select("*")
+        .eq("order_id", orderId);
 
-      if (designEntriesError) throw designEntriesError;
+      if (fetchError) throw fetchError;
+
+      // Create a map of existing entries for easy lookup
+      const existingEntriesMap = new Map(existingEntries.map(entry => [entry.id, entry]));
+
+      // Determine which entries to update and which to insert
+      const designEntriesToUpdate: DesignEntry[] = []; // Explicitly define the type
+      const designEntriesToInsert: DesignEntry[] = []; // Explicitly define the type
+      const designEntriesToDelete = existingEntries.filter(entry => 
+        !designEntries.some(currentEntry => currentEntry.id === entry.id)
+      );
+
+      designEntries.forEach(currentEntry => {
+        if (existingEntriesMap.has(currentEntry.id)) {
+          // If the entry exists, prepare it for update
+          designEntriesToUpdate.push(currentEntry);
+        } else {
+          // If the entry does not exist, prepare it for insertion
+          designEntriesToInsert.push(currentEntry);
+        }
+      });
+
+      // Update existing design entries
+      for (const entry of designEntriesToUpdate) {
+        const { error: updateError } = await supabase
+          .from("design_entries")
+          .update({
+            design: entry.design,
+            price: entry.price,
+            remark: entry.remark,
+            shades: entry.shades,
+          })
+          .eq("id", entry.id);
+
+        if (updateError) throw updateError;
+      }
+
+      // Delete design entries that are no longer present
+      if (designEntriesToDelete.length > 0) {
+        const { error: deleteError } = await supabase
+          .from("design_entries")
+          .delete()
+          .in("id", designEntriesToDelete.map(entry => entry.id));
+
+        if (deleteError) throw deleteError;
+      }
+
+      // Insert new design entries
+      if (designEntriesToInsert.length > 0) {
+        const { error: insertError } = await supabase
+          .from("design_entries")
+          .insert(designEntriesToInsert.map(entry => ({
+            order_id: orderId,
+            design: entry.design,
+            price: entry.price,
+            remark: entry.remark,
+            shades: entry.shades,
+          })));
+
+        if (insertError) throw insertError;
+      }
 
       toast({ title: "Success", description: "Order updated successfully" });
       onOrderUpdated();
@@ -571,6 +644,15 @@ export function EditOrderModal({
                       ))}
                     </datalist>
                   </div>
+                  {currentEntry && !designs.includes(currentEntry.design) && (
+                    <Button
+                      onClick={() =>
+                        handleAddDesignToDB(currentEntry.design.toUpperCase())
+                      }
+                    >
+                      Add Design
+                    </Button>
+                  )}
                   {currentEntry && designs.includes(currentEntry.design) && (
                     <>
                       <div className="grid grid-cols-4 items-center gap-4">
@@ -647,7 +729,8 @@ export function EditOrderModal({
                               </Button>
                             </div>
                           )}
-                          {(!currentEntry.shades[50]||currentEntry.shades[50]=="") &&
+                          {(!currentEntry.shades[50] ||
+                            currentEntry.shades[50] == "") &&
                             Array.from({ length: 50 }, (_, i) => (
                               <div
                                 key={i}

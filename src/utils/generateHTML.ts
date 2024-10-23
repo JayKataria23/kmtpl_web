@@ -180,8 +180,7 @@ export function generateHTML(order: Order): string {
                 Transport :
               </div>
               
-              <div style="width: 75%; text-align: left; padding-left: 2; font-weight: bold">
-              
+              <div style="width: 75%; text-align: left; padding-left: 2; font-weight: bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                 ${part.broker} <br />
                 ${part.transport}
               </div>

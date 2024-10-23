@@ -62,13 +62,9 @@ function OrderPreviewPage() {
   }, [orderDetails, designEntries]);
 
   const handlePrint = () => {
-    if (!generatedHtml) return;
-
-    const printWindow = window.open("", "_blank");
-    if (printWindow) {
-      printWindow.document.write(generatedHtml);
-      printWindow.document.close();
-      printWindow.print(); // Trigger the print dialog
+    const iframe = document.querySelector("iframe");
+    if (iframe) {
+      iframe.contentWindow?.print();
     }
   };
 
@@ -163,7 +159,9 @@ function OrderPreviewPage() {
             {orderDetails.bill_to}
           </div>
         )}
-        <div className="flex space-x-2"> {/* Added a flex container with spacing */}
+        <div className="flex space-x-2">
+          {" "}
+          {/* Added a flex container with spacing */}
           <Button onClick={handlePrint} disabled={!generatedHtml}>
             Print Order Form
           </Button>

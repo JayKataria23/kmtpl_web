@@ -85,6 +85,10 @@ export default function PartyProfilePage() {
   };
 
   const handleOpenModal = (party?: PartyProfile) => {
+    if (party) { 
+      setSelectedBroker(brokers.find((b) => b.id === party.broker_id)?.name || "");
+      setSelectedTransport(transportProfiles.find((t) => t.id === party.transport_id)?.name || "");
+    }
     setCurrentParty(
       party || {
         name: "",
