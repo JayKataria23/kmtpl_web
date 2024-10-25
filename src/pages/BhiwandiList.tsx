@@ -73,6 +73,7 @@ const BhiwandiList = () => {
   const [designEntries, setDesignEntries] = useState<GroupedOrder[]>([]); // State to hold design entries for the selected date
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [openAccordion, setOpenAccordion] = useState<string | null>(null);
 
   useEffect(() => {
     fetchBhiwandiEntries(); // Fetch Bhiwandi entries on component mount
@@ -113,7 +114,7 @@ const BhiwandiList = () => {
         price,
         remark,
         shades,
-        order_no
+        order_no,
       } = entry;
 
       // Check if the order_id already exists in the map
@@ -181,6 +182,10 @@ const BhiwandiList = () => {
     }
   };
 
+  const closeAllAccordions = () => {
+    setOpenAccordion(null);
+  };
+
   return (
     <div className="container mx-auto mt-10 text-center">
       <h1 className="text-2xl font-bold">Bhiwandi List</h1>
@@ -189,7 +194,13 @@ const BhiwandiList = () => {
       </Button>
 
       <div className="mt-6">
-        <Accordion type="single" collapsible className="w-full">
+        <Accordion
+          type="single"
+          collapsible
+          className="w-full"
+          value={openAccordion as string | undefined}
+          onValueChange={setOpenAccordion}
+        >
           {bhiwandiEntries.map((entry, index) => (
             <AccordionItem key={index} value={`item-${index}`}>
               <AccordionTrigger
@@ -278,9 +289,16 @@ const BhiwandiList = () => {
                               <Button
                                 variant="destructive"
                                 size="sm"
-                                onClick={() =>
-                                  handleDelete(designEntry.design_entry_id)
-                                }
+                                onClick={() => {
+                                  handleDelete(designEntry.design_entry_id);
+                                  setDesignEntries(
+                                    designEntries.filter(
+                                      (entry) =>
+                                        entry.order_id !== entry.order_id
+                                    )
+                                  );
+                                  closeAllAccordions();
+                                }}
                               >
                                 X
                               </Button>

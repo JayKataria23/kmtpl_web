@@ -25,6 +25,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 interface DesignCount {
   design: string;
   count: number;
+  part: boolean;
 }
 
 interface OrderDetail {
@@ -63,11 +64,11 @@ function OrderFile() {
       const { data, error } = await supabase.rpc("get_design_entry_count");
 
       if (error) throw error;
-
       const formattedData: DesignCount[] = data.map(
-        (item: { design: string; count: bigint }) => ({
+        (item: { design: string; count: bigint; part: bigint }) => ({
           design: item.design,
-          count: Number(item.count), // Convert BIGINT to number
+          count: Number(item.count),
+          part: Boolean(Number(item.part) > 0),
         })
       );
       formattedData.sort((a, b) => {
@@ -141,20 +142,44 @@ function OrderFile() {
 
   const handleSendBhiwandi = async () => {
     try {
+      if (drawerEntries.length === 0) {
+        toast({
+          title: "Error",
+          description: "No entries to send to Bhiwandi",
+        });
+        return;
+      }
+
       const today = new Date(
         new Date().getTime() + 5.5 * 60 * 60 * 1000
       ).toISOString();
 
       const idsToUpdate = drawerEntries.map((entry) => entry.id);
 
-      const { data, error } = await supabase
+      //update remarks for design entries
+      const remarksToUpdate = drawerEntries.map((entry) => ({
+        id: entry.id,
+        remark: entry.entry_remark,
+      }));
+
+      if (remarksToUpdate.length > 0) {
+        for (const remark of remarksToUpdate) {
+          const { error: remarkError } = await supabase
+            .from("design_entries")
+            .update(remark)
+            .eq("id", remark.id);
+          if (remarkError) throw remarkError;
+        }
+      }
+
+      //update bhiwandi date for design entries
+      const { error: bhiwandiError } = await supabase
         .from("design_entries")
         .update({ bhiwandi_date: today })
         .in("id", idsToUpdate);
 
-      if (error) throw error;
+      if (bhiwandiError) throw bhiwandiError;
 
-      console.log("Successfully updated Bhiwandi dates:", data);
       toast({
         title: "Success",
         description: `Successfully sent ${idsToUpdate.length} entries to Bhiwandi.`,
@@ -189,6 +214,8 @@ function OrderFile() {
       ); // Filter out designs starting with "D-" or "P-"
     } else if (filter === "Design No.") {
       return designCounts.filter((item) => !isNaN(Number(item.design))); // Filter out designs starting with "D-" or "P-"
+    } else if (filter === "Part Orders") {
+      return designCounts.filter((item) => item.part); // Filter out designs starting with "P-"
     } else {
       return designCounts.filter(
         (item) =>
@@ -260,8 +287,14 @@ function OrderFile() {
                                 )
                               }
                             ></Input>
-                            <Button className="m-2">Clear</Button>
-                            {/* <Button onClick={() => handleUpdateEntryRemark(entry.id)}>Update</Button> */}
+                            <Button
+                              className="m-2"
+                              onClick={() =>
+                                handleEntryRemarkChange(entry.id, "")
+                              }
+                            >
+                              Clear
+                            </Button>
                           </div>
                         </td>
                         <td className="px-2 py-4 w-2/6 text-sm text-gray-500">
@@ -314,8 +347,11 @@ function OrderFile() {
         variant="outline"
         type="single"
         value={filter}
-        onValueChange={setFilter}
-        className="mb-4 mx-4 border" // Added border class
+        onValueChange={(value) => {
+          setFilter(value);
+          setOpenAccordionItems([]);
+        }}
+        className="mb-4" // Added border class
       >
         <ToggleGroupItem value="all" aria-label="Show all">
           ALL
@@ -328,6 +364,9 @@ function OrderFile() {
         </ToggleGroupItem>
         <ToggleGroupItem value="Design No." aria-label="Show Design No.">
           Design No.
+        </ToggleGroupItem>
+        <ToggleGroupItem value="Part Orders" aria-label="Show Part Orders">
+          Part Orders
         </ToggleGroupItem>
       </ToggleGroup>
       <Accordion
