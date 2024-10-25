@@ -26,6 +26,7 @@ import { useToast } from "@/hooks/use-toast";
 import InputWithAutocomplete from "@/components/custom/InputWithAutocomplete";
 // Add this import at the top of your file
 import { useUser } from "@clerk/clerk-react"; // Import useAuth
+import NewPartyDrawer from "@/components/custom/NewPartyDrawer";
 
 interface DesignEntry {
   id: string;
@@ -89,15 +90,25 @@ export default function OrderForm() {
   const [orderId, setOrderId] = useState<string | null>(null); // New state to store the order ID
   const [remarkOptions, setRemarkOptions] = useState<string[]>([]);
   const [priceList, setPriceList] = useState<PriceEntry[]>([]);
+  const [isOpen, setIsOpen] = useState(false); // State to control drawer visibility
 
+  const fetchAllOptions = async () => {
+    await Promise.all([
+      fetchBrokers(),
+      fetchDesigns(),
+      fetchTransportOptions(),
+      fetchPartyOptions(),
+      fetchRemarkOptions(),
+    ]);
+  };
   useEffect(() => {
-    fetchBrokers();
-    fetchDesigns();
-    fetchTransportOptions();
-    fetchPartyOptions();
-    fetchRemarkOptions();
+    fetchAllOptions();
     generateUniqueOrderNo();
   }, []);
+
+  useEffect(() => {
+    fetchAllOptions();
+  }, [isOpen]);
 
   const generateUniqueOrderNo = async () => {
     try {
@@ -579,7 +590,16 @@ export default function OrderForm() {
             </Button>
           </div>
         </div>
-
+        <div className="flex justify-center">
+          {" "}
+          {/* Center the drawer */}
+          <NewPartyDrawer
+            brokerOptions={brokerOptions}
+            transportOptions={transportOptions}
+            isOpen={isOpen}
+            setIsOpen={setIsOpen}
+          />
+        </div>
         {/* Replace the existing mapping of fields with this updated version */}
         {["Bill To", "Broker", "Transport", "Ship To"].map((field) => (
           <div key={field}>
