@@ -61,6 +61,30 @@ const formatDate = (dateString: string): string => {
 };
 
 export function generateHTML(order: Order): string {
+  order.designs.sort((a, b) => {
+    const nameA = a.design.toLowerCase();
+    const nameB = b.design.toLowerCase();
+
+    // Check if both names are purely numeric
+    const isANumeric = !isNaN(Number(nameA));
+    const isBNumeric = !isNaN(Number(nameB));
+
+    if (isANumeric && isBNumeric) {
+      return Number(nameA) - Number(nameB); // Sort numerically if both are numeric
+    }
+    if (isANumeric) return 1; // Numeric comes after alphabets
+    if (isBNumeric) return -1; // Numeric comes after alphabets
+
+    if (nameA < nameB) return -1;
+    if (nameA > nameB) return 1;
+    return 0; // If they are equal
+  });
+  //sort such that all designs with - are at end
+  order.designs.sort((a, b) => {
+    if (a.design.includes("-") && !b.design.includes("-")) return 1;
+    if (!a.design.includes("-") && b.design.includes("-")) return -1;
+    return 0;
+  });
   const parts = splitOrder(order);
   let overallIndex = 0;
 
