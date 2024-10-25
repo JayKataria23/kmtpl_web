@@ -535,6 +535,7 @@ export default function OrderForm() {
     }
   };
 
+
   return (
     <div className="max-w-md mx-auto p-6 bg-white">
       <div className="flex justify-between items-center mb-6">
@@ -722,36 +723,37 @@ export default function OrderForm() {
                             +50
                           </Button>
                         </div>
-                        {currentEntry.shades[50] == "" && Array.from({ length: 50 }, (_, i) => (
-                          <div
-                            key={i}
-                            className="grid grid-cols-5 items-center gap-2"
-                          >
-                            <Label
-                              htmlFor={`shade-${i}`}
-                              className="text-right col-span-1"
+                        {currentEntry.shades[50] == "" &&
+                          Array.from({ length: 50 }, (_, i) => (
+                            <div
+                              key={i}
+                              className="grid grid-cols-5 items-center gap-2"
                             >
-                              Shade {i + 1}
-                            </Label>
-                            <Input
-                              id={`shade-${i}`}
-                              value={currentEntry.shades[i]}
-                              onChange={(e) =>
-                                handleShadeChange(i, e.target.value)
-                              }
-                              type="number"
-                              className="col-span-3"
-                            />
-                            <Button
-                              onClick={() => handleShadeIncrement(i)}
-                              variant="outline"
-                              size="sm"
-                              className="col-span-1"
-                            >
-                              +50
-                            </Button>
-                          </div>
-                        ))}
+                              <Label
+                                htmlFor={`shade-${i}`}
+                                className="text-right col-span-1"
+                              >
+                                Shade {i + 1}
+                              </Label>
+                              <Input
+                                id={`shade-${i}`}
+                                value={currentEntry.shades[i]}
+                                onChange={(e) =>
+                                  handleShadeChange(i, e.target.value)
+                                }
+                                type="number"
+                                className="col-span-3"
+                              />
+                              <Button
+                                onClick={() => handleShadeIncrement(i)}
+                                variant="outline"
+                                size="sm"
+                                className="col-span-1"
+                              >
+                                +50
+                              </Button>
+                            </div>
+                          ))}
                       </div>
                     </ScrollArea>
                     <Button onClick={handleSaveDesign} className="mt-4">
