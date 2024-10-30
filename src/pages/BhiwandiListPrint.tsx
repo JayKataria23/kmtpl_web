@@ -117,7 +117,7 @@ function BhiwandiListPrint() {
         // Loop through each design entry
         entry.entries.forEach((order) => {
           console.log(order.shades);
-          html += `'
+          html += `
           <div style="display: flex; justify-content: space-between; margin-top: 10px; border: 1px solid #ccc; padding: 10px; border-radius: 5px; page-break-inside:avoid; page-break-after:auto" >
             <div style="flex: 1;">
               <p style="font-size: 18px; line-height: 0.5;"><strong>Design:</strong> ${
