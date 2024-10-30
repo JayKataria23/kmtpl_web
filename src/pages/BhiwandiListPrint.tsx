@@ -2,8 +2,9 @@ import { useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Share2 } from "lucide-react";
+import { FileText, Share2 } from "lucide-react";
 import supabase from "@/utils/supabase";
+import html2pdf from "html2pdf.js";
 
 interface Entry {
   design_entry_id: number;
@@ -116,8 +117,8 @@ function BhiwandiListPrint() {
         // Loop through each design entry
         entry.entries.forEach((order) => {
           console.log(order.shades);
-          html += `
-          <div style="display: flex; justify-content: space-between; margin-top: 10px; border: 1px solid #ccc; padding: 10px; border-radius: 5px;">
+          html += `'
+          <div style="display: flex; justify-content: space-between; margin-top: 10px; border: 1px solid #ccc; padding: 10px; border-radius: 5px; page-break-inside:avoid; page-break-after:auto" >
             <div style="flex: 1;">
               <p style="font-size: 18px; line-height: 0.5;"><strong>Design:</strong> ${
                 order.design
@@ -222,9 +223,28 @@ function BhiwandiListPrint() {
           >
             Print
           </Button>
-          <Button onClick={handleShare} className="flex-1 ml-2">
+          <Button onClick={handleShare} className="flex-1 mx-2">
             <Share2 className="mr-2 h-4 w-4" />
             Share
+          </Button>
+          <Button
+            onClick={async () => {
+              if (generatedHtml && date) {
+                html2pdf(
+                  generatedHtml.replace(
+                    /font-size: 18px; line-height: 0.5;/g,
+                    "font-size: 18px; line-height: 1.5;"
+                  ),
+                  {
+                    margin: 5,
+                    filename: `Bhiwandi List ${formatDate(date as string)}.pdf`,
+                  }
+                );
+              }
+            }}
+            className="flex items-center ml-2"
+          >
+            <FileText className="mr-2 h-4 w-4" /> PDF
           </Button>
         </div>
       </Card>

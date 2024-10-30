@@ -171,10 +171,12 @@ function OrderPreviewPage() {
           </Button>
           <Button
             onClick={async () => {
-              console.log(orderDetails);
               if (generatedHtml && orderDetails) {
                 html2pdf(generatedHtml, {
-                  margin: 5,
+                  margin: [5, 5, 0, 5],
+                  pagebreak: {
+                    mode: ["avoid-all"],
+                  },
                   filename: `${orderDetails.bill_to} Order No ${orderDetails.order_no}.pdf`,
                 });
               }
@@ -187,7 +189,6 @@ function OrderPreviewPage() {
       </Card>
       {generatedHtml && (
         <iframe
-          id="order-preview"
           className="lg:max-w-[50%] lg:ml-[25%] "
           srcDoc={generatedHtml}
           title="Generated HTML Preview"
