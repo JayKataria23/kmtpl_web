@@ -4,7 +4,8 @@ import supabase from "@/utils/supabase";
 import { generateHTML } from "@/utils/generateHTML"; // Import the ge
 import { Button } from "@/components/ui";
 import { Card } from "@/components/ui/card";
-import { Share2 } from "lucide-react";
+import { FileText, Share2 } from "lucide-react";
+import html2pdf from "html2pdf.js";
 
 interface RelatedEntity {
   name: string;
@@ -168,10 +169,25 @@ function OrderPreviewPage() {
           <Button onClick={handleShare} className="flex items-center">
             <Share2 className="mr-2 h-4 w-4" /> Share
           </Button>
+          <Button
+            onClick={async () => {
+              console.log(orderDetails);
+              if (generatedHtml && orderDetails) {
+                html2pdf(generatedHtml, {
+                  margin: 5,
+                  filename: `${orderDetails.bill_to} Order No ${orderDetails.order_no}.pdf`,
+                });
+              }
+            }}
+            className="flex items-center"
+          >
+            <FileText className="mr-2 h-4 w-4" /> PDF
+          </Button>
         </div>
       </Card>
       {generatedHtml && (
         <iframe
+          id="order-preview"
           className="lg:max-w-[50%] lg:ml-[25%] "
           srcDoc={generatedHtml}
           title="Generated HTML Preview"
