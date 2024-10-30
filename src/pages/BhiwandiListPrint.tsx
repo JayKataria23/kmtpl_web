@@ -44,7 +44,6 @@ function BhiwandiListPrint() {
   const [generatedHtml, setGeneratedHtml] = useState<string | null>(null);
 
   const formatDate = (dateString: string): string => {
-    console.log(dateString);
     const date = new Date(dateString.substring(1));
     const optionsDate: Intl.DateTimeFormatOptions = {
       day: "numeric",
@@ -99,10 +98,11 @@ function BhiwandiListPrint() {
         html += `
         <div style="margin-bottom: 20px; background-color: ${
           entryIndex % 2 === 0 ? "#f9f9f9" : "#ffffff"
-        }; padding: 10px; border: 1px solid #ccc; border-radius: 5px;">
-          <p style="font-size: 18px; line-height: 0.5;"><strong>Bill To:</strong> ${
-            entry.bill_to_party
-          }</p>
+        }; padding: 10px; border: 1px solid #ccc; border-radius: 5px; ">
+          <div style="page-break-inside:avoid; page-break-after:auto;">
+            <p style="font-size: 18px; line-height: 0.5;"><strong>Bill To:</strong> ${
+              entry.bill_to_party
+            }</p>
           <p style="font-size: 18px; line-height: 0.5;"><strong>Ship To:</strong> ${
             entry.ship_to_party
           }</p>
@@ -112,11 +112,11 @@ function BhiwandiListPrint() {
           <p style="font-size: 18px; line-height: 0.5;"><strong>Transport:</strong> ${
             entry.transporter_name
           }</p>
+            </div >
       `;
 
         // Loop through each design entry
         entry.entries.forEach((order) => {
-          console.log(order.shades);
           html += `
           <div style="display: flex; justify-content: space-between; margin-top: 10px; border: 1px solid #ccc; padding: 10px; border-radius: 5px; page-break-inside:avoid; page-break-after:auto" >
             <div style="flex: 1;">
