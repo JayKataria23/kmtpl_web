@@ -239,7 +239,7 @@ function BhiwandiListPrint() {
 
   const handleShare = () => {
     const currentUrl = window.location.href; // Get the current page URL
-    const message = `Bhiwandi List: ${currentUrl}`;
+    const message = `Bhiwandi List ${formatDate(date as string)}: ${currentUrl}`;
     const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, "_blank");
   };
