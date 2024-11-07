@@ -93,8 +93,10 @@ function BhiwandiListPrint() {
       </div>`;
 
       // Loop through designEntries to create HTML structure
-      designEntries.forEach((entry: GroupedOrder, entryIndex: number) => {
-        html += `
+      designEntries
+        .sort((a, b) => a.bill_to_party.localeCompare(b.bill_to_party))
+        .forEach((entry: GroupedOrder, entryIndex: number) => {
+          html += `
         <div style="page-break-inside:avoid; page-break-after:auto; margin-bottom: 20px; background-color: ${
           entryIndex % 2 === 0 ? "#f9f9f9" : "#ffffff"
         }; padding: 10px; border: 1px solid #ccc; border-radius: 5px;">
@@ -124,9 +126,9 @@ function BhiwandiListPrint() {
             </thead>
             <tbody>`;
 
-        // Loop through each design entry
-        entry.entries.forEach((order) => {
-          html += `
+          // Loop through each design entry
+          entry.entries.forEach((order) => {
+            html += `
             <tr style="page-break-inside:avoid;">
               <td style="border: 1px solid #ccc; padding-left: 8px; width: 22%;">${
                 order.design
@@ -143,13 +145,13 @@ function BhiwandiListPrint() {
               </div>  
               </td>
             </tr>`;
-        });
+          });
 
-        html += `
+          html += `
             </tbody>
           </table>
         </div>`;
-      });
+        });
 
       return html;
     };
