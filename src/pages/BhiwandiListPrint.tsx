@@ -85,7 +85,7 @@ function BhiwandiListPrint() {
 
   useEffect(() => {
     const handleGenerateHTML = (designEntries: GroupedOrder[]) => {
-      let html = `<div style="display: flex; justify-content: space-between; align-items: center; padding-right: 10px; ">
+      let html = `<div style="display: flex; justify-content: space-between; align-items: center; padding-right: 10px;">
         <h1 style='font-size: 24px;'>Order Preview</h1>
         <p style='font-size: 18px; line-height: 0.5;'>${formatDate(
           date as string
@@ -94,65 +94,61 @@ function BhiwandiListPrint() {
 
       // Loop through designEntries to create HTML structure
       designEntries.forEach((entry: GroupedOrder, entryIndex: number) => {
-        // Specify the type of entry
         html += `
-        <div style="margin-bottom: 20px; background-color: ${
+        <div style="page-break-inside:avoid; page-break-after:auto; margin-bottom: 20px; background-color: ${
           entryIndex % 2 === 0 ? "#f9f9f9" : "#ffffff"
-        }; padding: 10px; border: 1px solid #ccc; border-radius: 5px; ">
-          <div style="page-break-inside:avoid; page-break-after:auto;">
+        }; padding: 10px; border: 1px solid #ccc; border-radius: 5px;">
+          <div style="page-break-inside:avoid;page-break-after:auto">
             <p style="font-size: 18px; line-height: 0.5;"><strong>Bill To:</strong> ${
               entry.bill_to_party
             }</p>
-          <p style="font-size: 18px; line-height: 0.5;"><strong>Ship To:</strong> ${
-            entry.ship_to_party
-          }</p>
-          <p style="font-size: 18px; line-height: 0.5;"><strong>Order No.:</strong> ${
-            entry.order_no
-          }</p>
-          <p style="font-size: 18px; line-height: 0.5;"><strong>Transport:</strong> ${
-            entry.transporter_name
-          }</p>
-            </div >
-      `;
+            <p style="font-size: 18px; line-height: 0.5;"><strong>Ship To:</strong> ${
+              entry.ship_to_party
+            }</p>
+            <p style="font-size: 18px; line-height: 0.5;"><strong>Order No.:</strong> ${
+              entry.order_no
+            }</p>
+            <p style="font-size: 18px; line-height: 0.5;"><strong>Transport:</strong> ${
+              entry.transporter_name
+            }</p>
+          </div>
+
+          <table style="width: 100%; border-collapse: collapse; margin-top: 10px; page-break-inside:avoid;">
+            <thead>
+              <tr style="background-color: #f0f0f0;">
+                <th style="border: 1px solid #ccc; padding-left: 8px; text-align: left; width: 22%;">Design</th>
+                <th style="border: 1px solid #ccc; padding-left: 8px; text-align: left; width: 10%;">Price</th>
+                <th style="border: 1px solid #ccc; padding-left: 8px; text-align: left; width: 13%;">Remark</th>
+                <th style="border: 1px solid #ccc; padding-left: 8px; text-align: left; width: 55%;">Shades</th>
+              </tr>
+            </thead>
+            <tbody>`;
 
         // Loop through each design entry
         entry.entries.forEach((order) => {
           html += `
-          <div style="display: flex; justify-content: space-between; margin-top: 10px; border: 1px solid #ccc; padding: 10px; border-radius: 5px; page-break-inside:avoid; page-break-after:auto" >
-            <div style="flex: 1;">
-              <p style="font-size: 18px; line-height: 0.5;"><strong>Design:</strong> ${
+            <tr style="page-break-inside:avoid;">
+              <td style="border: 1px solid #ccc; padding-left: 8px; width: 22%;">${
                 order.design
-              }</p>
-              <p style="font-size: 18px; line-height: 0.5;"><strong>Price:</strong> ${
+              }</td>
+              <td style="border: 1px solid #ccc; padding-left: 8px; width: 10%;">${
                 order.price
-              }</p>
-              <p style="font-size: 18px; line-height: 0.5;"><strong>Remark:</strong> ${
+              }</td>
+              <td style="border: 1px solid #ccc; padding-left: 8px; width: 13%;">${
                 order.remark || "N/A"
-              }</p>
-            </div>
-            <div style="flex: 1; text-align: left;">
-              <p style="font-size: 18px; line-height: 0.5;"><strong>Shades:</strong></p>
-              <div>
-                ${
-                  order.shades[50]
-                    ? `All Colurs: ${order.shades[50]}`
-                    : order.shades
-                        .map((shade, idx) => {
-                          return shade
-                            ? `<div style="font-size: 16px; line-height: 1;">${
-                                idx + 1
-                              }: ${shade} m</div>`
-                            : ""; // Return an empty string instead of null
-                        })
-                        .join("")
-                }
-              </div>
-            </div>
-          </div>
-        `;
+              }</td>
+              <td style="border: 1px solid #ccc; padding-left: 8px; width: 55%; ">
+              <div style="width: 100%; text-align: center; display: flex; flex-direction: row; flex-wrap: wrap;">
+              ${formatShades(order.shades)}
+              </div>  
+              </td>
+            </tr>`;
         });
 
-        html += "</div>"; // Close the entry div
+        html += `
+            </tbody>
+          </table>
+        </div>`;
       });
 
       return html;
@@ -199,6 +195,45 @@ function BhiwandiListPrint() {
 
     return Array.from(grouped.values()); // Return the grouped orders as an array
   }
+
+  const formatShades = (shades: string[]): string => {
+    if (shades[50]) {
+      return `<div>
+        <div style='border-bottom: 1px solid #000;'>All Colours</div>
+        <div style='border-top: 1px solid #000;'>${shades[50]} mtr</div>
+      </div>`;
+    }
+
+    // Group shades by their values
+    const formattedShades: { meters: string; shades: number[] }[] = [];
+
+    Object.entries(shades).forEach(([index, shade]: [string, string]) => {
+      if (shade) {
+        const existingGroup = formattedShades.find(
+          (group) => group.meters === shade
+        );
+        if (existingGroup) {
+          existingGroup.shades.push(Number(index) + 1);
+        } else {
+          formattedShades.push({
+            meters: shade,
+            shades: [Number(index) + 1],
+          });
+        }
+      }
+    });
+
+    return formattedShades
+      .map((group) => {
+        return `<div>
+          <div style='border-bottom: 1px solid #000;'>${group.shades.join(
+            " - "
+          )}</div>
+          <div style='border-top: 1px solid #000;'>${group.meters} mtr</div>
+        </div>`;
+      })
+      .join("<div style='padding-left: 20px;'></div>");
+  };
 
   const handleShare = () => {
     const currentUrl = window.location.href; // Get the current page URL
