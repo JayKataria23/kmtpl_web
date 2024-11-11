@@ -295,7 +295,7 @@ export default function OrderForm() {
     if (currentEntry) {
       setCurrentEntry({
         ...currentEntry,
-        remark: value,
+        remark: value.toUpperCase(),
       });
     }
   };
@@ -372,7 +372,7 @@ export default function OrderForm() {
       broker: selectedBroker,
       transport: selectedTransport,
       designs: designEntries,
-      remark: (document.getElementById("remark") as HTMLInputElement)?.value,
+      remark: (document.getElementById("remark") as HTMLInputElement)?.value.toUpperCase(),
     };
 
     try {

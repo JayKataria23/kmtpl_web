@@ -189,7 +189,7 @@ export function generateHTML(order: Order): string {
             <div style="border-right: 1px solid #000; width: 55%; font-size: small">
               47-SHANTI BHAVEN, 1ST FLOOR, ROOM NO. 1, 2, 3, 4 <br />
               OLD HANUMAN LANE, KALBADEVI ROAD, MUMBAI-400002 <br />
-              TEL : 022 40225657 / 022 40641137
+              TEL : 022 40225657 / 022 40116437
               <i class="fa fa-whatsapp" style="margin-left: 10px"></i>:+91 8097301148 <br />
               EMAIL : k.m.textilespvtltd@gmail.com
             </div>
