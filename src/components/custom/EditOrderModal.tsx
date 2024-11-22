@@ -41,7 +41,7 @@ interface DesignEntry {
   design: string;
   price: number | string; // Updated to allow number
   remark: string;
-  shades: string[];
+  shades: { [key: string]: string }[];
 }
 
 export function EditOrderModal({
@@ -70,6 +70,7 @@ export function EditOrderModal({
   const [isDesignDialogOpen, setIsDesignDialogOpen] = useState(false);
   const { toast } = useToast();
   const [remarkOptions, setRemarkOptions] = useState<string[]>([]);
+  const [newCustomShade, setNewCustomShade] = useState<string>("");
 
   const fetchOrderDetails = useCallback(async () => {
     if (!orderId) return;
@@ -277,7 +278,10 @@ export function EditOrderModal({
       design,
       price: "",
       remark: "",
-      shades: Array(51).fill(""),
+      shades: [
+        { "All Colours": "" },
+        ...Array.from({ length: 30 }, (_, i) => ({ [`${i + 1}`]: "" })),
+      ],
     });
   };
 
@@ -286,7 +290,7 @@ export function EditOrderModal({
       setCurrentEntry({
         ...currentEntry,
         shades: currentEntry.shades.map((shade, i) =>
-          i === index ? value : shade
+          i === index ? { ...shade, [Object.keys(shade)[0]]: value } : shade
         ),
       });
     }
@@ -316,10 +320,10 @@ export function EditOrderModal({
         ...currentEntry,
         shades: currentEntry.shades.map((shade, i) => {
           if (i === index) {
-            const currentValue = parseInt(shade) || 0;
-            return (currentValue + 50).toString();
+            const currentValue = parseInt(shade[Object.keys(shade)[0]]) || 0; // Get the current value of the shade
+            return { [Object.keys(shade)[0]]: (currentValue + 50).toString() }; // Increment by 50
           }
-          return shade;
+          return shade; // Return unchanged shade
         }),
       });
     }
@@ -486,7 +490,10 @@ export function EditOrderModal({
       design: "",
       price: "",
       remark: "",
-      shades: Array(50).fill(""),
+      shades: [
+        { "All Colours": "" },
+        ...Array.from({ length: 30 }, (_, i) => ({ [`${i + 1}`]: "" })),
+      ],
     });
     setIsDesignDialogOpen(true);
   };
@@ -699,60 +706,66 @@ export function EditOrderModal({
                       </div>
                       <ScrollArea className="h-[200px] w-full rounded-md border p-4">
                         <div className="grid gap-4">
-                          {currentEntry.shades.length == 51 && (
-                            <div
-                              key={"allColour"}
-                              className="grid grid-cols-5 items-center gap-2"
+                          <div className="grid grid-cols-5 items-center gap-2">
+                            <Label
+                              htmlFor={`shade-custom`}
+                              className="text-right col-span-1"
                             >
-                              <Label
-                                htmlFor={`allColour`}
-                                className="text-right col-span-1"
-                              >
-                                All Colours
-                              </Label>
-                              <Input
-                                id={`allColours`}
-                                value={currentEntry.shades[50]}
-                                onChange={(e) => {
-                                  handleShadeChange(50, e.target.value);
-                                }}
-                                type="number"
-                                className="col-span-3"
-                              />
-                              <Button
-                                onClick={() => handleShadeIncrement(50)}
-                                variant="outline"
-                                size="sm"
-                                className="col-span-1"
-                              >
-                                +50
-                              </Button>
-                            </div>
-                          )}
-                          {(!currentEntry.shades[50] ||
-                            currentEntry.shades[50] == "") &&
-                            Array.from({ length: 50 }, (_, i) => (
+                              Custom
+                            </Label>
+                            <Input
+                              value={newCustomShade} // Use the value of the shade object
+                              onChange={(e) =>
+                                setNewCustomShade(e.target.value.toUpperCase())
+                              }
+                              className="col-span-3"
+                            />
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="col-span-1"
+                              onClick={() => {
+                                if (currentEntry) {
+                                  const newShade = { [newCustomShade]: "" }; // Create new shade object
+                                  setCurrentEntry({
+                                    ...currentEntry,
+                                    shades: [
+                                      currentEntry.shades[0], // Keep the first shade
+                                      newShade, // Add the new shade at index 1
+                                      ...currentEntry.shades.slice(1), // Spread the rest of the shades
+                                    ],
+                                  });
+                                  setNewCustomShade(""); // Clear the input after adding
+                                }
+                              }}
+                            >
+                              Add
+                            </Button>
+                          </div>
+                          {currentEntry.shades.length > 0 && // Check if there are shades
+                            currentEntry.shades.map((shade, index) => (
                               <div
-                                key={i}
+                                key={index}
                                 className="grid grid-cols-5 items-center gap-2"
                               >
                                 <Label
-                                  htmlFor={`shade-${i}`}
+                                  htmlFor={`shade-${index}`}
                                   className="text-right col-span-1"
                                 >
-                                  Shade {i + 1}
+                                  {Object.keys(shade)[0]}{" "}
+                                  {/* Use the key of the shade object */}
                                 </Label>
                                 <Input
-                                  id={`shade-${i}`}
-                                  value={currentEntry.shades[i]}
+                                  id={`shade-${index}`}
+                                  value={shade[Object.keys(shade)[0]]} // Use the value of the shade object
                                   onChange={(e) =>
-                                    handleShadeChange(i, e.target.value)
+                                    handleShadeChange(index, e.target.value)
                                   }
                                   type="number"
                                   className="col-span-3"
                                 />
                                 <Button
-                                  onClick={() => handleShadeIncrement(i)}
+                                  onClick={() => handleShadeIncrement(index)}
                                   variant="outline"
                                   size="sm"
                                   className="col-span-1"
@@ -761,6 +774,36 @@ export function EditOrderModal({
                                 </Button>
                               </div>
                             ))}
+                          <Button
+                            onClick={() => {
+                              if (currentEntry) {
+                                // Find the maximum shade number from existing shades
+                                const maxShadeNumber = Math.max(
+                                  ...currentEntry.shades.map(
+                                    (shade) =>
+                                      parseInt(Object.keys(shade)[0]) || 0
+                                  )
+                                );
+
+                                const newShades = Array.from(
+                                  { length: 10 },
+                                  (_, i) => ({
+                                    [`${maxShadeNumber + i + 1}`]: "",
+                                  })
+                                );
+                                setCurrentEntry({
+                                  ...currentEntry,
+                                  shades: [
+                                    ...currentEntry.shades,
+                                    ...newShades,
+                                  ],
+                                });
+                              }
+                            }}
+                            className="mt-4"
+                          >
+                            + 10
+                          </Button>
                         </div>
                       </ScrollArea>
                       <Button onClick={handleSaveDesign} className="mt-4">
