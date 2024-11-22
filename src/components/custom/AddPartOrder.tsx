@@ -11,18 +11,17 @@ import { Button, Input, Label, ScrollArea, Toaster } from "../ui";
 import supabase from "@/utils/supabase";
 import { useToast } from "@/hooks/use-toast";
 
-
 interface DesignEntry {
   id: string;
   design: string;
   price: string;
   remark: string;
-  shades: string[];
+  shades: { [key: string]: string }[];
 }
 
 interface SelectedDesignDetail {
   design: string;
-  shades: number[];
+  shades: { [key: string]: string }[];
   totalMeters: number;
   remark: string;
   canceled: boolean;
@@ -44,7 +43,6 @@ interface AddPartOrderProps {
   selectedEntries: SelectedDesignDetail[];
 }
 
-
 function AddPartOrder({
   open,
   onClose,
@@ -57,13 +55,17 @@ function AddPartOrder({
 }: AddPartOrderProps) {
   const [currentEntry, setCurrentEntry] = useState<DesignEntry>();
   const { toast } = useToast();
+  const [newCustomShade, setNewCustomShade] = useState<string>("");
   useEffect(() => {
     setCurrentEntry({
       id: design_entry_id,
       design: design_name,
       price: price.toString(),
       remark: "",
-      shades: Array(51).fill(""),
+      shades: [
+        { "All Colours": "" },
+        ...Array.from({ length: 30 }, (_, i) => ({ [`${i + 1}`]: "" })),
+      ],
     });
   }, [design_entry_id, design_name, price]);
   const handleShadeIncrement = (index: number) => {
@@ -72,10 +74,10 @@ function AddPartOrder({
         ...currentEntry,
         shades: currentEntry.shades.map((shade, i) => {
           if (i === index) {
-            const currentValue = parseInt(shade) || 0;
-            return (currentValue + 50).toString();
+            const currentValue = parseInt(shade[Object.keys(shade)[0]]) || 0; // Get the current value of the shade
+            return { [Object.keys(shade)[0]]: (currentValue + 50).toString() }; // Increment by 50
           }
-          return shade;
+          return shade; // Return unchanged shade
         }),
       });
     }
@@ -85,58 +87,92 @@ function AddPartOrder({
       setCurrentEntry({
         ...currentEntry,
         shades: currentEntry.shades.map((shade, i) =>
-          i === index ? value : shade
+          i === index ? { ...shade, [Object.keys(shade)[0]]: value } : shade
         ),
       });
     }
   };
   const handleSave = async () => {
-    // Change to async function
-    const { error } = await supabase.rpc(
-      "create_design_entry_with_updated_shades",
-      {
-        design_entry_id: currentEntry?.id,
-        new_shades: currentEntry?.shades,
-      }
-    );
+    const { data: oldEntry, error: oldError } = await supabase
+      .from("design_entries")
+      .select("*")
+      .eq("id", design_entry_id);
 
-      setSelectedEntries(
-        selectedEntries.map((entry) => ({
-          ...entry,
-          shades:
-            entry.design_entry_id === parseInt(currentEntry?.id || "0")
-              ? entry.shades.map((shade, index) =>
-                  Math.max(
-                    shade - (parseInt(currentEntry?.shades[index] || "0") || 0),
-                    0
-                  )
-                )
-              : entry.shades,
-        }))
-    );
-    setCurrentEntry({
-      id: design_entry_id,
-      design: design_name,
-      price: price.toString(),
-      remark: "",
-      shades: Array(51).fill(""),
-    });
-
-    if (error) {
+    if (oldError) {
       //toast
       toast({
         title: "Error",
         description: `Failed to create part order ${
-          error instanceof Error ? error.message : "Unknown error"
+          oldError instanceof Error ? oldError.message : "Unknown error"
         }`,
         variant: "destructive",
       });
-    } else {
-      onClose();
-      toast({
-        title: "Success",
-        description: "Part order created successfully",
+    }
+
+    if (oldEntry) {
+      const newSelectedEntry = selectedEntries.map((entry) => {
+        const updatedShades = entry.shades.map((shade) => {
+          const shadeKey = Object.keys(shade)[0];
+          const currentShade = currentEntry?.shades.find(
+            (s) => Object.keys(s)[0] === shadeKey
+          );
+          if (currentShade) {
+            const newValue =
+              parseInt(shade[shadeKey]) -
+              (parseInt(currentShade[shadeKey]) || 0);
+            return { [shadeKey]: isNaN(newValue) ? "" : (newValue < 0 ? "" : newValue.toString()) }; // Update the value or set to empty string
+          }
+          return shade; // Return unchanged shade if no match found
+        });
+        return { ...entry, shades: updatedShades }; // Return updated entry
       });
+      const { error } = await supabase
+        .from("design_entries")
+        .insert([
+          {
+            design: oldEntry[0].design,
+            order_id: oldEntry[0].order_id,
+            part: "true",
+            price: oldEntry[0].price,
+            remark: oldEntry[0].remark,
+            shades: currentEntry?.shades,
+          },
+        ])
+        .then(() => {
+          return supabase.from("design_entries").update({shades:newSelectedEntry[0].shades}).eq('id', design_entry_id)
+        })
+      
+      setSelectedEntries(
+        newSelectedEntry
+      );
+
+      setCurrentEntry({
+        id: design_entry_id,
+        design: design_name,
+        price: price.toString(),
+        remark: "",
+        shades: [
+          { "All Colours": "" },
+          ...Array.from({ length: 30 }, (_, i) => ({ [`${i + 1}`]: "" })),
+        ],
+      });
+
+      if (error) {
+        //toast
+        toast({
+          title: "Error",
+          description: `Failed to create part order ${
+            error instanceof Error ? error.message : "Unknown error"
+          }`,
+          variant: "destructive",
+        });
+      } else {
+        onClose();
+        toast({
+          title: "Success",
+          description: "Part order created successfully",
+        });
+      }
     }
   };
   return (
@@ -155,49 +191,62 @@ function AddPartOrder({
         </div>
         <ScrollArea className="h-[200px] w-full rounded-md border p-4">
           <div className="grid gap-4">
-            <div
-              key={"allColour"}
-              className="grid grid-cols-5 items-center gap-2"
-            >
-              <Label htmlFor={`allColour`} className="text-right col-span-1">
-                All Colours
+            <div className="grid grid-cols-5 items-center gap-2">
+              <Label htmlFor={`shade-custom`} className="text-right col-span-1">
+                Custom
               </Label>
               <Input
-                id={`allColours`}
-                value={currentEntry?.shades[50]}
-                onChange={(e) => {
-                  handleShadeChange(50, e.target.value);
-                }}
-                type="number"
+                value={newCustomShade} // Use the value of the shade object
+                onChange={(e) =>
+                  setNewCustomShade(e.target.value.toUpperCase())
+                }
                 className="col-span-3"
               />
               <Button
-                onClick={() => handleShadeIncrement(50)}
                 variant="outline"
                 size="sm"
                 className="col-span-1"
+                onClick={() => {
+                  if (currentEntry) {
+                    const newShade = { [newCustomShade]: "" }; // Create new shade object
+                    setCurrentEntry({
+                      ...currentEntry,
+                      shades: [
+                        currentEntry.shades[0], // Keep the first shade
+                        newShade, // Add the new shade at index 1
+                        ...currentEntry.shades.slice(1), // Spread the rest of the shades
+                      ],
+                    });
+                    setNewCustomShade(""); // Clear the input after adding
+                  }
+                }}
               >
-                +50
+                Add
               </Button>
             </div>
-            {currentEntry?.shades[50] == "" &&
-              Array.from({ length: 50 }, (_, i) => (
-                <div key={i} className="grid grid-cols-5 items-center gap-2">
+            {currentEntry &&
+              currentEntry.shades.length > 0 && // Check if there are shades
+              currentEntry.shades.map((shade, index) => (
+                <div
+                  key={index}
+                  className="grid grid-cols-5 items-center gap-2"
+                >
                   <Label
-                    htmlFor={`shade-${i}`}
+                    htmlFor={`shade-${index}`}
                     className="text-right col-span-1"
                   >
-                    Shade {i + 1}
+                    {Object.keys(shade)[0]}{" "}
+                    {/* Use the key of the shade object */}
                   </Label>
                   <Input
-                    id={`shade-${i}`}
-                    value={currentEntry.shades[i]}
-                    onChange={(e) => handleShadeChange(i, e.target.value)}
+                    id={`shade-${index}`}
+                    value={shade[Object.keys(shade)[0]]} // Use the value of the shade object
+                    onChange={(e) => handleShadeChange(index, e.target.value)}
                     type="number"
                     className="col-span-3"
                   />
                   <Button
-                    onClick={() => handleShadeIncrement(i)}
+                    onClick={() => handleShadeIncrement(index)}
                     variant="outline"
                     size="sm"
                     className="col-span-1"
@@ -206,6 +255,29 @@ function AddPartOrder({
                   </Button>
                 </div>
               ))}
+            <Button
+              onClick={() => {
+                if (currentEntry) {
+                  // Find the maximum shade number from existing shades
+                  const maxShadeNumber = Math.max(
+                    ...currentEntry.shades.map(
+                      (shade) => parseInt(Object.keys(shade)[0]) || 0
+                    )
+                  );
+
+                  const newShades = Array.from({ length: 10 }, (_, i) => ({
+                    [`${maxShadeNumber + i + 1}`]: "",
+                  }));
+                  setCurrentEntry({
+                    ...currentEntry,
+                    shades: [...currentEntry.shades, ...newShades],
+                  });
+                }
+              }}
+              className="mt-4"
+            >
+              + 10
+            </Button>
           </div>
         </ScrollArea>
         <DialogFooter>

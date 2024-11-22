@@ -11,7 +11,7 @@ interface Entry {
   design: string;
   price: string;
   remark: string;
-  shades: string[];
+  shades: { [key: string]: string }[];
   bill_to_party: string;
   ship_to_party: string;
   broker_name: string;
@@ -24,7 +24,7 @@ interface GroupedEntry {
   design: string;
   price: string;
   remark: string;
-  shades: string[];
+  shades: { [key: string]: string }[];
   design_entry_id: number;
 }
 
@@ -198,28 +198,29 @@ function BhiwandiListPrint() {
     return Array.from(grouped.values()); // Return the grouped orders as an array
   }
 
-  const formatShades = (shades: string[]): string => {
-    if (shades[50]) {
-      return `<div>
-        <div style='border-bottom: 1px solid #000;'>All Colours</div>
-        <div style='border-top: 1px solid #000;'>${shades[50]} mtr</div>
-      </div>`;
-    }
+  const formatShades = (shades: { [key: string]: string }[]): string => {
+    
 
     // Group shades by their values
-    const formattedShades: { meters: string; shades: number[] }[] = [];
+    const formattedShades: { meters: string; shades: number[]; keys: string[] }[] = [];
 
-    Object.entries(shades).forEach(([index, shade]: [string, string]) => {
-      if (shade) {
+    shades.forEach((shadeObj, index) => {
+      const shadeName = Object.keys(shadeObj)[0]; // Get the shade name
+      const shadeValue = shadeObj[shadeName]; // Get the shade value
+
+      if (shadeValue) {
+        // Only process non-empty values
         const existingGroup = formattedShades.find(
-          (group) => group.meters === shade
+          (group) => group.meters === shadeValue
         );
         if (existingGroup) {
-          existingGroup.shades.push(Number(index) + 1);
+          existingGroup.shades.push(index + 1); // Add the index to the existing group
+          existingGroup.keys.push(shadeName); // Add the key to the existing group
         } else {
           formattedShades.push({
-            meters: shade,
-            shades: [Number(index) + 1],
+            meters: shadeValue,
+            shades: [index + 1],
+            keys: [shadeName], // Create a new group with the key
           });
         }
       }
@@ -228,7 +229,7 @@ function BhiwandiListPrint() {
     return formattedShades
       .map((group) => {
         return `<div>
-          <div style='border-bottom: 1px solid #000;'>${group.shades.join(
+          <div style='border-bottom: 1px solid #000;'>${group.keys.join(
             " - "
           )}</div>
           <div style='border-top: 1px solid #000;'>${group.meters} mtr</div>

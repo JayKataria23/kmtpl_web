@@ -30,7 +30,7 @@ interface DesignCount {
 
 interface OrderDetail {
   partyName: string;
-  shades: number[];
+  shades: { [key: string]: string }[];
   order_remark: string;
   id: number; // Add id to OrderDetail interface
   price: number;
@@ -210,6 +210,7 @@ function OrderFile() {
           !item.design.startsWith("P-") &&
           !item.design.startsWith("WC-") &&
           !item.design.startsWith("RLT-") &&
+          !item.design.startsWith("DBY-") &&
           isNaN(Number(item.design))
       ); // Filter out designs starting with "D-" or "P-"
     } else if (filter === "Design No.") {
@@ -222,7 +223,8 @@ function OrderFile() {
           item.design.startsWith("P-") ||
           item.design.startsWith("D-") ||
           item.design.startsWith("WC-") ||
-          item.design.startsWith("RLT-")
+          item.design.startsWith("RLT-") ||
+          item.design.startsWith("DBY-")
       ); // Filter out designs starting with "D-" or "P-"
     }
   };
@@ -298,15 +300,19 @@ function OrderFile() {
                           </div>
                         </td>
                         <td className="px-2 py-4 w-2/6 text-sm text-gray-500">
-                          {entry.shades[50] == 0 || entry.shades.length == 50
-                            ? entry.shades.map((meters, idx) =>
-                                meters ? (
-                                  <div key={idx}>
-                                    {idx + 1}: {meters}m
-                                  </div>
-                                ) : null
-                              )
-                            : "All Colours: " + entry.shades[50] + "m"}
+                          {entry.shades &&
+                            entry.shades.map((shade, idx) => {
+                              const shadeName = Object.keys(shade)[0];
+                              const shadeValue = shade[shadeName];
+                              if (shadeValue == "") {
+                                return;
+                              }
+                              return (
+                                <div key={idx}>
+                                  {shadeName}: {shadeValue}m{" "}
+                                </div>
+                              );
+                            })}
                         </td>
                         <td className="px-2 py-4 w-1/6 text-right">
                           {" "}
@@ -431,16 +437,19 @@ function OrderFile() {
                                 )}
                               </td>
                               <td className="px-2 py-4 w-2/6 text-sm text-gray-500">
-                                {order.shades[50] == 0 ||
-                                order.shades.length == 50
-                                  ? order.shades.map((meters, idx) =>
-                                      meters ? (
-                                        <div key={idx}>
-                                          {idx + 1}: {meters}m
-                                        </div>
-                                      ) : null
-                                    )
-                                  : "All Colours: " + order.shades[50] + "m"}
+                                {order.shades &&
+                                  order.shades.map((shade, idx) => {
+                                    const shadeName = Object.keys(shade)[0];
+                                    const shadeValue = shade[shadeName];
+                                    if (shadeValue == "") {
+                                      return;
+                                    }
+                                    return (
+                                      <div key={idx}>
+                                        {shadeName}: {shadeValue}m{" "}
+                                      </div>
+                                    );
+                                  })}
                               </td>
                               <td className="px-2 py-4 w-1/6">
                                 {isSelected ? (

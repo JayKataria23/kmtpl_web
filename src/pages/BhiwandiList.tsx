@@ -21,7 +21,7 @@ interface Entry {
   design: string;
   price: string;
   remark: string;
-  shades: string[];
+  shades: { [key: string]: string }[];
   bill_to_party: string;
   ship_to_party: string;
   broker_name: string;
@@ -34,7 +34,7 @@ interface GroupedEntry {
   design: string;
   price: string;
   remark: string;
-  shades: string[];
+  shades: { [key: string]: string }[];
   design_entry_id: number;
 }
 
@@ -266,24 +266,19 @@ const BhiwandiList = () => {
                               <p className="font-semibold text-base md:text-lg">
                                 Shades:
                               </p>
-                              {designEntry.shades.length > 0 ? (
-                                designEntry.shades[50] == "" ||
-                                designEntry.shades.length == 50 ? (
-                                  designEntry.shades.map((meters, idx) =>
-                                    meters ? (
-                                      <div key={idx}>
-                                        {idx + 1}: {meters}m
-                                      </div>
-                                    ) : null
-                                  )
-                                ) : (
-                                  "All Colours: " + designEntry.shades[50] + "m"
-                                )
-                              ) : (
-                                <p className="text-sm md:text-base">
-                                  No shades available
-                                </p>
-                              )}
+                              {designEntry.shades &&
+                                designEntry.shades.map((shade, idx) => {
+                                  const shadeName = Object.keys(shade)[0];
+                                  const shadeValue = shade[shadeName];
+                                  if (shadeValue == "") {
+                                    return;
+                                  }
+                                  return (
+                                    <div key={idx}>
+                                      {shadeName}: {shadeValue}m{" "}
+                                    </div>
+                                  );
+                                })}
                             </div>
                             <div className="w-1/6 flex items-center justify-center">
                               <Button

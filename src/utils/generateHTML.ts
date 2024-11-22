@@ -1,10 +1,6 @@
-interface Shade {
-  [key: number]: string;
-}
-
 interface Design {
   design: string;
-  shades: Shade;
+  shades: { [key: string]: string }[];
   price: string;
   remark: string;
 }
@@ -30,10 +26,13 @@ function splitOrder(order: Order): Order[] {
 
   for (let i = 0; i < order.designs.length; i++) {
     const design = order.designs[i];
-    const nonEmptyShades = Object.values(design.shades).filter(
-      (shade) => shade !== ""
-    ).length;
-    const designRows = Math.ceil(nonEmptyShades / 8);
+    console.log(design)
+    const nonEmptyShades = design.shades.reduce(
+      (count, shade) => (shade[Object.keys(shade)[0]] ? count + 1 : count),
+      0
+    );
+
+    const designRows = Math.ceil(nonEmptyShades / 8) + (design.remark ? .2 : 0); ;
 
     if (currentRows + designRows > 15) {
       parts.push(currentPart);
@@ -89,47 +88,46 @@ export function generateHTML(order: Order): string {
   let overallIndex = 0;
 
   const shadesRow = (design: Design): string => {
-    if (design.shades[50] == "" || design.shades[50] == undefined) {
-      // Create a new variable to convert design.shades into the desired format
-      const formattedShades: { meters: string; shades: number[] }[] = [];
+    // Create a new variable to convert design.shades into the desired format
+    const formattedShades: {
+      meters: string;
+      shades: number[];
+      keys: string[];
+    }[] = [];
 
-      // Group shades by their values
-      Object.entries(design.shades).forEach(
-        ([index, shade]: [string, string]) => {
-          // Use Object.entries to iterate
-          if (shade) {
-            const existingGroup = formattedShades.find(
-              (group) => group.meters === shade
-            );
-            if (existingGroup) {
-              existingGroup.shades.push(Number(index) + 1); // Add the index to the existing group
-            } else {
-              formattedShades.push({
-                meters: shade,
-                shades: [Number(index) + 1],
-              }); // Create a new group
-            }
-          }
+    // Group shades by their values
+    design.shades.forEach((shadeObj, index) => {
+      const shadeName = Object.keys(shadeObj)[0]; // Get the shade name
+      const shadeValue = shadeObj[shadeName]; // Get the shade value
+
+      if (shadeValue) { // Only process non-empty values
+        const existingGroup = formattedShades.find(
+          (group) => group.meters === shadeValue
+        );
+        if (existingGroup) {
+          existingGroup.shades.push(index + 1); // Add the index to the existing group
+          existingGroup.keys.push(shadeName); // Add the key to the existing group
+        } else {
+          formattedShades.push({
+            meters: shadeValue,
+            shades: [index + 1],
+            keys: [shadeName], // Create a new group with the key
+          });
         }
-      );
+      }
+    });
 
-      const shadesHTML = formattedShades
-        .map((group) => {
-          return ` <div><div style='border-bottom: 1px solid #000;'>${group.shades.join(
-            " - "
-          )}</div><div style='border-top: 1px solid #000;'>${
-            group.meters
-          } mtr</div></div>`;
-        })
-        .join("<div style='padding-left: 20px;'></div>"); // Join with line breaks for each group
+    const shadesHTML = formattedShades
+      .map((group) => {
+        return ` <div><div style='border-bottom: 1px solid #000;'>${group.keys.join(
+          " - "
+        )}</div><div style='border-top: 1px solid #000;'>${
+          group.meters
+        } mtr</div></div>`;
+      })
+      .join("<div style='padding-left: 20px;'></div>"); // Join with line breaks for each group
 
-      return shadesHTML;
-    } else {
-      return `<div >
-                <div style='border-bottom: 1px solid #000;'>All Colours</div>
-                <div style='border-top: 1px solid #000;'>${design.shades[50]} mtr</div>
-              </div>`;
-    }
+    return shadesHTML;
   };
 
   const generatePartHTML = (part: Order, startIndex: number): string => {
@@ -150,11 +148,11 @@ export function generateHTML(order: Order): string {
               ${shadesRow(design)}
             </div>
             <div style="text-align: center; width: 100%;  color: #f00; font-weight: bold;">
-              ${design.remark}
+              ${design.remark?design.remark:""}
             </div>
             </div>
             <div style="width: 4%; border-right: 1px solid #000; text-align: center; word-wrap: break-word;">
-              <p>${Object.values(design.shades).filter((s) => s).length}</p>
+              <p>${Object.values(design.shades).filter((s) => s[Object.keys(s)[0]] !== "").length}</p>
             </div>
             <div style="width: 8%; text-align: center; word-wrap: break-word; font-weight: bold;">
               <p>${design.price}</p>
@@ -250,7 +248,10 @@ export function generateHTML(order: Order): string {
             <div style="width: 4%; border-right: 1px solid #000; font-weight: bold; text-align: center;">
               ${part.designs.reduce(
                 (total, design) =>
-                  total + Object.values(design.shades).filter((s) => s).length,
+                  total +
+                  Object.values(design.shades).filter(
+                    (s) => s[Object.keys(s)[0]] !== ""
+                  ).length,
                 0
               )}
             </div>

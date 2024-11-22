@@ -20,7 +20,7 @@ interface DesignCount {
 interface DesignEntry {
   id: number;
   party_name: string;
-  shades: string[];
+  shades: { [key: string]: string }[];
   order_remark: string;
   price: string;
   dispatch_date: string;
@@ -193,15 +193,19 @@ function DispatchList() {
                     <div className="ml-4 w-1/3">
                       <strong>Shades:</strong>
                       <ul>
-                        {entry.shades[50] == "" || entry.shades.length == 50
-                          ? entry.shades.map((meters, idx) =>
-                              meters ? (
-                                <div key={idx}>
-                                  {idx + 1}: {meters}m
-                                </div>
-                              ) : null
-                            )
-                          : "All Colours: " + entry.shades[50] + "m"}
+                        {entry.shades &&
+                          entry.shades.map((shade, idx) => {
+                            const shadeName = Object.keys(shade)[0];
+                            const shadeValue = shade[shadeName];
+                            if (shadeValue == "") {
+                              return;
+                            }
+                            return (
+                              <div key={idx}>
+                                {shadeName}: {shadeValue}m{" "}
+                              </div>
+                            );
+                          })}
                       </ul>
                     </div>
                   </div>
