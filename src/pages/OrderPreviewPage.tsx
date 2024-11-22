@@ -16,7 +16,7 @@ interface DesignEntry {
   design: string;
   price: string;
   remark: string;
-  shades: string[];
+  shades: { [key: string]: string }[];
 }
 
 interface OrderData {
