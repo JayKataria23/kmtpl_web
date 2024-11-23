@@ -368,6 +368,7 @@ export default function OrderForm() {
   };
 
   const handleSave = async () => {
+    generateUniqueOrderNo();
     const orderDetails: OrderDetails = {
       orderNo: orderNo,
       date: formatDate(date),
@@ -756,10 +757,10 @@ export default function OrderForm() {
                         </div>
                         {currentEntry.shades.length > 0 && // Check if there are shades
                           currentEntry.shades.map((shade, index) => (
-                            <div
+                        <div
                               key={index}
-                              className="grid grid-cols-5 items-center gap-2"
-                            >
+                          className="grid grid-cols-5 items-center gap-2"
+                        >
                               <Label
                                 htmlFor={`shade-${index}`}
                                 className="text-right col-span-1"
