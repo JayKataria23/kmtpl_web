@@ -150,6 +150,30 @@ export default function PartyProfilePage() {
   };
 
   const handleDelete = async (id: number) => {
+    // Check if there are any orders associated with the party profile
+    const { data: ordersData, error: ordersError } = await supabase
+      .from("orders") // Assuming you have an "orders" table
+      .select("*")
+      .or(`bill_to_id.eq.${id},ship_to_id.eq.${id}`); // Check for matching bill_to or ship_to
+
+    if (ordersError) {
+      toast({
+        title: "Error",
+        description: "Failed to check orders",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (ordersData && ordersData.length > 0) {
+      toast({
+        title: "Error",
+        description: "Cannot delete party profile as it is associated with existing orders.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const { error } = await supabase
       .from("party_profiles")
       .delete()
