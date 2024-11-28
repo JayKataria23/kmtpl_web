@@ -30,6 +30,7 @@ interface SelectedDesignDetail {
   design_entry_id: number;
   party_name: string;
   date: string; // New date attribute
+  order_date: string; // New date attribute
 }
 
 interface AddPartOrderProps {

@@ -28,6 +28,7 @@ interface PartyCount {
 }
 
 interface DesignDetail {
+  order_date: string;
   design: string;
   shades: { [key: string]: string }[];
   totalMeters: number;
@@ -56,13 +57,24 @@ function PartyFile() {
   const { toast } = useToast();
   const [openAccordionItems, setOpenAccordionItems] = useState<string[]>([]);
   const [isAddPartOrderOpen, setIsAddPartOrderOpen] = useState(false);
-  const [selectedOrder, setSelectedOrder] = useState<DesignDetail | null>(
-    null
-  );
+  const [selectedOrder, setSelectedOrder] = useState<DesignDetail | null>(null);
 
   useEffect(() => {
     fetchPartyCounts();
   }, []);
+
+  const formatDate = (dateString: string): string => {
+    const date = new Date(dateString);
+    const optionsDate: Intl.DateTimeFormatOptions = {
+      day: "numeric",
+      month: "long", // Change month to 'long'
+      year: "numeric",
+    };
+
+    const formattedDateGB = date.toLocaleDateString("en-GB", optionsDate); // Format date to day/month/year
+
+    return `${formattedDateGB}`; // Return combined formatted date and time
+  };
 
   const fetchPartyCounts = async () => {
     try {
@@ -95,6 +107,7 @@ function PartyFile() {
           bhiwandi_date: string;
           price: number;
           design_entry_id: number;
+          order_date: string;
         }) => ({
           design: entry.design_name,
           shades: entry.shades,
@@ -104,6 +117,7 @@ function PartyFile() {
           bhiwandi_date: entry.bhiwandi_date,
           price: entry.price,
           design_entry_id: entry.design_entry_id,
+          order_date: entry.order_date,
         })
       );
 
@@ -365,6 +379,12 @@ function PartyFile() {
                                     <>
                                       <br />
                                       Price: {order.price}
+                                    </>
+                                  )}
+                                  {order.order_date && (
+                                    <>
+                                      <br />
+                                      {formatDate(order.order_date)}
                                     </>
                                   )}
                                 </div>

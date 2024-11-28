@@ -36,6 +36,7 @@ interface OrderDetail {
   price: number;
   part: boolean;
   entry_remark: string;
+  order_date: string;
 }
 
 interface DrawerEntry extends OrderDetail {
@@ -59,6 +60,18 @@ function OrderFile() {
     fetchDesignCounts();
   }, []);
 
+  const formatDate = (dateString: string): string => {
+    const date = new Date(dateString);
+    const optionsDate: Intl.DateTimeFormatOptions = {
+      day: "numeric",
+      month: "long", // Change month to 'long'
+      year: "numeric",
+    };
+
+    const formattedDateGB = date.toLocaleDateString("en-GB", optionsDate); // Format date to day/month/year
+
+    return `${formattedDateGB}`; // Return combined formatted date and time
+  };
   const fetchDesignCounts = async () => {
     try {
       const { data, error } = await supabase.rpc("get_design_entry_count");
@@ -113,6 +126,7 @@ function OrderFile() {
           price: number;
           part: boolean;
           entry_remark: string | null;
+          order_date: string;
         }) => ({
           partyName: entry.party_name,
           shades: entry.shades,
@@ -121,6 +135,7 @@ function OrderFile() {
           price: entry.price,
           part: entry.part,
           entry_remark: entry.entry_remark,
+          order_date: entry.order_date,
         })
       );
 
@@ -429,6 +444,9 @@ function OrderFile() {
                                 )}
                                 <div className="text-xs text-gray-500 mt-1">
                                   Price: {order.price}
+                                </div>
+                                <div className="text-xs text-gray-500 mt-1">
+                                  {formatDate(order.order_date)}
                                 </div>
                                 {order.entry_remark && (
                                   <div className="text-xs text-gray-500 mt-1">
