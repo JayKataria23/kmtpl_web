@@ -54,6 +54,20 @@ export default function HomePage() {
         <br />
         <Button
           className="w-64 text-lg h-12"
+          onClick={() => navigate("/create-challan")}
+        >
+          Create Challan
+        </Button>
+        <br />
+        <Button
+          className="w-64 text-lg h-12"
+          onClick={() => navigate("/challan-list")}
+        >
+          Challan List
+        </Button>
+        <br />
+        <Button
+          className="w-64 text-lg h-12"
           onClick={() => navigate("/party-profiles")}
         >
           Party Profiles

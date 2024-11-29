@@ -20,6 +20,10 @@ import SignUpPage from "./pages/sign-up";
 import OrderPreviewPage from "./pages/OrderPreviewPage";
 import BhiwandiListPrint from "./pages/BhiwandiListPrint";
 import DispatchList from "./pages/DispatchList";
+import CreateChallan from "./pages/CreateChallan";
+import ChallanView from "./pages/ChallanView";
+import ChallanList from "./pages/ChallanList";
+import EditChallan from "./pages/EditChallan";
 
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
@@ -45,6 +49,8 @@ createRoot(document.getElementById("root")!).render(
             path="/order-preview/:orderId"
             element={<OrderPreviewPage />}
           />
+          <Route path="/challan-view/:challanId" element={<ChallanView />} />
+          <Route path="/challan-edit/:challanId" element={<EditChallan />} />
           <Route
             path="/order-file"
             element={
@@ -78,6 +84,14 @@ createRoot(document.getElementById("root")!).render(
             }
           />
           <Route
+            path="/challan-list"
+            element={
+              <ProtectedRoute>
+                <ChallanList />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/order-list"
             element={
               <ProtectedRoute>
@@ -98,6 +112,14 @@ createRoot(document.getElementById("root")!).render(
             element={
               <ProtectedRoute>
                 <DispatchList />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/create-challan" // Add the new route
+            element={
+              <ProtectedRoute>
+                <CreateChallan />
               </ProtectedRoute>
             }
           />
