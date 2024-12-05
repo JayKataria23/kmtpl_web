@@ -63,7 +63,7 @@ function CreateChallan() {
   const [priceList, setPriceList] = useState<PriceEntry[]>([]);
   const [designs, setDesigns] = useState<string[]>([]);
   const [remark, setRemark] = useState<string>("");
-  const [disc, setDisc] = useState<string>("");
+  const [disc, setDisc] = useState<number>(0);
   const { user } = useUser();
   const userName = user?.fullName || user?.firstName || "Unknown User";
 
@@ -539,7 +539,7 @@ function CreateChallan() {
             type="number"
             id="discount"
             value={disc}
-            onChange={(e) => setDisc(e.target.value)}
+            onChange={(e) => setDisc(Number(e.target.value))}
           />
         </div>
         <div>
