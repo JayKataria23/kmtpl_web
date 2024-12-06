@@ -9,7 +9,6 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-  ScrollArea,
   Toaster,
 } from "@/components/ui";
 import supabase from "@/utils/supabase";
@@ -505,7 +504,7 @@ function CreateChallan() {
         </Dialog>
 
         {entries.length > 0 && (
-          <ScrollArea className="max-h-[200px] w-full rounded-md border p-4">
+          <div className="w-full rounded-md border p-4">
             {entries.map((entry, index) => (
               <div key={entry.id}>
                 <span>{index + 1}.</span>
@@ -530,7 +529,7 @@ function CreateChallan() {
                 </div>
               </div>
             ))}
-          </ScrollArea>
+          </div>
         )}
 
         <div>
