@@ -126,7 +126,9 @@ function ChallanView() {
       `
       <tr style="height:40px; font-weight:bold">
         <td>Total</td>
-        <td>${entries.reduce((sum, entry) => sum + entry.meters, 0)}</td>
+        <td>${entries
+          .reduce((sum, entry) => sum + entry.meters * entry.pcs, 0)
+          .toFixed(2)}</td>
         <td>${entries.reduce((sum, entry) => sum + entry.pcs, 0)}</td>
         <td></td>
         <td></td>
