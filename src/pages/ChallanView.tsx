@@ -91,7 +91,7 @@ function ChallanView() {
     challan: Challan,
     entries: ChallanEntry[]
   ): string => {
-    const extraRows = 18 - entries.length;
+    const extraRows = 16 - entries.length;
     const entryRows =
       entries
         .map(
@@ -126,11 +126,11 @@ function ChallanView() {
       `
       <tr style="height:40px; font-weight:bold">
         <td>Total</td>
+        <td></td>
+        <td>${entries.reduce((sum, entry) => sum + entry.pcs, 0)}</td>
         <td>${entries
           .reduce((sum, entry) => sum + entry.meters * entry.pcs, 0)
           .toFixed(2)}</td>
-        <td>${entries.reduce((sum, entry) => sum + entry.pcs, 0)}</td>
-        <td></td>
         <td></td>
         <td>Taxable Value</td>
         <td>₹${entries
@@ -144,8 +144,18 @@ function ChallanView() {
             0
           )
           .toFixed(2)} + GST</td>
+      </tr>`+
+      `
+      <tr style="height:${40 * 2}px">
+        <td></td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td></td>
       </tr>
-    `;
+    `
+    ;
 
     return `
       <html>
@@ -179,7 +189,7 @@ function ChallanView() {
               </div>
               <div style="width: 45%;">
                 <div style="display: flex; justify-content: space-around; font-size: 20px;">
-                  <span>Order No.: <b>${challan.challan_no}</b></span>
+                  <span>Challan No.: <b>${challan.challan_no}</b></span>
                   <span>Date: <b>${formatDate(challan.date)}</b></span>
                 </div>
                 <div style="display: flex; flex-direction: row; font-size: small">
