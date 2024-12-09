@@ -226,6 +226,15 @@ function OrderFile() {
           !item.design.startsWith("WC-") &&
           !item.design.startsWith("RLT-") &&
           !item.design.startsWith("DBY-") &&
+          !item.design.startsWith("DD-") &&
+          !item.design.startsWith("CR-") &&
+          !item.design.startsWith("SS-") &&
+          !item.design.startsWith("KK-") &&
+          !item.design.startsWith("MG-") &&
+          !item.design.startsWith("AF-") &&
+          !item.design.startsWith("BR-") &&
+          !item.design.startsWith("CL-") &&
+          !item.design.startsWith("SC-") &&
           isNaN(Number(item.design))
       ); // Filter out designs starting with "D-" or "P-"
     } else if (filter === "Design No.") {
@@ -239,7 +248,16 @@ function OrderFile() {
           item.design.startsWith("D-") ||
           item.design.startsWith("WC-") ||
           item.design.startsWith("RLT-") ||
-          item.design.startsWith("DBY-")
+          item.design.startsWith("DBY-") ||
+          item.design.startsWith("DD-") ||
+          item.design.startsWith("CR-") ||
+          item.design.startsWith("SS-") ||
+          item.design.startsWith("KK-") ||
+          item.design.startsWith("MG-") ||
+          item.design.startsWith("AF-") ||
+          item.design.startsWith("BR-") ||
+          item.design.startsWith("CL-") ||
+          item.design.startsWith("SC-") 
       ); // Filter out designs starting with "D-" or "P-"
     }
   };
