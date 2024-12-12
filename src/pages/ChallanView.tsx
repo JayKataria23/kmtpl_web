@@ -33,6 +33,7 @@ function ChallanView() {
   const [generatedHtml, setGeneratedHtml] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [challanNo, setChallanNo] = useState<number | null>(null);
 
   useEffect(() => {
     const fetchChallanDetails = async () => {
@@ -70,6 +71,7 @@ function ChallanView() {
         // Generate HTML after fetching both challan and entries
         const html = generateChallanHTML(challan, entries);
         setGeneratedHtml(html);
+        setChallanNo(challan.challan_no);
       } catch (error) {
         console.error("Error fetching challan details:", error);
         setError("Failed to fetch challan details");
@@ -144,7 +146,7 @@ function ChallanView() {
             0
           )
           .toFixed(2)} + GST</td>
-      </tr>`+
+      </tr>` +
       `
       <tr style="height:${40 * 2}px">
         <td></td>
@@ -154,9 +156,7 @@ function ChallanView() {
         <td></td>
         <td></td>
       </tr>
-    `
-    ;
-
+    `;
     return `
       <html>
         <head>
@@ -188,7 +188,7 @@ function ChallanView() {
                 EMAIL : k.m.textilespvtltd@gmail.com
               </div>
               <div style="width: 45%;">
-                <div style="display: flex; justify-content: space-around; font-size: 20px;">
+                <div style="display: flex; justify-content: space-around; font-size: 18px;">
                   <span>Challan No.: <b>${challan.challan_no}</b></span>
                   <span>Date: <b>${formatDate(challan.date)}</b></span>
                 </div>
@@ -246,7 +246,7 @@ function ChallanView() {
 
   const handleShare = () => {
     const currentUrl = window.location.href;
-    const message = `Challan View: ${currentUrl}`;
+    const message = `Challan No. ${challanNo}: ${currentUrl}`;
     const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, "_blank");
   };

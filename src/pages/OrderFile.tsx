@@ -37,6 +37,7 @@ interface OrderDetail {
   part: boolean;
   entry_remark: string;
   order_date: string;
+  order_no: number;
 }
 
 interface DrawerEntry extends OrderDetail {
@@ -127,6 +128,7 @@ function OrderFile() {
           part: boolean;
           entry_remark: string | null;
           order_date: string;
+          order_no: number;
         }) => ({
           partyName: entry.party_name,
           shades: entry.shades,
@@ -136,6 +138,7 @@ function OrderFile() {
           part: entry.part,
           entry_remark: entry.entry_remark,
           order_date: entry.order_date,
+          order_no: entry.order_no
         })
       );
 
@@ -466,6 +469,11 @@ function OrderFile() {
                                 <div className="text-xs text-gray-500 mt-1">
                                   {formatDate(order.order_date)}
                                 </div>
+                                {order.order_remark && (
+                                  <div className="text-xs text-gray-500 mt-1">
+                                    Order No: {order.order_no}
+                                  </div>
+                                )}
                                 {order.entry_remark && (
                                   <div className="text-xs text-gray-500 mt-1">
                                     Entry Remark: {order.entry_remark}

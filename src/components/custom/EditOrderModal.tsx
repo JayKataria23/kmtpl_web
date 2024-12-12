@@ -71,6 +71,7 @@ export function EditOrderModal({
   const { toast } = useToast();
   const [remarkOptions, setRemarkOptions] = useState<string[]>([]);
   const [newCustomShade, setNewCustomShade] = useState<string>("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const fetchOrderDetails = useCallback(async () => {
     if (!orderId) return;
@@ -383,6 +384,7 @@ export function EditOrderModal({
   };
 
   const handleSubmit = async () => {
+    setIsSubmitting(true);
     try {
       const { error } = await supabase
         .from("orders")
@@ -476,6 +478,8 @@ export function EditOrderModal({
         description: "Failed to update order",
         variant: "destructive",
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -869,7 +873,9 @@ export function EditOrderModal({
             <Button variant="outline" onClick={onClose}>
               Cancel
             </Button>
-            <Button onClick={handleSubmit}>Save Changes</Button>
+            <Button onClick={handleSubmit} disabled={isSubmitting}>
+              Save Changes
+            </Button>
           </div>
         </ScrollArea>
       </DialogContent>
