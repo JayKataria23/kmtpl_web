@@ -18,6 +18,7 @@ interface Entry {
   transporter_name: string;
   order_id: string;
   order_no: number;
+  order_remark: string;
 }
 
 interface GroupedEntry {
@@ -36,6 +37,7 @@ interface GroupedOrder {
   transporter_name: string;
   entries: GroupedEntry[];
   order_no: number;
+  order_remark: string;
 }
 
 function BhiwandiListPrint() {
@@ -107,10 +109,14 @@ function BhiwandiListPrint() {
             <p style="font-size: 18px; line-height: 0.5;"><strong>Ship To:</strong> ${
               entry.ship_to_party
             }</p>
-            <p style="font-size: 18px; line-height: 0.5;"><strong>Order No.:</strong> ${
-              entry.order_no
-            }</p>
-            <p style="font-size: 18px; line-height: 0.5;"><strong>Transport:</strong> ${
+            <p style="font-size: 18px; line-height: 0.5;">
+            <span><strong>Order No.:</strong> ${entry.order_no}
+            </span>
+            <span><strong style="color: red; margin:5px; margin-left:40px; line-height:1">${
+              entry.order_remark
+            }</strong></span>
+            <span></p>
+            <p style="font-size: 18px; line-height: 0.5"><strong>Transport:</strong> ${
               entry.transporter_name
             }</p>
           </div>
@@ -174,6 +180,7 @@ function BhiwandiListPrint() {
         remark,
         shades,
         order_no,
+        order_remark,
       } = entry;
 
       // Check if the order_id already exists in the map
@@ -182,6 +189,7 @@ function BhiwandiListPrint() {
         grouped.set(order_id, {
           order_id,
           order_no,
+          order_remark,
           bill_to_party,
           ship_to_party,
           broker_name,
@@ -199,10 +207,12 @@ function BhiwandiListPrint() {
   }
 
   const formatShades = (shades: { [key: string]: string }[]): string => {
-    
-
     // Group shades by their values
-    const formattedShades: { meters: string; shades: number[]; keys: string[] }[] = [];
+    const formattedShades: {
+      meters: string;
+      shades: number[];
+      keys: string[];
+    }[] = [];
 
     shades.forEach((shadeObj, index) => {
       const shadeName = Object.keys(shadeObj)[0]; // Get the shade name
@@ -240,7 +250,9 @@ function BhiwandiListPrint() {
 
   const handleShare = () => {
     const currentUrl = window.location.href; // Get the current page URL
-    const message = `Bhiwandi List ${formatDate(date as string)}: ${currentUrl}`;
+    const message = `Bhiwandi List ${formatDate(
+      date as string
+    )}: ${currentUrl}`;
     const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, "_blank");
   };
