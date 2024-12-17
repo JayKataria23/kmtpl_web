@@ -469,7 +469,7 @@ function OrderFile() {
                                 <div className="text-xs text-gray-500 mt-1">
                                   {formatDate(order.order_date)}
                                 </div>
-                                {order.order_remark && (
+                                {order.order_no && (
                                   <div className="text-xs text-gray-500 mt-1">
                                     Order No: {order.order_no}
                                   </div>

@@ -38,6 +38,7 @@ interface DesignDetail {
   price: number;
   design_entry_id: number;
   party_name: string;
+  order_no: number;
 }
 
 interface SelectedDesignDetail extends DesignDetail {
@@ -108,6 +109,7 @@ function PartyFile() {
           price: number;
           design_entry_id: number;
           order_date: string;
+          order_no: number;
         }) => ({
           design: entry.design_name,
           shades: entry.shades,
@@ -118,6 +120,7 @@ function PartyFile() {
           price: entry.price,
           design_entry_id: entry.design_entry_id,
           order_date: entry.order_date,
+          order_no: entry.order_no
         })
       );
 
@@ -385,6 +388,12 @@ function PartyFile() {
                                     <>
                                       <br />
                                       {formatDate(order.order_date)}
+                                    </>
+                                  )}
+                                  {order.order_no && (
+                                    <>
+                                      <br />
+                                      Order No. :{order.order_no}
                                     </>
                                   )}
                                 </div>
