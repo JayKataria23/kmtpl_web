@@ -70,6 +70,7 @@ const formatDate = (dateString: string): string => {
 
 const BhiwandiList = () => {
   const [bhiwandiEntries, setBhiwandiEntries] = useState<BhiwandiEntry[]>([]); // State to hold Bhiwandi entries
+  const [selectedEntries, setSelectedEntries] = useState<Set<string>>(new Set()); // New state for selected entries
   const [designEntries, setDesignEntries] = useState<GroupedOrder[]>([]); // State to hold design entries for the selected date
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -186,11 +187,63 @@ const BhiwandiList = () => {
     setOpenAccordion(null);
   };
 
+  const handleCheckboxChange = (entryDate: string) => {
+    const updatedSelection = new Set(selectedEntries);
+    if (updatedSelection.has(entryDate)) {
+      updatedSelection.delete(entryDate); // Deselect if already selected
+    } else {
+      updatedSelection.add(entryDate); // Select if not already selected
+    }
+    setSelectedEntries(updatedSelection); // Update state
+  };
+
+  const combineBhiwandiLists = async () => { // Make the function async
+    if (selectedEntries.size < 2) {
+      toast({
+        title: "Error",
+        description: "Please select at least two entries to combine.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    const today = new Date(new Date().getTime() + 5.5 * 60 * 60 * 1000).toISOString(); 
+    
+      const { error } = await supabase
+        .from("design_entries")
+        .update({ bhiwandi_date: today }) 
+        .in("bhiwandi_date", Array.from(selectedEntries)); // Update only for selected entries
+    
+
+      if (error) {
+        toast({
+          title: "Error",
+          description: `Failed to combine Bhiwandi entries: ${
+            error instanceof Error ? error.message : "Unknown error"
+          }`,
+          variant: "destructive",
+        });
+        return; // Exit the function if there's an error
+      }
+    
+
+    // Refresh the page if there are no errors
+    window.location.reload(); // Refresh the page
+  };
+
   return (
     <div className="container mx-auto mt-10 text-center">
       <h1 className="text-2xl font-bold">Bhiwandi List</h1>
-      <Button onClick={() => navigate("/")} className="mt-4">
+      <Button onClick={() => navigate("/")} className="mt-4 m-2">
         Back to Home
+      </Button>
+
+      <Button
+        onClick={combineBhiwandiLists}
+        disabled={selectedEntries.size < 2} // Disable if less than 2 selected
+        className="mt-4 m-2"
+      >
+        Combine
       </Button>
 
       <div className="mt-6">
@@ -210,6 +263,12 @@ const BhiwandiList = () => {
                 }}
               >
                 <div>
+                  <input
+                    type="checkbox"
+                    checked={selectedEntries.has(entry.bhiwandi_date)}
+                    onChange={() => handleCheckboxChange(entry.bhiwandi_date)}
+                    className="mr-2"
+                  />
                   <span className="text-lg font-semibold">
                     {formatDate(entry.bhiwandi_date)}
                   </span>
