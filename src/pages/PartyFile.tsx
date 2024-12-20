@@ -254,7 +254,6 @@ function PartyFile() {
       { ...entry, date: lastEntryDate, party_name: party_name },
     ]);
 
-    setIsSendToBhiwandiOpen(true); // Open the Bhiwandi drawer
   };
 
   return (
