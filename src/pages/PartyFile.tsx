@@ -59,6 +59,10 @@ function PartyFile() {
   const [openAccordionItems, setOpenAccordionItems] = useState<string[]>([]);
   const [isAddPartOrderOpen, setIsAddPartOrderOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<DesignDetail | null>(null);
+  const [isSendToBhiwandiOpen, setIsSendToBhiwandiOpen] = useState(false); // State for the new drawer
+  const [selectedBhiwandiEntries, setSelectedBhiwandiEntries] = useState<
+    SelectedDesignDetail[]
+  >([]); // New state for selected Bhiwandi entries
 
   useEffect(() => {
     fetchPartyCounts();
@@ -120,7 +124,7 @@ function PartyFile() {
           price: entry.price,
           design_entry_id: entry.design_entry_id,
           order_date: entry.order_date,
-          order_no: entry.order_no
+          order_no: entry.order_no,
         })
       );
 
@@ -134,11 +138,11 @@ function PartyFile() {
 
   const addToDrawer = (entry: DesignDetail, party_name: string) => {
     const lastEntryDate =
-      selectedEntries.length > 0
-        ? selectedEntries[selectedEntries.length - 1].date
+      selectedBhiwandiEntries.length > 0
+        ? selectedBhiwandiEntries[selectedBhiwandiEntries.length - 1].date
         : new Date().toISOString().split("T")[0]; // Use today's date if no entries
 
-    setSelectedEntries((prev) => [
+    setSelectedBhiwandiEntries((prev) => [
       ...prev,
       { ...entry, date: lastEntryDate, party_name: party_name },
     ]);
@@ -148,7 +152,14 @@ function PartyFile() {
 
   // Function to remove an entry from the drawer
   const removeFromDrawer = (entry: DesignDetail) => {
-    setSelectedEntries((prev) =>
+    setSelectedBhiwandiEntries((prev) =>
+      prev.filter((e) => e.design_entry_id !== entry.design_entry_id)
+    );
+  };
+
+  // Function to remove an entry from the Bhiwandi drawer
+  const removeFromDrawerBhiwandi = (entry: DesignDetail) => {
+    setSelectedBhiwandiEntries((prev) =>
       prev.filter((e) => e.design_entry_id !== entry.design_entry_id)
     );
   };
@@ -183,6 +194,67 @@ function PartyFile() {
         }`,
       });
     }
+  };
+
+  // Function to handle sending all entries to Bhiwandi
+  const handleSendAllToBhiwandi = async () => {
+    try {
+      if (selectedBhiwandiEntries.length === 0) {
+        toast({
+          title: "Error",
+          description: "No entries to send to Bhiwandi",
+        });
+        return;
+      }
+
+      const today = new Date(
+        new Date().getTime() + 5.5 * 60 * 60 * 1000
+      ).toISOString();
+
+      const idsToUpdate = selectedBhiwandiEntries.map(
+        (entry) => entry.design_entry_id
+      );
+
+      // Update bhiwandi date for design entries
+      const { error } = await supabase
+        .from("design_entries")
+        .update({ bhiwandi_date: today })
+        .in("id", idsToUpdate);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: `Successfully sent ${idsToUpdate.length} entries to Bhiwandi.`,
+      });
+      fetchPartyCounts();
+      setSelectedBhiwandiEntries([]); // Clear the selected entries
+      setIsSendToBhiwandiOpen(false); // Close the drawer
+    } catch (error) {
+      console.error("Error sending to Bhiwandi:", error);
+      toast({
+        title: "Error",
+        description: `Failed to send entries to Bhiwandi: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`,
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Function to add an entry to the Bhiwandi selected entries
+  const addToDrawerBhiwandi = (entry: DesignDetail, party_name: string) => {
+    const lastEntryDate =
+      selectedBhiwandiEntries.length > 0
+        ? selectedBhiwandiEntries[selectedBhiwandiEntries.length - 1].date
+        : new Date().toISOString().split("T")[0]; // Use today's date if no entries
+
+    setSelectedBhiwandiEntries((prev) => [
+      ...prev,
+      { ...entry, date: lastEntryDate, party_name: party_name },
+    ]);
+
+    setIsSendToBhiwandiOpen(true); // Open the Bhiwandi drawer
   };
 
   return (
@@ -304,6 +376,38 @@ function PartyFile() {
             </Button>
             <DrawerClose asChild>
               <Button variant="outline">Close</Button>
+            </DrawerClose>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
+      <Drawer
+        open={isSendToBhiwandiOpen}
+        onOpenChange={setIsSendToBhiwandiOpen}
+      >
+        <DrawerTrigger asChild>
+          <Button className="">Send to Bhiwandi</Button>
+        </DrawerTrigger>
+        <DrawerContent>
+          <DrawerHeader>
+            <DrawerTitle>Send All Entries to Bhiwandi</DrawerTitle>
+            <DrawerDescription>
+              {selectedBhiwandiEntries.length > 0 ? (
+                selectedBhiwandiEntries.map((entry, index) => (
+                  <div key={index}>
+                    {entry.party_name}: {entry.design}
+                  </div>
+                ))
+              ) : (
+                "No entries selected."
+              )}
+            </DrawerDescription>
+          </DrawerHeader>
+          <DrawerFooter>
+            <Button onClick={handleSendAllToBhiwandi} className="mr-2">
+              Confirm
+            </Button>
+            <DrawerClose asChild>
+              <Button variant="outline">Cancel</Button>
             </DrawerClose>
           </DrawerFooter>
         </DrawerContent>
@@ -436,7 +540,27 @@ function PartyFile() {
                                       D
                                     </Button>
                                   )
-                                ) : null}
+                                ) : selectedBhiwandiEntries.some(
+                                    (entry) =>
+                                      entry.design_entry_id ===
+                                      order.design_entry_id
+                                  ) ? (
+                                  <Button
+                                    className="ml-2 bg-red-500 active:bg-red-500 visited:bg-red-500 hover:bg-red-500 rounded-full w-10 h-10 text-lg text-white"
+                                    onClick={() => removeFromDrawerBhiwandi(order)} // Remove entry from drawer on click
+                                  >
+                                    X
+                                  </Button>
+                                ) : (
+                                  <Button
+                                    className="ml-2 bg-yellow-500 active:bg-yellow-500 visited:bg-yellow-500 hover:bg-yellow-500 rounded-full w-10 h-10 text-lg text-white"
+                                    onClick={() =>
+                                      addToDrawerBhiwandi(order, item.party_name) // Add entry to Bhiwandi drawer on click
+                                    }
+                                  >
+                                    B
+                                  </Button>
+                                )}
                               </td>
                             </tr>
                           ))}
