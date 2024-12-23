@@ -302,10 +302,21 @@ function OrderFile() {
 
     // Prepare data for Excel
     const excelData = [
-      ["Design Name", design, "", "Date", new Date().toLocaleDateString("en-GB")],
+      [
+        "Design Name",
+        design,
+        "",
+        "Date",
+        new Date().toLocaleDateString("en-GB"),
+      ],
       [
         "Shade Name",
-        ...new Set(orderDetails.map((o) => o.partyName + String(o.order_no))),
+        ...new Set(
+          orderDetails.map((o) => {
+            const nameParts = o.partyName.split(" "); // Split the party name into words
+            return nameParts.slice(0, 2).join(" ") + String(o.order_no); // Take the first two words and join them
+          })
+        ),
         "Total",
       ], // Header row
     ]; // Initialize with header
