@@ -302,7 +302,12 @@ function OrderFile() {
 
     // Prepare data for Excel
     const excelData = [
-      ["Shade Name", ...new Set(orderDetails.map((o) => o.partyName+String(o.order_no))), "Total"], // Header row
+      ["Design Name", design, "", "Date", new Date().toLocaleDateString("en-GB")],
+      [
+        "Shade Name",
+        ...new Set(orderDetails.map((o) => o.partyName + String(o.order_no))),
+        "Total",
+      ], // Header row
     ]; // Initialize with header
     let highestNonZeroRowIndex = -1; // Track the highest row index with a non-zero total
     const rowsToKeep: string[][] = []; // Explicitly define the type as a 2D array of strings
