@@ -302,22 +302,46 @@ function OrderFile() {
 
     // Prepare data for Excel
     const excelData = [
-      ["Shade Name", ...new Set(orderDetails.map((o) => o.partyName)), "Total"],
-    ]; // Header row
+      ["Shade Name", ...new Set(orderDetails.map((o) => o.partyName+String(o.order_no))), "Total"], // Header row
+    ]; // Initialize with header
+    let highestNonZeroRowIndex = -1; // Track the highest row index with a non-zero total
+    const rowsToKeep: string[][] = []; // Explicitly define the type as a 2D array of strings
+
     Object.entries(shadeMap).forEach(([shadeName, partyQuantities]) => {
-      const row = [shadeName];
+      const row: string[] = [shadeName]; // Define row as an array of strings
+      let totalQuantity = 0; // Initialize total for this row
       orderDetails.forEach((order) => {
-        row.push(String(partyQuantities[order.partyName] || 0)); // Fill in quantities or 0 as string
+        const quantity = partyQuantities[order.partyName] || 0; // Get quantity or 0
+        row.push(String(quantity)); // Fill in quantities or 0 as string
+        totalQuantity += quantity; // Accumulate total quantity
       });
-      excelData.push(row);
+      row.push(String(totalQuantity)); // Add total quantity to the row
+
+      // Check if the total is not zero and if the shadeName is a digit
+      if (totalQuantity !== 0 && !isNaN(Number(shadeName))) {
+        highestNonZeroRowIndex = rowsToKeep.length; // Update the highest non-zero row index
+      }
+
+      // Add the row to the rowsToKeep array
+      rowsToKeep.push(row);
     });
+
+    // Filter rows to keep only those before the highest non-zero row and all non-zero rows
+    const filteredRows = rowsToKeep.filter((row, index) => {
+      return (
+        index <= highestNonZeroRowIndex || Number(row[row.length - 1]) !== 0
+      );
+    });
+
+    // Add filtered rows to excelData
+    excelData.push(...filteredRows);
 
     // Create a worksheet and workbook
     const worksheet = XLSX.utils.aoa_to_sheet(excelData);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Report");
 
-    // Export the Excel file
+    // Export the Excel file without applying borders
     XLSX.writeFile(workbook, `${design}_report.xlsx`);
   };
 
