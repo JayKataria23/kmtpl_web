@@ -138,11 +138,11 @@ function PartyFile() {
 
   const addToDrawer = (entry: DesignDetail, party_name: string) => {
     const lastEntryDate =
-      selectedBhiwandiEntries.length > 0
-        ? selectedBhiwandiEntries[selectedBhiwandiEntries.length - 1].date
+      selectedEntries.length > 0
+        ? selectedEntries[selectedEntries.length - 1].date
         : new Date().toISOString().split("T")[0]; // Use today's date if no entries
 
-    setSelectedBhiwandiEntries((prev) => [
+    setSelectedEntries((prev) => [
       ...prev,
       { ...entry, date: lastEntryDate, party_name: party_name },
     ]);
@@ -152,7 +152,7 @@ function PartyFile() {
 
   // Function to remove an entry from the drawer
   const removeFromDrawer = (entry: DesignDetail) => {
-    setSelectedBhiwandiEntries((prev) =>
+    setSelectedEntries((prev) =>
       prev.filter((e) => e.design_entry_id !== entry.design_entry_id)
     );
   };
@@ -253,7 +253,6 @@ function PartyFile() {
       ...prev,
       { ...entry, date: lastEntryDate, party_name: party_name },
     ]);
-
   };
 
   return (
@@ -268,153 +267,150 @@ function PartyFile() {
         setSelectedEntries={setSelectedEntries}
         selectedEntries={selectedEntries}
       />
-      <Drawer
-        open={isDrawerOpen}
-        onOpenChange={() => {
-          setIsDrawerOpen((open) => !open);
-          setOpenAccordionItems([]);
-        }}
-      >
-        <DrawerTrigger asChild>
-          <Button className="absolute top-4 right-4">Dispatch</Button>
-        </DrawerTrigger>
-        <DrawerContent>
-          <DrawerHeader>
-            <DrawerTitle>Selected Entries</DrawerTitle>
-            <DrawerDescription>
-              Entries added to Dispatch list
-            </DrawerDescription>
-          </DrawerHeader>
-          <div className="p-4 overflow-y-auto max-h-[60vh]">
-            {selectedEntries.map((entry, index) => (
-              <div key={index} className="mb-4">
-                <h3 className="text-lg font-semibold mb-2">{entry.design}</h3>
-                <table className="w-full divide-y divide-gray-200">
-                  <tbody>
-                    <tr>
-                      <td className="px-2 py-4 w-3/6 text-sm font-medium text-gray-900">
-                        <div className="break-words">
-                          {entry.party_name}
-                          {entry.remark && (
-                            <>
-                              <br />
-                              Remark: {entry.remark}
-                            </>
-                          )}
-                          {entry.price && (
-                            <>
-                              <br />
-                              Price: {entry.price}
-                            </>
-                          )}
-                          <br />
-                          <input
-                            type="date"
-                            className="mt-2 border rounded p-1"
-                            value={entry.date}
-                            onChange={(e) => {
-                              const updatedDate = e.target.value;
-                              setSelectedEntries((prev) =>
-                                prev.map((e) =>
-                                  e.design_entry_id === entry.design_entry_id
-                                    ? { ...e, date: updatedDate }
-                                    : e
-                                )
+      <div>
+        <Button onClick={() => navigate("/")}>Home</Button>
+        <Drawer
+          open={isDrawerOpen}
+          onOpenChange={() => {
+            setIsDrawerOpen((open) => !open);
+            setOpenAccordionItems([]);
+          }}
+        >
+          <DrawerTrigger asChild>
+            <Button className="mx-4">Dispatch</Button>
+          </DrawerTrigger>
+          <DrawerContent>
+            <DrawerHeader>
+              <DrawerTitle>Selected Entries</DrawerTitle>
+              <DrawerDescription>
+                Entries added to Dispatch list
+              </DrawerDescription>
+            </DrawerHeader>
+            <div className="p-4 overflow-y-auto max-h-[60vh]">
+              {selectedEntries.map((entry, index) => (
+                <div key={index} className="mb-4">
+                  <h3 className="text-lg font-semibold mb-2">{entry.design}</h3>
+                  <table className="w-full divide-y divide-gray-200">
+                    <tbody>
+                      <tr>
+                        <td className="px-2 py-4 w-3/6 text-sm font-medium text-gray-900">
+                          <div className="break-words">
+                            {entry.party_name}
+                            {entry.remark && (
+                              <>
+                                <br />
+                                Remark: {entry.remark}
+                              </>
+                            )}
+                            {entry.price && (
+                              <>
+                                <br />
+                                Price: {entry.price}
+                              </>
+                            )}
+                            <br />
+                            <input
+                              type="date"
+                              className="mt-2 border rounded p-1"
+                              value={entry.date}
+                              onChange={(e) => {
+                                const updatedDate = e.target.value;
+                                setSelectedEntries((prev) =>
+                                  prev.map((e) =>
+                                    e.design_entry_id === entry.design_entry_id
+                                      ? { ...e, date: updatedDate }
+                                      : e
+                                  )
+                                );
+                              }} // Update the date in selected entries
+                            />
+                          </div>
+                        </td>
+                        <td className="px-2 py-4 w-2/6 text-sm text-gray-500">
+                          {entry.shades &&
+                            entry.shades.map((shade, idx) => {
+                              const shadeName = Object.keys(shade)[0];
+                              const shadeValue = shade[shadeName];
+                              if (shadeValue == "" || shadeValue == "NaN") {
+                                return;
+                              }
+                              return (
+                                <div key={idx}>
+                                  {shadeName}: {shadeValue}m{" "}
+                                </div>
                               );
-                            }} // Update the date in selected entries
-                          />
-                        </div>
-                      </td>
-                      <td className="px-2 py-4 w-2/6 text-sm text-gray-500">
-                        {entry.shades &&
-                          entry.shades.map((shade, idx) => {
-                            const shadeName = Object.keys(shade)[0];
-                            const shadeValue = shade[shadeName];
-                            if (shadeValue == "" || shadeValue == "NaN") {
-                              return;
-                            }
-                            return (
-                              <div key={idx}>
-                                {shadeName}: {shadeValue}m{" "}
-                              </div>
-                            );
-                          })}
-                      </td>
-                      <td className="px-2 py-4 w-1/6 text-sm text-gray-500">
-                        <Button
-                          className="ml-2 rounded-full w-10 h-10 text-lg text-white my-1"
-                          onClick={() => {
-                            setIsAddPartOrderOpen(true);
-                            setSelectedOrder(entry);
-                            console.log(entry);
-                            console.log();
-                          }}
-                        >
-                          P
-                        </Button>
-                        <Button
-                          className="ml-2 my-1 bg-green-500 active:bg-green-500 visited:bg-green-500 hover:bg-green-500 rounded-full w-10 h-10 text-lg text-white"
-                          onClick={() => removeFromDrawer(entry)} // Add function to remove entry from drawer
-                        >
-                          X
-                        </Button>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            ))}
-          </div>
-          <DrawerFooter>
-            <Button
-              onClick={handleDispatch} // Call the function when clicked
-              className="mr-2" // Optional: Add some margin
-              disabled={selectedEntries.length === 0} // Disable if no items in drawer
-            >
-              Dispatch
-            </Button>
-            <DrawerClose asChild>
-              <Button variant="outline">Close</Button>
-            </DrawerClose>
-          </DrawerFooter>
-        </DrawerContent>
-      </Drawer>
-      <Drawer
-        open={isSendToBhiwandiOpen}
-        onOpenChange={setIsSendToBhiwandiOpen}
-      >
-        <DrawerTrigger asChild>
-          <Button className="">Send to Bhiwandi</Button>
-        </DrawerTrigger>
-        <DrawerContent>
-          <DrawerHeader>
-            <DrawerTitle>Send All Entries to Bhiwandi</DrawerTitle>
-            <DrawerDescription>
-              {selectedBhiwandiEntries.length > 0 ? (
-                selectedBhiwandiEntries.map((entry, index) => (
-                  <div key={index}>
-                    {entry.party_name}: {entry.design}
-                  </div>
-                ))
-              ) : (
-                "No entries selected."
-              )}
-            </DrawerDescription>
-          </DrawerHeader>
-          <DrawerFooter>
-            <Button onClick={handleSendAllToBhiwandi} className="mr-2">
-              Confirm
-            </Button>
-            <DrawerClose asChild>
-              <Button variant="outline">Cancel</Button>
-            </DrawerClose>
-          </DrawerFooter>
-        </DrawerContent>
-      </Drawer>
-      <Button onClick={() => navigate("/")} className="mr-4">
-        Back to Home
-      </Button>
-
+                            })}
+                        </td>
+                        <td className="px-2 py-4 w-1/6 text-sm text-gray-500">
+                          <Button
+                            className="ml-2 rounded-full w-10 h-10 text-lg text-white my-1"
+                            onClick={() => {
+                              setIsAddPartOrderOpen(true);
+                              setSelectedOrder(entry);
+                              console.log(entry);
+                              console.log();
+                            }}
+                          >
+                            P
+                          </Button>
+                          <Button
+                            className="ml-2 my-1 bg-green-500 active:bg-green-500 visited:bg-green-500 hover:bg-green-500 rounded-full w-10 h-10 text-lg text-white"
+                            onClick={() => removeFromDrawer(entry)} // Add function to remove entry from drawer
+                          >
+                            X
+                          </Button>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              ))}
+            </div>
+            <DrawerFooter>
+              <Button
+                onClick={handleDispatch} // Call the function when clicked
+                className="mr-2" // Optional: Add some margin
+                disabled={selectedEntries.length === 0} // Disable if no items in drawer
+              >
+                Dispatch
+              </Button>
+              <DrawerClose asChild>
+                <Button variant="outline">Close</Button>
+              </DrawerClose>
+            </DrawerFooter>
+          </DrawerContent>
+        </Drawer>
+        <Drawer
+          open={isSendToBhiwandiOpen}
+          onOpenChange={setIsSendToBhiwandiOpen}
+        >
+          <DrawerTrigger asChild>
+            <Button className="">Bhiwandi</Button>
+          </DrawerTrigger>
+          <DrawerContent>
+            <DrawerHeader>
+              <DrawerTitle>Send All Entries to Bhiwandi</DrawerTitle>
+              <DrawerDescription>
+                {selectedBhiwandiEntries.length > 0
+                  ? selectedBhiwandiEntries.map((entry, index) => (
+                      <div key={index}>
+                        {entry.party_name}: {entry.design}
+                      </div>
+                    ))
+                  : "No entries selected."}
+              </DrawerDescription>
+            </DrawerHeader>
+            <DrawerFooter>
+              <Button onClick={handleSendAllToBhiwandi} className="mr-2">
+                Confirm
+              </Button>
+              <DrawerClose asChild>
+                <Button variant="outline">Cancel</Button>
+              </DrawerClose>
+            </DrawerFooter>
+          </DrawerContent>
+        </Drawer>
+      </div>
       <Accordion
         type="multiple"
         value={openAccordionItems}
@@ -493,6 +489,12 @@ function PartyFile() {
                                       {formatDate(order.order_date)}
                                     </>
                                   )}
+                                  {order.bhiwandi_date && (
+                                    <span className="text-red-600">
+                                      <br />
+                                      {formatDate(order.bhiwandi_date)}
+                                    </span>
+                                  )}
                                   {order.order_no && (
                                     <>
                                       <br />
@@ -546,15 +548,21 @@ function PartyFile() {
                                   ) ? (
                                   <Button
                                     className="ml-2 bg-red-500 active:bg-red-500 visited:bg-red-500 hover:bg-red-500 rounded-full w-10 h-10 text-lg text-white"
-                                    onClick={() => removeFromDrawerBhiwandi(order)} // Remove entry from drawer on click
+                                    onClick={() =>
+                                      removeFromDrawerBhiwandi(order)
+                                    } // Remove entry from drawer on click
                                   >
                                     X
                                   </Button>
                                 ) : (
                                   <Button
                                     className="ml-2 bg-yellow-500 active:bg-yellow-500 visited:bg-yellow-500 hover:bg-yellow-500 rounded-full w-10 h-10 text-lg text-white"
-                                    onClick={() =>
-                                      addToDrawerBhiwandi(order, item.party_name) // Add entry to Bhiwandi drawer on click
+                                    onClick={
+                                      () =>
+                                        addToDrawerBhiwandi(
+                                          order,
+                                          item.party_name
+                                        ) // Add entry to Bhiwandi drawer on click
                                     }
                                   >
                                     B
