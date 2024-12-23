@@ -21,6 +21,7 @@ import {
 import { useToast } from "@/hooks/use-toast"; // Import useToast at the top
 import { Input, Toaster } from "@/components/ui";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import * as XLSX from "xlsx"; // Import XLSX for Excel file generation
 
 interface DesignCount {
   design: string;
@@ -138,7 +139,7 @@ function OrderFile() {
           part: entry.part,
           entry_remark: entry.entry_remark,
           order_date: entry.order_date,
-          order_no: entry.order_no
+          order_no: entry.order_no,
         })
       );
 
@@ -260,7 +261,7 @@ function OrderFile() {
           item.design.startsWith("AF-") ||
           item.design.startsWith("BR-") ||
           item.design.startsWith("CL-") ||
-          item.design.startsWith("SC-") 
+          item.design.startsWith("SC-")
       ); // Filter out designs starting with "D-" or "P-"
     }
   };
@@ -271,6 +272,53 @@ function OrderFile() {
         entry.id === id ? { ...entry, entry_remark: value } : entry
       )
     );
+  };
+
+  const handleDownloadReport = (design: string) => {
+    const orderDetails = designOrders[design];
+    console.log(designOrders[design]);
+    const shadeMap: { [key: string]: { [key: string]: number } } = {};
+    const totalMap: { [key: string]: number } = {}; // To store total quantities
+
+    // Populate the shadeMap with distinct shade names and their quantities
+    designOrders[design].forEach((order) => {
+      order.shades.forEach((shade) => {
+        const shadeName = Object.keys(shade)[0];
+        const quantity = Number(shade[shadeName]); // Ensure quantity is a number
+
+        if (!shadeMap[shadeName]) {
+          shadeMap[shadeName] = {};
+          totalMap[shadeName] = 0; // Initialize total for this shade
+        }
+
+        if (!shadeMap[shadeName][order.partyName]) {
+          shadeMap[shadeName][order.partyName] = 0;
+        }
+
+        shadeMap[shadeName][order.partyName] += quantity; // Accumulate quantities
+        totalMap[shadeName] += quantity; // Update total quantity
+      });
+    });
+
+    // Prepare data for Excel
+    const excelData = [
+      ["Shade Name", ...new Set(orderDetails.map((o) => o.partyName)), "Total"],
+    ]; // Header row
+    Object.entries(shadeMap).forEach(([shadeName, partyQuantities]) => {
+      const row = [shadeName];
+      orderDetails.forEach((order) => {
+        row.push(String(partyQuantities[order.partyName] || 0)); // Fill in quantities or 0 as string
+      });
+      excelData.push(row);
+    });
+
+    // Create a worksheet and workbook
+    const worksheet = XLSX.utils.aoa_to_sheet(excelData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Report");
+
+    // Export the Excel file
+    XLSX.writeFile(workbook, `${design}_report.xlsx`);
   };
 
   return (
@@ -424,6 +472,9 @@ function OrderFile() {
               onClick={() => fetchOrderDetails(item.design)}
             >
               <span className="text-left flex-grow">{item.design}</span>
+              <Button onClick={() => handleDownloadReport(item.design)}>
+                Report
+              </Button>
               <span className="text-sm text-gray-500 ml-2 mr-3">
                 count: {item.count}
               </span>
