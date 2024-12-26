@@ -122,7 +122,7 @@ function BhiwandiListPrint() {
           </div>
 
           <table style="width: 100%; border-collapse: collapse; margin-top: 10px; page-break-inside:avoid;">
-            <thead>
+            <thead style="break-inside:avoid;">
               <tr style="background-color: #f0f0f0;">
                 <th style="border: 1px solid #ccc; padding-left: 8px; text-align: left; width: 22%;">Design</th>
                 <th style="border: 1px solid #ccc; padding-left: 8px; text-align: left; width: 10%;">Price</th>
@@ -130,7 +130,7 @@ function BhiwandiListPrint() {
                 <th style="border: 1px solid #ccc; padding-left: 8px; text-align: left; width: 55%;">Shades</th>
               </tr>
             </thead>
-            <tbody>`;
+            <tbody style="break-inside:avoid;">`;
 
           // Loop through each design entry
           entry.entries.forEach((order) => {
