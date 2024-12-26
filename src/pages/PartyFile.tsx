@@ -266,7 +266,7 @@ function PartyFile() {
         setSelectedEntries={setSelectedEntries}
         selectedEntries={selectedEntries}
       />
-      <div>
+      <div className="sticky top-0 bg-white z-10 p-4 border-b-2">
         <Button onClick={() => navigate("/")}>Home</Button>
         <Drawer
           open={isDrawerOpen}

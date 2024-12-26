@@ -363,142 +363,144 @@ function OrderFile() {
 
   return (
     <div className="container mx-auto mt-10 p-4 relative">
-      <Drawer open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
-        <DrawerTrigger asChild>
-          <Button className="absolute top-4 right-4">Bhiwandi</Button>
-        </DrawerTrigger>
-        <DrawerContent>
-          <DrawerHeader>
-            <DrawerTitle>Selected Entries</DrawerTitle>
-            <DrawerDescription>
-              Entries added to Bhiwandi list
-            </DrawerDescription>
-          </DrawerHeader>
+      <div className="sticky top-0 bg-white z-10">
+        <Drawer open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
+          <DrawerTrigger asChild>
+            <Button className="absolute top-4 right-4">Bhiwandi</Button>
+          </DrawerTrigger>
+          <DrawerContent>
+            <DrawerHeader>
+              <DrawerTitle>Selected Entries</DrawerTitle>
+              <DrawerDescription>
+                Entries added to Bhiwandi list
+              </DrawerDescription>
+            </DrawerHeader>
 
-          <div className="p-4 overflow-y-auto max-h-[60vh]">
-            {Object.entries(
-              drawerEntries.reduce((acc, entry) => {
-                if (!acc[entry.design]) acc[entry.design] = [];
-                acc[entry.design].push(entry);
-                return acc;
-              }, {} as Record<string, DrawerEntry[]>)
-            ).map(([design, entries]) => (
-              <div key={design} className="mb-4">
-                <h3 className="text-lg font-semibold mb-2">{design}</h3>
-                <table className="w-full divide-y divide-gray-200">
-                  <tbody>
-                    {entries.map((entry, index) => (
-                      <tr
-                        key={index}
-                        className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}
-                      >
-                        <td className="px-2 py-4 w-4/6 text-sm font-medium text-gray-900">
-                          <div className="break-words">{entry.partyName}</div>
-                          {entry.order_remark && (
+            <div className="p-4 overflow-y-auto max-h-[60vh]">
+              {Object.entries(
+                drawerEntries.reduce((acc, entry) => {
+                  if (!acc[entry.design]) acc[entry.design] = [];
+                  acc[entry.design].push(entry);
+                  return acc;
+                }, {} as Record<string, DrawerEntry[]>)
+              ).map(([design, entries]) => (
+                <div key={design} className="mb-4">
+                  <h3 className="text-lg font-semibold mb-2">{design}</h3>
+                  <table className="w-full divide-y divide-gray-200">
+                    <tbody>
+                      {entries.map((entry, index) => (
+                        <tr
+                          key={index}
+                          className={
+                            index % 2 === 0 ? "bg-white" : "bg-gray-50"
+                          }
+                        >
+                          <td className="px-2 py-4 w-4/6 text-sm font-medium text-gray-900">
+                            <div className="break-words">{entry.partyName}</div>
+                            {entry.order_remark && (
+                              <div className="text-xs text-gray-500 mt-1">
+                                Remark: {entry.order_remark}
+                              </div>
+                            )}
                             <div className="text-xs text-gray-500 mt-1">
-                              Remark: {entry.order_remark}
+                              Price: {entry.price}
                             </div>
-                          )}
-                          <div className="text-xs text-gray-500 mt-1">
-                            Price: {entry.price}
-                          </div>
-                          <div className="text-xs text-gray-500 mt-1">
-                            Remark:{" "}
-                            <Input
-                              value={entry.entry_remark}
-                              onChange={(e) =>
-                                handleEntryRemarkChange(
-                                  entry.id,
-                                  e.target.value
-                                )
-                              }
-                            ></Input>
+                            <div className="text-xs text-gray-500 mt-1">
+                              Remark:{" "}
+                              <Input
+                                value={entry.entry_remark}
+                                onChange={(e) =>
+                                  handleEntryRemarkChange(
+                                    entry.id,
+                                    e.target.value
+                                  )
+                                }
+                              ></Input>
+                              <Button
+                                className="m-2"
+                                onClick={() =>
+                                  handleEntryRemarkChange(entry.id, "")
+                                }
+                              >
+                                Clear
+                              </Button>
+                            </div>
+                          </td>
+                          <td className="px-2 py-4 w-2/6 text-sm text-gray-500">
+                            {entry.shades &&
+                              entry.shades.map((shade, idx) => {
+                                const shadeName = Object.keys(shade)[0];
+                                const shadeValue = shade[shadeName];
+                                if (shadeValue == "") {
+                                  return;
+                                }
+                                return (
+                                  <div key={idx}>
+                                    {shadeName}: {shadeValue}m{" "}
+                                  </div>
+                                );
+                              })}
+                          </td>
+                          <td className="px-2 py-4 w-1/6 text-right">
                             <Button
-                              className="m-2"
-                              onClick={() =>
-                                handleEntryRemarkChange(entry.id, "")
-                              }
+                              className="ml-2 rounded-full w-8 h-8 text-white"
+                              onClick={() => handleRemoveFromDrawer(entry.id)} // Call the remove function
                             >
-                              Clear
+                              X
                             </Button>
-                          </div>
-                        </td>
-                        <td className="px-2 py-4 w-2/6 text-sm text-gray-500">
-                          {entry.shades &&
-                            entry.shades.map((shade, idx) => {
-                              const shadeName = Object.keys(shade)[0];
-                              const shadeValue = shade[shadeName];
-                              if (shadeValue == "") {
-                                return;
-                              }
-                              return (
-                                <div key={idx}>
-                                  {shadeName}: {shadeValue}m{" "}
-                                </div>
-                              );
-                            })}
-                        </td>
-                        <td className="px-2 py-4 w-1/6 text-right">
-                          {" "}
-                          {/* Added a new cell for the button */}
-                          <Button
-                            className="ml-2 rounded-full w-8 h-8 text-white"
-                            onClick={() => handleRemoveFromDrawer(entry.id)} // Call the remove function
-                          >
-                            X
-                          </Button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ))}
-          </div>
-          <DrawerFooter>
-            <Button
-              onClick={handleSendBhiwandi} // Call the function when clicked
-              className="mr-2" // Optional: Add some margin
-              disabled={drawerEntries.length === 0} // Disable if no items in drawer
-            >
-              Send to Bhiwandi
-            </Button>
-            <DrawerClose asChild>
-              <Button variant="outline">Close</Button>
-            </DrawerClose>
-          </DrawerFooter>
-        </DrawerContent>
-      </Drawer>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ))}
+            </div>
+            <DrawerFooter>
+              <Button
+                onClick={handleSendBhiwandi} // Call the function when clicked
+                className="mr-2" // Optional: Add some margin
+                disabled={drawerEntries.length === 0} // Disable if no items in drawer
+              >
+                Send to Bhiwandi
+              </Button>
+              <DrawerClose asChild>
+                <Button variant="outline">Close</Button>
+              </DrawerClose>
+            </DrawerFooter>
+          </DrawerContent>
+        </Drawer>
 
-      <Button onClick={() => navigate("/")} className="mb-4">
-        Back to Home
-      </Button>
-      <ToggleGroup
-        variant="outline"
-        type="single"
-        value={filter}
-        onValueChange={(value) => {
-          setFilter(value);
-          setOpenAccordionItems([]);
-        }}
-        className="mb-4" // Added border class
-      >
-        <ToggleGroupItem value="all" aria-label="Show all">
-          ALL
-        </ToggleGroupItem>
-        <ToggleGroupItem value="regular" aria-label="Show regular">
-          Regular
-        </ToggleGroupItem>
-        <ToggleGroupItem value="print" aria-label="Show print">
-          Print
-        </ToggleGroupItem>
-        <ToggleGroupItem value="Design No." aria-label="Show Design No.">
-          Design No.
-        </ToggleGroupItem>
-        <ToggleGroupItem value="Part Orders" aria-label="Show Part Orders">
-          Part Orders
-        </ToggleGroupItem>
-      </ToggleGroup>
+        <Button onClick={() => navigate("/")} className="mb-4">
+          Back to Home
+        </Button>
+        <ToggleGroup
+          variant="outline"
+          type="single"
+          value={filter}
+          onValueChange={(value) => {
+            setFilter(value);
+            setOpenAccordionItems([]);
+          }}
+          className="mb-4" // Added border class
+        >
+          <ToggleGroupItem value="all" aria-label="Show all">
+            ALL
+          </ToggleGroupItem>
+          <ToggleGroupItem value="regular" aria-label="Show regular">
+            Regular
+          </ToggleGroupItem>
+          <ToggleGroupItem value="print" aria-label="Show print">
+            Print
+          </ToggleGroupItem>
+          <ToggleGroupItem value="Design No." aria-label="Show Design No.">
+            Design No.
+          </ToggleGroupItem>
+          <ToggleGroupItem value="Part Orders" aria-label="Show Part Orders">
+            Part Orders
+          </ToggleGroupItem>
+        </ToggleGroup>
+      </div>
       <Accordion
         type="multiple"
         className="w-full"
