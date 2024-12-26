@@ -541,7 +541,7 @@ function PartyFile() {
                                         D
                                       </Button>
                                       <Button
-                                        className="ml-2 bg-red-500 active:bg-red-500 visited:bg-red-500 hover:bg-red-500 rounded-full w-10 h-10 text-white"
+                                        className="m-2 mt-8 bg-red-500 active:bg-red-500 visited:bg-red-500 hover:bg-red-500 rounded-full w-10 h-10 text-white text-xl"
                                         onClick={() => {
                                           // Confirmation popup
                                           const confirmDelete = window.confirm(
@@ -620,7 +620,7 @@ function PartyFile() {
                                       B
                                     </Button>
                                     <Button
-                                      className="ml-2 bg-red-500 active:bg-red-500 visited:bg-red-500 hover:bg-red-500 rounded-full w-10 h-10 text-white"
+                                      className="m-2 mt-8 bg-red-500 active:bg-red-500 visited:bg-red-500 hover:bg-red-500 rounded-full w-10 h-10 text-xl text-white"
                                       onClick={() => {
                                         // Confirmation popup
                                         const confirmDelete = window.confirm(
