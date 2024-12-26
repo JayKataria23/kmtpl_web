@@ -31,6 +31,10 @@ export default function BrokerTransportPage() {
   const [newRemark, setNewRemark] = useState("");
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [editingStates, setEditingStates] = useState<{
+    [key: number]: boolean;
+  }>({});
+  const [editTitles, setEditTitles] = useState<{ [key: number]: string }>({});
 
   useEffect(() => {
     fetchBrokers();
@@ -250,6 +254,28 @@ export default function BrokerTransportPage() {
     }
   };
 
+  const editDesign = async (id: number, title: string) => {
+    if (title.trim()) {
+      const { error } = await supabase
+        .from("designs")
+        .update({ title: title.trim().toUpperCase() }) // Convert to uppercase
+        .eq("id", id);
+      if (error) {
+        toast({
+          title: "Error",
+          description: "Failed to edit design",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Success",
+          description: `Design updated successfully`,
+        });
+        fetchDesigns(); // Refresh the designs list
+      }
+    }
+  };
+
   return (
     <div className="container mx-auto mt-10 p-4">
       <Button onClick={() => navigate("/")} className="mb-4">
@@ -358,14 +384,61 @@ export default function BrokerTransportPage() {
                       key={design.id}
                       className="flex justify-between items-center bg-gray-100 p-2 rounded"
                     >
-                      <span>{design.title}</span>
-                      <Button
-                        onClick={() => deleteDesign(design.id)}
-                        variant="destructive"
-                        size="sm"
-                      >
-                        Delete
-                      </Button>
+                      {editingStates[design.id] ? (
+                        <>
+                          <Input
+                            value={editTitles[design.id] || design.title}
+                            onChange={(e) =>
+                              setEditTitles({
+                                ...editTitles,
+                                [design.id]: e.target.value,
+                              })
+                            }
+                            placeholder="Edit design title"
+                          />
+                          <Button
+                            onClick={() => {
+                              editDesign(
+                                design.id,
+                                editTitles[design.id] || design.title
+                              );
+                              setEditingStates({
+                                ...editingStates,
+                                [design.id]: false,
+                              });
+                            }}
+                            variant="outline"
+                            size="sm"
+                          >
+                            Save
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          <span>{design.title}</span>
+                          <div className="flex space-x-2">
+                            <Button
+                              onClick={() =>
+                                setEditingStates({
+                                  ...editingStates,
+                                  [design.id]: true,
+                                })
+                              }
+                              variant="outline"
+                              size="sm"
+                            >
+                              Edit
+                            </Button>
+                            <Button
+                              onClick={() => deleteDesign(design.id)}
+                              variant="destructive"
+                              size="sm"
+                            >
+                              Delete
+                            </Button>
+                          </div>
+                        </>
+                      )}
                     </li>
                   ))}
                 </ul>
