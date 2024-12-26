@@ -20,8 +20,7 @@ import {
   DrawerDescription,
 } from "@/components/ui/drawer";
 import { Toaster } from "@/components/ui";
-import AddPartOrder from "@/components/custom/AddPartOrder"; // Import the AddPartOrder component
-
+import AddPartOrder from "@/components/custom/AddPartOrder";
 interface PartyCount {
   party_name: string; // Changed from 'party' to 'party_name'
   design_entry_count: number; // Changed from 'count' to 'design_entry_count'
@@ -532,14 +531,66 @@ function PartyFile() {
                                       X
                                     </Button>
                                   ) : (
-                                    <Button
-                                      className="ml-2 bg-green-500 active:bg-green-500 visited:bg-green-500 hover:bg-green-500 rounded-full w-10 h-10 text-lg text-white"
-                                      onClick={() =>
-                                        addToDrawer(order, item.party_name)
-                                      } // Add entry to drawer on click
-                                    >
-                                      D
-                                    </Button>
+                                    <>
+                                      <Button
+                                        className="ml-2 bg-green-500 active:bg-green-500 visited:bg-green-500 hover:bg-green-500 rounded-full w-10 h-10 text-lg text-white"
+                                        onClick={() =>
+                                          addToDrawer(order, item.party_name)
+                                        }
+                                      >
+                                        D
+                                      </Button>
+                                      <Button
+                                        className="ml-2 bg-red-500 active:bg-red-500 visited:bg-red-500 hover:bg-red-500 rounded-full w-10 h-10 text-white"
+                                        onClick={() => {
+                                          // Confirmation popup
+                                          const confirmDelete = window.confirm(
+                                            `Are you sure you want to delete the entry from bhiwandi list for ${order.design} from ${item.party_name} with order number ${order.order_no}?`
+                                          );
+                                          if (confirmDelete) {
+                                            const updateBhiwandiDate =
+                                              async () => {
+                                                try {
+                                                  const { error } =
+                                                    await supabase
+                                                      .from("design_entries")
+                                                      .update({
+                                                        bhiwandi_date: null,
+                                                      })
+                                                      .eq(
+                                                        "id",
+                                                        order.design_entry_id
+                                                      );
+                                                  if (error) throw error;
+                                                  toast({
+                                                    title: "Success",
+                                                    description:
+                                                      "Bhiwandi date deleted successfully.",
+                                                  });
+                                                  fetchPartyCounts();
+                                                } catch (error) {
+                                                  console.error(
+                                                    "Error deleting Bhiwandi date:",
+                                                    error
+                                                  );
+                                                  toast({
+                                                    title: "Error",
+                                                    description: `Failed to delete Bhiwandi date: ${
+                                                      error instanceof Error
+                                                        ? error.message
+                                                        : "Unknown error"
+                                                    }`,
+                                                    variant: "destructive",
+                                                  });
+                                                }
+                                              };
+                                            updateBhiwandiDate();
+                                          }
+                                        }}
+                                      >
+                                        ↩︎
+                                      </Button>
+                                    </>
                                   )
                                 ) : selectedBhiwandiEntries.some(
                                     (entry) =>
@@ -555,18 +606,72 @@ function PartyFile() {
                                     X
                                   </Button>
                                 ) : (
-                                  <Button
-                                    className="ml-2 bg-yellow-500 active:bg-yellow-500 visited:bg-yellow-500 hover:bg-yellow-500 rounded-full w-10 h-10 text-lg text-white"
-                                    onClick={
-                                      () =>
-                                        addToDrawerBhiwandi(
-                                          order,
-                                          item.party_name
-                                        ) // Add entry to Bhiwandi drawer on click
-                                    }
-                                  >
-                                    B
-                                  </Button>
+                                  <>
+                                    <Button
+                                      className="ml-2 bg-yellow-500 active:bg-yellow-500 visited:bg-yellow-500 hover:bg-yellow-500 rounded-full w-10 h-10 text-lg text-white"
+                                      onClick={
+                                        () =>
+                                          addToDrawerBhiwandi(
+                                            order,
+                                            item.party_name
+                                          ) // Add entry to Bhiwandi drawer on click
+                                      }
+                                    >
+                                      B
+                                    </Button>
+                                    <Button
+                                      className="ml-2 bg-red-500 active:bg-red-500 visited:bg-red-500 hover:bg-red-500 rounded-full w-10 h-10 text-white"
+                                      onClick={() => {
+                                        // Confirmation popup
+                                        const confirmDelete = window.confirm(
+                                          `Are you sure you want to cancel the entry for ${order.design} from ${item.party_name} with order number ${order.order_no}?`
+                                        );
+                                        if (confirmDelete) {
+                                          const cancelEntry = async () => {
+                                            try {
+                                              const now =
+                                                new Date().toISOString(); // Get current date and time
+                                              const { error } = await supabase
+                                                .from("design_entries")
+                                                .update({
+                                                  bhiwandi_date: now, // Set Bhiwandi date to now
+                                                  dispatch_date: now, // Set dispatch date to now
+                                                  remark: "Entry Cancelled", // Set remark to "Entry Cancelled"
+                                                })
+                                                .eq(
+                                                  "id",
+                                                  order.design_entry_id
+                                                );
+                                              if (error) throw error;
+                                              toast({
+                                                title: "Success",
+                                                description:
+                                                  "Entry cancelled successfully.",
+                                              });
+                                              fetchPartyCounts();
+                                            } catch (error) {
+                                              console.error(
+                                                "Error cancelling entry:",
+                                                error
+                                              );
+                                              toast({
+                                                title: "Error",
+                                                description: `Failed to cancel entry: ${
+                                                  error instanceof Error
+                                                    ? error.message
+                                                    : "Unknown error"
+                                                }`,
+                                                variant: "destructive",
+                                              });
+                                            }
+                                          };
+                                          cancelEntry();
+                                        }
+                                      }}
+                                    >
+                                      X
+                                    </Button>
+                                  </>
                                 )}
                               </td>
                             </tr>
