@@ -62,7 +62,7 @@ function CreateChallan() {
   const [priceList, setPriceList] = useState<PriceEntry[]>([]);
   const [designs, setDesigns] = useState<string[]>([]);
   const [remark, setRemark] = useState<string>("");
-  const [disc, setDisc] = useState<number>(0);
+  const [disc, setDisc] = useState<string>("");
   const { user } = useUser();
   const userName = user?.fullName || user?.firstName || "Unknown User";
 
@@ -77,6 +77,7 @@ function CreateChallan() {
 
   const [entries, setEntries] = useState<Entry[]>([]);
   const [isChallanSaved, setIsChallanSaved] = useState(false);
+  const [oldDiscount, setOldDiscount] = useState<number | null>(null);
 
   const handleDateChange = (amount: number, unit: "day" | "month" | "year") => {
     const newDate = new Date(date);
@@ -223,9 +224,26 @@ function CreateChallan() {
     });
   };
 
+  const fetchOldDiscount = async (partyId: number) => {
+    try {
+      const { data, error } = await supabase
+        .from("challans")
+        .select("discount")
+        .eq("bill_to_id", partyId)
+        .order("date");
+
+      if (error) throw error;
+
+      setOldDiscount(data[0].discount);
+    } catch (error) {
+      console.error("Error fetching old discount:", error);
+    }
+  };
+
   const handleBillToChange = (partyId: number) => {
     setSelectedBillTo(partyId);
     fetchPriceList(partyId);
+    fetchOldDiscount(partyId);
     const selectedParty = partyOptions.find((party) => party.id === partyId);
     if (selectedParty) {
       if (selectedParty.delivery_id) {
@@ -332,7 +350,7 @@ function CreateChallan() {
             broker_id: selectedBroker,
             transport_id: selectedTransport,
             remark: remark,
-            discount: disc,
+            discount: Number(disc),
             created_by: userName,
           },
         ])
@@ -566,10 +584,14 @@ function CreateChallan() {
         <div>
           <Label htmlFor="discount">Discount %</Label>
           <Input
-            type="number"
             id="discount"
             value={disc}
-            onChange={(e) => setDisc(Number(e.target.value))}
+            placeholder={
+              oldDiscount !== null
+                ? `Old Discount: ${oldDiscount}`
+                : "Enter Discount"
+            }
+            onChange={(e) => setDisc(e.target.value)}
           />
         </div>
         <div>
