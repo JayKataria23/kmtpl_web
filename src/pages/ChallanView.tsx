@@ -93,70 +93,114 @@ function ChallanView() {
     challan: Challan,
     entries: ChallanEntry[]
   ): string => {
-    const extraRows = 16 - entries.length;
+    // Group entries by design
+    const groupedEntries = entries.reduce((acc, entry) => {
+      if (!acc[entry.design]) {
+        acc[entry.design] = {
+          design: entry.design,
+          entries: [],
+          totalMeters: 0,
+          totalPieces: 0,
+          price: entry.price, // Assuming same price for same design
+        };
+      }
+      acc[entry.design].entries.push(entry);
+      acc[entry.design].totalMeters += entry.meters * entry.pcs;
+      acc[entry.design].totalPieces += entry.pcs;
+      return acc;
+    }, {} as { [key: string]: { design: string; entries: ChallanEntry[]; totalMeters: number; totalPieces: number; price: number } });
+
+    const extraRows = 20 - entries.length;
+
     const entryRows =
-      entries
-        .map(
-          (entry) => `
-      <tr style="height:40px">
-        <td>${entry.design}</td>
-        <td>${entry.meters.toFixed(2)}</td>
-        <td>${entry.pcs}</td>
-        <td>${(entry.meters * entry.pcs).toFixed(2)}</td>
-        <td>${entry.price.toFixed(2)}</td>
-        <td>${challan.discount.toFixed(2)}</td>
-        <td>${(
-          entry.price *
-          entry.meters *
-          entry.pcs *
-          (1 - challan.discount / 100)
-        ).toFixed(2)}</td>
-      </tr>
-    `
-        )
+      Object.values(groupedEntries)
+        .map((group) => {
+          const rowSpan = group.entries.length;
+          const metersAndPiecesRows = group.entries
+            .map(
+              (entry, index) => `
+            ${
+              index === 0
+                ? `<td rowspan="${rowSpan}" style="vertical-align: middle;">${group.design}</td>`
+                : ""
+            }
+            <td>${entry.meters.toFixed(2)}</td>
+            <td>${entry.pcs}</td>
+            ${
+              index === 0
+                ? `
+              <td rowspan="${rowSpan}" style="vertical-align: middle;">${group.totalMeters.toFixed(
+                    2
+                  )}</td>
+              <td rowspan="${rowSpan}" style="vertical-align: middle;">${group.price.toFixed(
+                    2
+                  )}</td>
+              <td rowspan="${rowSpan}" style="vertical-align: middle;">${challan.discount.toFixed(
+                    2
+                  )}</td>
+              <td rowspan="${rowSpan}" style="vertical-align: middle;">${(
+                    group.totalMeters *
+                    group.price *
+                    (1 - challan.discount / 100)
+                  ).toFixed(2)}</td>
+            `
+                : ""
+            }
+          `
+            )
+            .map((row) => `<tr style="height:30px">${row}</tr>`)
+            .join("");
+
+          return metersAndPiecesRows;
+        })
         .join("") +
+      (extraRows > 0
+        ? `
+          <tr style="height:${30 * extraRows}px">
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+          </tr>
+        `
+        : "") +
       `
-      <tr style="height:${40 * extraRows}px">
-        <td></td>
-        <td></td>
-        <td></td>
-        <td></td>
-        <td></td>
-        <td></td>
-      </tr>
-    ` +
-      `
-      <tr style="height:40px; font-weight:bold">
-        <td>Total</td>
-        <td></td>
-        <td>${entries.reduce((sum, entry) => sum + entry.pcs, 0)}</td>
-        <td>${entries
-          .reduce((sum, entry) => sum + entry.meters * entry.pcs, 0)
-          .toFixed(2)}</td>
-        <td></td>
-        <td>Taxable Value</td>
-        <td>₹${entries
-          .reduce(
-            (sum, entry) =>
-              sum +
-              entry.price *
-                entry.meters *
-                entry.pcs *
-                (1 - challan.discount / 100),
-            0
-          )
-          .toFixed(2)} + GST</td>
+        <tr style="height:30px; font-weight:bold">
+          <td>Total</td>
+          <td></td>
+          <td>${entries.reduce((sum, entry) => sum + entry.pcs, 0)}</td>
+          <td>${entries
+            .reduce((sum, entry) => sum + entry.meters * entry.pcs, 0)
+            .toFixed(2)}</td>
+          <td></td>
+          <td>Taxable Value</td>
+          <td>₹${entries
+            .reduce(
+              (sum, entry) =>
+                sum +
+                entry.price *
+                  entry.meters *
+                  entry.pcs *
+                  (1 - challan.discount / 100),
+              0
+            )
+            .toFixed(2)} + GST</td>
       </tr>` +
       `
-      <tr style="height:${40 * 2}px">
+      <tr style="height:${30 * 2}px">
         <td></td>
         <td></td>
         <td></td>
         <td></td>
         <td></td>
         <td></td>
-      </tr>
-    `;
+        </tr>
+      `;
+
+    // Rest of the HTML template remains the same
     return `
       <html>
         <head>
