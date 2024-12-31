@@ -345,15 +345,10 @@ export default function PartyProfilePage() {
                     const printContent = `
                        <div style="
         width: 2.5in; 
-        height: 1.3in; 
+        height: 1.35in; 
         padding: 0.1in; 
         font-family: Arial, sans-serif; 
         box-sizing: border-box;
-        transform: rotate(90deg);
-        transform-origin: top left;
-        position: absolute;
-        top: 0;
-        left: 1.35in;
       ">
         <h1 style="margin: 0 0 0.1in 0; font-size: 12pt; font-weight: bold;">${party.name}</h1>
         <p style="margin: 0 0 0.05in 0; font-size: 9pt; line-height: 1.2;">${party.address}</p>
@@ -373,7 +368,7 @@ export default function PartyProfilePage() {
         <head>
           <style>
             @page {
-              size: 1.35in 2.5in;
+              size: 2.5in 1.35in;
               margin: 0;
             }
             body {
