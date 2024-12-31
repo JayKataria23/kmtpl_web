@@ -343,51 +343,18 @@ export default function PartyProfilePage() {
                 <Button
                   onClick={() => {
                     const printContent = `
-                       <div style="
-        width: 2.5in; 
-        height: 1.35in; 
-        padding: 0.1in; 
-        font-family: Arial, sans-serif; 
-        box-sizing: border-box;
-      ">
-        <h1 style="margin: 0 0 0.1in 0; font-size: 12pt; font-weight: bold;">${party.name}</h1>
-        <p style="margin: 0 0 0.05in 0; font-size: 9pt; line-height: 1.2;">${party.address}</p>
-        <p style="margin: 0 0 0.05in 0; font-size: 9pt; line-height: 1.2;">Contact: ${party.contact_number}</p>
-      </div>
+                      <div style="width: 2.5in; height: 1.3in; padding: 10px; ">
+                        <p style="font-size: 12pt">${party.name}</p>
+                        <p  style="font-size: 9pt">${party.address}</p>
+                        <p  style="font-size: 9pt">Contact: ${party.contact_number}</p>
+                      </div>
                     `;
-                    const printWindow = window.open(
-                      "",
-                      "",
-                      "width=600,height=600"
-                    );
-                    if (!printWindow) return;
-
-                    printWindow.document.write(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <style>
-            @page {
-              size: 2.5in 1.35in;
-              margin: 0;
-            }
-            body {
-              margin: 0;
-              padding: 0;
-            }
-          </style>
-        </head>
-        <body>
-          ${printContent}
-        </body>
-      </html>
-    `);
+                    const printWindow = window.open("", "");
+                    printWindow?.document.write(printContent);
                     printWindow?.document.close();
-                    printWindow.onload = () => {
-                      printWindow.focus();
-                      printWindow.print();
-                      printWindow.close();
-                    };
+                    printWindow?.focus();
+                    printWindow?.print();
+                    printWindow?.close();
                   }}
                   variant="outline"
                   size="sm"
