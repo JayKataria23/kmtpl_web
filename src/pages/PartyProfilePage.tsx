@@ -343,8 +343,19 @@ export default function PartyProfilePage() {
                 <Button
                   onClick={() => {
                     const printContent = `
-                       <div style="width: 2.5in; height: 1.35in; padding: 0.1in; font-family: Arial, sans-serif; box-sizing: border-box;">
-        <h1 style="margin: 0 0 0.1in 0; font-size: 11pt; font-weight: bold;">${party.name}</h1>
+                       <div style="
+        width: 2.5in; 
+        height: 1.3in; 
+        padding: 0.1in; 
+        font-family: Arial, sans-serif; 
+        box-sizing: border-box;
+        transform: rotate(90deg);
+        transform-origin: top left;
+        position: absolute;
+        top: 0;
+        left: 1.35in;
+      ">
+        <h1 style="margin: 0 0 0.1in 0; font-size: 12pt; font-weight: bold;">${party.name}</h1>
         <p style="margin: 0 0 0.05in 0; font-size: 9pt; line-height: 1.2;">${party.address}</p>
         <p style="margin: 0 0 0.05in 0; font-size: 9pt; line-height: 1.2;">Contact: ${party.contact_number}</p>
       </div>
@@ -362,7 +373,7 @@ export default function PartyProfilePage() {
         <head>
           <style>
             @page {
-              size: 2.5in 1.35in;
+              size: 1.35in 2.5in;
               margin: 0;
             }
             body {
