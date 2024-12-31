@@ -323,7 +323,7 @@ export default function PartyProfilePage() {
                     ?.name || "N/A"}
                 </p>
               </div>
-              <div className="grid grid-cols-2 gap-2 mt-4">
+              <div className="grid grid-cols-3 gap-2 mt-4">
                 <Button
                   onClick={() => handleOpenModal(party)}
                   variant="outline"
@@ -343,10 +343,10 @@ export default function PartyProfilePage() {
                 <Button
                   onClick={() => {
                     const printContent = `
-                      <div style="width: 2.5in; height: 1.3in; padding: 10px; ">
-                        <p style="font-size: 12pt">${party.name}</p>
-                        <p  style="font-size: 9pt">${party.address}</p>
-                        <p  style="font-size: 9pt">Contact: ${party.contact_number}</p>
+                      <div style="text-align: center;">
+                        <h1 style="line-height:80%;">${party.name}</h1>
+                        <h4 style="line-height:80%;">${party.address}</h4>
+                        <h4 style="line-height:80%;">Contact: ${party.contact_number}</h4>
                       </div>
                     `;
                     const printWindow = window.open("", "");
