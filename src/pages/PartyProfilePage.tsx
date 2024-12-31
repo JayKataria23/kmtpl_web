@@ -85,9 +85,13 @@ export default function PartyProfilePage() {
   };
 
   const handleOpenModal = (party?: PartyProfile) => {
-    if (party) { 
-      setSelectedBroker(brokers.find((b) => b.id === party.broker_id)?.name || "");
-      setSelectedTransport(transportProfiles.find((t) => t.id === party.transport_id)?.name || "");
+    if (party) {
+      setSelectedBroker(
+        brokers.find((b) => b.id === party.broker_id)?.name || ""
+      );
+      setSelectedTransport(
+        transportProfiles.find((t) => t.id === party.transport_id)?.name || ""
+      );
     }
     setCurrentParty(
       party || {
@@ -168,7 +172,8 @@ export default function PartyProfilePage() {
     if (ordersData && ordersData.length > 0) {
       toast({
         title: "Error",
-        description: "Cannot delete party profile as it is associated with existing orders.",
+        description:
+          "Cannot delete party profile as it is associated with existing orders.",
         variant: "destructive",
       });
       return;
@@ -206,7 +211,6 @@ export default function PartyProfilePage() {
           .startsWith(searchQuery.toLowerCase()) // Filter by search query only
     );
   }, [parties, searchQuery]);
-
 
   return (
     <div className="container mx-auto mt-10 p-4">
@@ -335,6 +339,31 @@ export default function PartyProfilePage() {
                   className="w-full"
                 >
                   Delete
+                </Button>
+                <Button
+                  onClick={() => {
+                    const printContent = `
+                      <div style="width: 2.5in; height: 1.37in; padding: 10px; border: 1px solid #000;">
+                        <h1>${party.name}</h1>
+                        <p>${party.address}</p>
+                        <p>Contact: ${party.contact_number}</p>
+                      </div>
+                    `;
+                    const printWindow = window.open(
+                      "",
+                      "",
+                    );
+                    printWindow?.document.write(printContent);
+                    printWindow?.document.close();
+                    printWindow?.focus();
+                    printWindow?.print();
+                    printWindow?.close();
+                  }}
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                >
+                  Print
                 </Button>
               </div>
             </CardContent>
