@@ -343,8 +343,8 @@ export default function PartyProfilePage() {
                 <Button
                   onClick={() => {
                     const printContent = `
-                      <div style="width: 2.5in; height: 1.37in; padding: 10px; border: 1px solid #000;">
-                        <h1>${party.name}</h1>
+                      <div style="width: 250; height: 137; padding: 10px; ">
+                        <p>${party.name}</p>
                         <p>${party.address}</p>
                         <p>Contact: ${party.contact_number}</p>
                       </div>
