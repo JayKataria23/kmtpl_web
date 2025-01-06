@@ -322,6 +322,11 @@ export default function PartyProfilePage() {
                   {transportProfiles.find((t) => t.id === party.transport_id)
                     ?.name || "N/A"}
                 </p>
+                {party.contact_number && (
+                  <h4 className="text-sm text-gray-500">
+                    Contact: {party.contact_number}
+                  </h4>
+                )}
               </div>
               <div className="grid grid-cols-3 gap-2 mt-4">
                 <Button
@@ -343,10 +348,31 @@ export default function PartyProfilePage() {
                 <Button
                   onClick={() => {
                     const printContent = `
-                      <div style="text-align: center;">
-                        <h1 style="line-height:80%;">${party.name}</h1>
-                        <h4 style="line-height:80%;">${party.address}</h4>
-                        <h4 style="line-height:80%;">Contact: ${party.contact_number}</h4>
+                      <style>
+                        @media print {
+                          @page {
+                            size: 220mm 110mm; /* Set the size for DL envelope in landscape mode */
+                            margin-left: 110mm; /* Remove default margins */
+                            margin-right: 20mm;
+                          }
+                          body {
+                            margin: 0; /* Remove body margin */
+                          }
+                          
+                        }
+                      </style>
+                      <div style="text-align: left; width: 220mm; height: 110mm; padding: 10mm; box-sizing: border-box;">
+                        <p style="line-height:80%; font-size: 24px; font-weight:bold">${
+                          party.name
+                        }</p>
+                        <p style="line-height:150%; font-size: 18px;">${
+                          party.address
+                        }</p>
+                        ${
+                          party.contact_number
+                            ? `<p style="line-height:150%; font-size: 18px;">Contact: ${party.contact_number}</p>`
+                            : ""
+                        }
                       </div>
                     `;
                     const printWindow = window.open("", "");
