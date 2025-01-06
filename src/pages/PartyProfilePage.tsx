@@ -351,18 +351,19 @@ export default function PartyProfilePage() {
                       <style>
                         @media print {
                           @page {
-                            size: 220mm 110mm; /* Set the size for DL envelope in landscape mode */
-                            margin-left: 110mm; /* Remove default margins */
-                            margin-right: 20mm;
+                            size: 220mm 110mm; 
+                            
                           }
                           body {
-                            margin: 0; /* Remove body margin */
+                            overflow: visible;
+                            padding-left:45%;
+                            padding-right:5%;
                           }
                           
                         }
                       </style>
-                      <div style="text-align: left; width: 220mm; height: 110mm; padding: 10mm; box-sizing: border-box;">
-                        <p style="line-height:80%; font-size: 24px; font-weight:bold">${
+                      <div style="text-align: left; padding: 10mm; box-sizing: border-box;">
+                        <p style="line-height:100%; font-size: 22px; font-weight:bold">${
                           party.name
                         }</p>
                         <p style="line-height:150%; font-size: 18px;">${
@@ -370,7 +371,7 @@ export default function PartyProfilePage() {
                         }</p>
                         ${
                           party.contact_number
-                            ? `<p style="line-height:150%; font-size: 18px;">Contact: ${party.contact_number}</p>`
+                            ? `<p style="line-height:100%; font-size: 18px;">Contact: ${party.contact_number}</p>`
                             : ""
                         }
                       </div>
