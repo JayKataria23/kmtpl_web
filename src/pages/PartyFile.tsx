@@ -146,7 +146,6 @@ function PartyFile() {
       { ...entry, date: lastEntryDate, party_name: party_name },
     ]);
 
-    setIsDrawerOpen(true);
   };
 
   // Function to remove an entry from the drawer
