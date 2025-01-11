@@ -145,7 +145,6 @@ function PartyFile() {
       ...prev,
       { ...entry, date: lastEntryDate, party_name: party_name },
     ]);
-
   };
 
   // Function to remove an entry from the drawer
@@ -435,24 +434,8 @@ function PartyFile() {
                       <tbody>
                         {partyOrders[item.party_name]
                           ?.sort((a, b) => {
-                            const designA = a.design.match(/(\D+)(\d*)/);
-                            const designB = b.design.match(/(\D+)(\d*)/);
-
-                            // Handle cases where designA or designB is null
-                            if (!designA && !designB) return 0;
-                            if (!designA) return 1;
-                            if (!designB) return -1;
-
-                            const nameComparison = designA[1].localeCompare(
-                              designB[1]
-                            );
-                            if (nameComparison !== 0) return nameComparison;
-
-                            // Sort numerically
-                            const numA = parseInt(designA[2] || "0");
-                            const numB = parseInt(designB[2] || "0");
-                            return numA - numB;
-                          }) // Sort alphabetically by design and then numerically by number
+                            return a.design.localeCompare(b.design);
+                          })
                           .map((order, orderIndex) => (
                             <tr
                               key={order.design_entry_id}
