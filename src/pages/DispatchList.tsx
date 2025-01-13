@@ -117,46 +117,63 @@ function DispatchList() {
 
   const filteredDesignCounts = () => {
     if (filter === "all") {
-      return designCounts; // No filter applied
+      return designCounts.sort((a, b) => a.design.localeCompare(b.design)); // No filter applied
     } else if (filter === "regular") {
-      return designCounts.filter(
-        (item) =>
-          !item.design.startsWith("D-") &&
-          !item.design.startsWith("P-") &&
-          !item.design.startsWith("WC-") &&
-          !item.design.startsWith("RLT-") &&
-          !item.design.startsWith("DBY-") &&
-          !item.design.startsWith("DD-") &&
-          !item.design.startsWith("CR-") &&
-          !item.design.startsWith("SS-") &&
-          !item.design.startsWith("KK-") &&
-          !item.design.startsWith("MG-") &&
-          !item.design.startsWith("AF-") &&
-          !item.design.startsWith("BR-") &&
-          !item.design.startsWith("CL-") &&
-          !item.design.startsWith("SC-") &&
-          isNaN(Number(item.design))
-      ); // Filter out designs starting with "D-" or "P-"
+      return designCounts
+        .filter(
+          (item) =>
+            !(
+              item.design.includes("-") && /^\d{4}$/.test(item.design.slice(-4))
+            ) &&
+            !(
+              item.design.includes("-") && /^\d{3}$/.test(item.design.slice(-3))
+            ) &&
+            isNaN(Number(item.design))
+        )
+        .sort((a, b) => a.design.localeCompare(b.design));
     } else if (filter === "Design No.") {
-      return designCounts.filter((item) => !isNaN(Number(item.design))); // Filter out designs starting with "D-" or "P-"
+      return designCounts
+        .filter((item) => !isNaN(Number(item.design))) // Filter out designs starting with "D-" or "P-"
+        .sort((a, b) => Number(a.design) - Number(b.design)); // Filter out designs starting with "D-" or "P-"
     } else {
-      return designCounts.filter(
-        (item) =>
-          item.design.startsWith("P-") ||
-          item.design.startsWith("D-") ||
-          item.design.startsWith("WC-") ||
-          item.design.startsWith("RLT-") ||
-          item.design.startsWith("DBY-") ||
-          item.design.startsWith("DD-") ||
-          item.design.startsWith("CR-") ||
-          item.design.startsWith("SS-") ||
-          item.design.startsWith("KK-") ||
-          item.design.startsWith("MG-") ||
-          item.design.startsWith("AF-") ||
-          item.design.startsWith("BR-") ||
-          item.design.startsWith("CL-") ||
-          item.design.startsWith("SC-")
-      ); // Filter out designs starting with "D-" or "P-"
+      return designCounts
+        .filter(
+          (item) =>
+            (item.design.includes("-") &&
+              /^\d{4}$/.test(item.design.slice(-4))) ||
+            (item.design.includes("-") && /^\d{3}$/.test(item.design.slice(-3))) // Check if design ends with a 4-digit number
+        )
+        .sort((a, b) => {
+          const numA = Number(a.design.split("-").pop());
+          const numB = Number(b.design.split("-").pop());
+          return numA - numB; // Sort by the number after the hyphen
+        }); // Filter out designs starting with "D-" or "P-"
+    }
+  };
+
+  const handleRemoveDispatchDate = async (id: number) => {
+    // Ask for confirmation before proceeding
+    if (!window.confirm("Are you sure you want to remove the dispatch list?")) {
+      return; // Exit if the user cancels
+    }
+
+    try {
+      const { error } = await supabase
+        .from("design_entries")
+        .update({
+          dispatch_date: null, // Set dispatch date to now
+        })
+        .eq("id", id);
+
+      if (error) throw error;
+      
+    } catch (error) {
+      console.error("Error removing dispatch date:", error);
+      toast({
+        title: "Error",
+        description: "Failed to remove dispatch date.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -204,7 +221,7 @@ function DispatchList() {
             <AccordionContent>
               <div className="px-4 py-2">
                 {designEntries.map((entry) => (
-                  <div key={entry.id} className="flex justify-between">
+                  <div key={entry.id} className="flex justify-between mb-3">
                     <div className="flex-grow w-2/3">
                       <h3 className="font-semibold">{entry.party_name}</h3>
                       <p className="font-semibold">Price: {entry.price}</p>
@@ -228,6 +245,12 @@ function DispatchList() {
                           })}
                       </ul>
                     </div>
+                    <Button
+                      className="m-2 mt-8 bg-red-500 active:bg-red-500 visited:bg-red-500 hover:bg-red-500 rounded-full w-10 h-10 text-xl text-white"
+                      onClick={() => handleRemoveDispatchDate(entry.id)}
+                    >
+                      X
+                    </Button>
                   </div>
                 ))}
               </div>

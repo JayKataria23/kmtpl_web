@@ -221,48 +221,41 @@ function OrderFile() {
 
   const filteredDesignCounts = () => {
     if (filter === "all") {
-      return designCounts; // No filter applied
+      return designCounts.sort((a, b) => a.design.localeCompare(b.design)); // Sort alphabetically before returning
     } else if (filter === "regular") {
-      return designCounts.filter(
-        (item) =>
-          !item.design.startsWith("D-") &&
-          !item.design.startsWith("P-") &&
-          !item.design.startsWith("WC-") &&
-          !item.design.startsWith("RLT-") &&
-          !item.design.startsWith("DBY-") &&
-          !item.design.startsWith("DD-") &&
-          !item.design.startsWith("CR-") &&
-          !item.design.startsWith("SS-") &&
-          !item.design.startsWith("KK-") &&
-          !item.design.startsWith("MG-") &&
-          !item.design.startsWith("AF-") &&
-          !item.design.startsWith("BR-") &&
-          !item.design.startsWith("CL-") &&
-          !item.design.startsWith("SC-") &&
-          isNaN(Number(item.design))
-      ); // Filter out designs starting with "D-" or "P-"
+      return designCounts
+        .filter(
+          (item) =>
+            !(
+              item.design.includes("-") && /^\d{4}$/.test(item.design.slice(-4))
+            ) &&
+            !(
+              item.design.includes("-") && /^\d{3}$/.test(item.design.slice(-3))
+            ) &&
+            isNaN(Number(item.design))
+        )
+        .sort((a, b) => a.design.localeCompare(b.design));
     } else if (filter === "Design No.") {
-      return designCounts.filter((item) => !isNaN(Number(item.design))); // Filter out designs starting with "D-" or "P-"
+      return designCounts
+        .filter((item) => !isNaN(Number(item.design))) // Filter out designs starting with "D-" or "P-"
+        .sort((a, b) => Number(a.design) - Number(b.design)); // Sort numerically before returning
     } else if (filter === "Part Orders") {
-      return designCounts.filter((item) => item.part); // Filter out designs starting with "P-"
+      return designCounts
+        .filter((item) => item.part)
+        .sort((a, b) => a.design.localeCompare(b.design)); // Filter out designs starting with "P-"
     } else {
-      return designCounts.filter(
-        (item) =>
-          item.design.startsWith("P-") ||
-          item.design.startsWith("D-") ||
-          item.design.startsWith("WC-") ||
-          item.design.startsWith("RLT-") ||
-          item.design.startsWith("DBY-") ||
-          item.design.startsWith("DD-") ||
-          item.design.startsWith("CR-") ||
-          item.design.startsWith("SS-") ||
-          item.design.startsWith("KK-") ||
-          item.design.startsWith("MG-") ||
-          item.design.startsWith("AF-") ||
-          item.design.startsWith("BR-") ||
-          item.design.startsWith("CL-") ||
-          item.design.startsWith("SC-")
-      ); // Filter out designs starting with "D-" or "P-"
+      return designCounts
+        .filter(
+          (item) =>
+            (item.design.includes("-") &&
+              /^\d{4}$/.test(item.design.slice(-4))) ||
+            (item.design.includes("-") && /^\d{3}$/.test(item.design.slice(-3))) // Check if design ends with a 4-digit number
+        )
+        .sort((a, b) => {
+          const numA = Number(a.design.split("-").pop());
+          const numB = Number(b.design.split("-").pop());
+          return numA - numB; // Sort by the number after the hyphen
+        });
     }
   };
 
