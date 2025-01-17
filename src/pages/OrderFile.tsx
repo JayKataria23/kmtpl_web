@@ -243,6 +243,16 @@ function OrderFile() {
       return designCounts
         .filter((item) => item.part)
         .sort((a, b) => a.design.localeCompare(b.design)); // Filter out designs starting with "P-"
+    } else if (filter === "digital") {
+      return designCounts
+        .filter(
+          (item) => item.design.includes("D-") // Check if design ends with a 4-digit number
+        )
+        .sort((a, b) => {
+          const numA = Number(a.design.split("-").pop());
+          const numB = Number(b.design.split("-").pop());
+          return numA - numB; // Sort by the number after the hyphen
+        }); // Filter out designs starting with "P-"
     } else {
       return designCounts
         .filter(
@@ -485,6 +495,9 @@ function OrderFile() {
           </ToggleGroupItem>
           <ToggleGroupItem value="print" aria-label="Show print">
             Print
+          </ToggleGroupItem>{" "}
+          <ToggleGroupItem value="digital" aria-label="Show digital">
+            Digital
           </ToggleGroupItem>
           <ToggleGroupItem value="Design No." aria-label="Show Design No.">
             Design No.
