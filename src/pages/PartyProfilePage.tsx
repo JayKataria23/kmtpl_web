@@ -21,6 +21,9 @@ interface PartyProfile {
   name: string;
   gstin: string | null;
   address: string | null;
+  address_line_1: string | null;
+  address_line_2: string | null;
+  address_line_3: string | null;
   contact_number: string | null;
   broker_id: number | null;
   transport_id: number | null;
@@ -47,6 +50,9 @@ export default function PartyProfilePage() {
     name: "",
     gstin: null,
     address: null,
+    address_line_1: null,
+    address_line_2: null,
+    address_line_3: null,
     contact_number: null,
     broker_id: null,
     transport_id: null,
@@ -98,6 +104,9 @@ export default function PartyProfilePage() {
         name: "",
         gstin: null,
         address: null,
+        address_line_1: null,
+        address_line_2: null,
+        address_line_3: null,
         contact_number: null,
         broker_id: null,
         transport_id: null,
@@ -257,6 +266,28 @@ export default function PartyProfilePage() {
                 </div>
               )
             )}
+
+            {["address_line_1", "address_line_2", "address_line_3"].map(
+              (field) => (
+                <div key={field} className="space-y-2">
+                  <Label htmlFor={field}>
+                    {field
+                      .split("_")
+                      .map(
+                        (word) => word.charAt(0).toUpperCase() + word.slice(1)
+                      )
+                      .join(" ")}
+                  </Label>
+                  <Input
+                    id={field}
+                    name={field}
+                    value={currentParty[field as keyof PartyProfile] || ""}
+                    onChange={handleInputChange}
+                  />
+                </div>
+              )
+            )}
+
             {[
               { name: "broker_id", options: brokers, label: "Broker" },
               {
@@ -313,6 +344,27 @@ export default function PartyProfilePage() {
                     </p>
                   )
                 )}
+                <div className="text-sm text-gray-500">
+                  Address:
+                  <br />
+                  {party.address_line_1 && (
+                    <span>
+                      {party.address_line_1}
+                      <br />
+                    </span>
+                  )}
+                  {party.address_line_2 && (
+                    <span>
+                      {party.address_line_2}
+                      <br />
+                    </span>
+                  )}
+                  {party.address_line_3 && <span>{party.address_line_3}</span>}
+                  {!party.address_line_1 &&
+                    !party.address_line_2 &&
+                    !party.address_line_3 &&
+                    "N/A"}
+                </div>
                 <p className="text-sm text-gray-500">
                   Broker:{" "}
                   {brokers.find((b) => b.id === party.broker_id)?.name || "N/A"}
@@ -352,23 +404,33 @@ export default function PartyProfilePage() {
                         @media print {
                           @page {
                             size: 220mm 110mm; 
-                            
                           }
                           body {
                             overflow: visible;
                             padding-left:45%;
                             padding-right:5%;
                           }
-                          
                         }
                       </style>
                       <div style="text-align: left; padding: 10mm; box-sizing: border-box;">
                         <p style="line-height:100%; font-size: 22px; font-weight:bold">${
                           party.name
                         }</p>
-                        <p style="line-height:150%; font-size: 18px;">${
-                          party.address
-                        }</p>
+                        ${
+                          party.address_line_1
+                            ? `<p style="line-height:150%; font-size: 18px;">${party.address_line_1}</p>`
+                            : ""
+                        }
+                        ${
+                          party.address_line_2
+                            ? `<p style="line-height:150%; font-size: 18px;">${party.address_line_2}</p>`
+                            : ""
+                        }
+                        ${
+                          party.address_line_3
+                            ? `<p style="line-height:150%; font-size: 18px;">${party.address_line_3}</p>`
+                            : ""
+                        }
                         ${
                           party.contact_number
                             ? `<p style="line-height:100%; font-size: 18px;">Contact: ${party.contact_number}</p>`
