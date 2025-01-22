@@ -408,7 +408,6 @@ export default function PartyProfilePage() {
                           body {
                             overflow: visible;
                             padding-left:45%;
-                            padding-right:5%;
                           }
                         }
                       </style>
@@ -416,24 +415,18 @@ export default function PartyProfilePage() {
                         <p style="line-height:100%; font-size: 22px; font-weight:bold">${
                           party.name
                         }</p>
-                        ${
-                          party.address_line_1
-                            ? `<p style="line-height:50%; font-size: 18px;">${party.address_line_1}</p>`
-                            : ""
-                        }
-                        ${
-                          party.address_line_2
-                            ? `<p style="line-height:50%; font-size: 18px;">${party.address_line_2}</p>`
-                            : ""
-                        }
-                        ${
-                          party.address_line_3
-                            ? `<p style="line-height:50%; font-size: 18px;">${party.address_line_3}</p>`
-                            : ""
-                        }
+                        <p style="line-height:100%; font-size: 18px;">
+                          ${[
+                            party.address_line_1,
+                            party.address_line_2,
+                            party.address_line_3,
+                          ]
+                            .filter(Boolean)
+                            .join("<br>")}
+                        </p>
                         ${
                           party.contact_number
-                            ? `<p style="line-height:150%; font-size: 18px;">Contact: ${party.contact_number}</p>`
+                            ? `<p style="line-height:120%; font-size: 18px;">Contact: ${party.contact_number}</p>`
                             : ""
                         }
                       </div>
