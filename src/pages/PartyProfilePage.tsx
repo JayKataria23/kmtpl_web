@@ -412,28 +412,28 @@ export default function PartyProfilePage() {
                           }
                         }
                       </style>
-                      <div style="text-align: left; padding: 10mm; box-sizing: border-box;">
+                      <div style="text-align: left;padding-top: 10mm; box-sizing: border-box;">
                         <p style="line-height:100%; font-size: 22px; font-weight:bold">${
                           party.name
                         }</p>
                         ${
                           party.address_line_1
-                            ? `<p style="line-height:150%; font-size: 18px;">${party.address_line_1}</p>`
+                            ? `<p style="line-height:95%; font-size: 18px;">${party.address_line_1}</p>`
                             : ""
                         }
                         ${
                           party.address_line_2
-                            ? `<p style="line-height:150%; font-size: 18px;">${party.address_line_2}</p>`
+                            ? `<p style="line-height:95%; font-size: 18px;">${party.address_line_2}</p>`
                             : ""
                         }
                         ${
                           party.address_line_3
-                            ? `<p style="line-height:150%; font-size: 18px;">${party.address_line_3}</p>`
+                            ? `<p style="line-height:95%; font-size: 18px;">${party.address_line_3}</p>`
                             : ""
                         }
                         ${
                           party.contact_number
-                            ? `<p style="line-height:100%; font-size: 18px;">Contact: ${party.contact_number}</p>`
+                            ? `<p style="line-height:150%; font-size: 18px;">Contact: ${party.contact_number}</p>`
                             : ""
                         }
                       </div>
