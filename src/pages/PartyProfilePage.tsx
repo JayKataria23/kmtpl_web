@@ -407,7 +407,7 @@ export default function PartyProfilePage() {
                           }
                           body {
                             overflow: visible;
-                            padding-left:45%;
+                            padding-left:50%;
                           }
                         }
                       </style>
