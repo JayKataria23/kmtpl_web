@@ -418,17 +418,17 @@ export default function PartyProfilePage() {
                         }</p>
                         ${
                           party.address_line_1
-                            ? `<p style="line-height:95%; font-size: 18px;">${party.address_line_1}</p>`
+                            ? `<p style="line-height:75%; font-size: 18px;">${party.address_line_1}</p>`
                             : ""
                         }
                         ${
                           party.address_line_2
-                            ? `<p style="line-height:95%; font-size: 18px;">${party.address_line_2}</p>`
+                            ? `<p style="line-height:75%; font-size: 18px;">${party.address_line_2}</p>`
                             : ""
                         }
                         ${
                           party.address_line_3
-                            ? `<p style="line-height:95%; font-size: 18px;">${party.address_line_3}</p>`
+                            ? `<p style="line-height:75%; font-size: 18px;">${party.address_line_3}</p>`
                             : ""
                         }
                         ${
