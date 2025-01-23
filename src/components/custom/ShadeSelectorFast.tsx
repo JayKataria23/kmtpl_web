@@ -9,11 +9,13 @@ interface ShadeItem {
 interface ShadeSelectorFastProps {
   currentJSON: ShadeItem[];
   setCurrentJSON: React.Dispatch<React.SetStateAction<ShadeItem[]>>;
+  currentSelectedDesign: string | null;
 }
 
 function ShadeSelectorFast({
   currentJSON,
   setCurrentJSON,
+  currentSelectedDesign,
 }: ShadeSelectorFastProps) {
   const [newCustomShade, setNewCustomShade] = useState<string>("");
   const [newValue, setNewValue] = useState<string>("");
@@ -220,7 +222,9 @@ function ShadeSelectorFast({
 
       {/* Shade Selection Buttons */}
       <div>
-        <h3 className="text-lg font-semibold mb-2">Select Shades</h3>
+        <h3 className="text-lg font-semibold mb-2">
+          Select Shades for {currentSelectedDesign}
+        </h3>
         <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto">
           {uniqueKeys.map((key) => (
             <Button
@@ -238,7 +242,9 @@ function ShadeSelectorFast({
       </div>
       {Object.entries(groupedEntries).length > 0 && (
         <div className="bg-gray-50 rounded-lg p-3">
-          <h3 className="text-lg font-semibold mb-2">Current Shades</h3>
+          <h3 className="text-lg font-semibold mb-2">
+            {currentSelectedDesign}
+          </h3>
           <div className=" max-h-40 overflow-y-auto flex flex-wrap space-x-2">
             {Object.entries(groupedEntries)
               .sort((a, b) => a[1].length - b[1].length) // Sort by length of keys

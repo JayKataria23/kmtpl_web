@@ -25,6 +25,7 @@ function FastOrderForm() {
     <ShadeSelectorFast
       currentJSON={currentJSON}
       setCurrentJSON={setCurrentJSON}
+      currentSelectedDesign={currentSelectedDesign}
     />,
     <div>Section 4 Content</div>,
     <div>Section 5 Content</div>,
