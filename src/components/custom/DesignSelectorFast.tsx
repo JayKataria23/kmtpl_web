@@ -13,7 +13,7 @@ function DesignSelectorFast({
   setCurrentSelectedDesign,
 }: DesignSelectorFastProps) {
   const [designs, setDesigns] = useState<string[]>([]);
-  const [filter, setFilter] = useState<string>("");
+  const [filter, setFilter] = useState<string>("Regular");
   const [inputValue, setInputValue] = useState<string>("");
 
   const fetchDesigns = async () => {
@@ -52,7 +52,7 @@ function DesignSelectorFast({
       if (filter === "Design Number") {
         return /^\d+$/.test(design);
       }
-      return filter ? design.includes(filter) : true;
+      return true;
     })
     .sort((a, b) => {
       // Sort designs based on the selected filter
@@ -90,7 +90,7 @@ function DesignSelectorFast({
   return (
     <>
       <div className="flex space-x-2 mb-2">
-        {["Regular", "Print", "Digital", "Design Number"].map((type) => (
+        {["All", "Regular", "Print", "Digital", "Design Number"].map((type) => (
           <button
             key={type}
             onClick={() => setFilter(type)}
@@ -129,20 +129,39 @@ function DesignSelectorFast({
       />
 
       <div className="flex flex-wrap justify-center gap-2">
-        {Array.from(Array(26)).map((_, index) => {
-          const letter = String.fromCharCode(65 + index);
-          return (
-            <button
-              key={letter}
-              className="mx-1 p-2 bg-gray-300 rounded"
-              onClick={() => {
-                setInputValue((prev) => prev + letter);
-              }}
-            >
-              {letter}
-            </button>
-          );
-        })}
+        {filter === "Regular" &&
+          Array.from(Array(26)).map((_, index) => {
+            const letter = String.fromCharCode(65 + index);
+            return (
+              <button
+                key={letter}
+                className="mx-1 p-2 bg-gray-300 rounded"
+                onClick={() => {
+                  setInputValue((prev) => prev + letter);
+                }}
+              >
+                {letter}
+              </button>
+            );
+          })}
+        {(filter === "Design Number" ||
+          filter === "Digital" ||
+          filter === "Print") &&
+          Array.from(Array(10)).map((_, index) => {
+            const letter = String.fromCharCode(48 + index);
+            return (
+              <button
+                key={letter}
+                className="mx-1 p-2 bg-gray-300 rounded"
+                onClick={() => {
+                  setInputValue((prev) => prev + letter);
+                }}
+              >
+                {letter}
+              </button>
+            );
+          })}
+
         <button
           className="mx-1 p-2 bg-red-500 text-white rounded"
           onClick={() => setInputValue((prev) => prev.slice(0, -1))}

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui";
 import PartySelectorFast from "@/components/custom/PartySelectorFast";
 import DesignSelectorFast from "@/components/custom/DesignSelectorFast";
@@ -22,17 +22,29 @@ function FastOrderForm() {
     <div>Section 4 Content</div>,
     <div>Section 5 Content</div>,
   ];
-  const handleNext = () => {
+  const handleNext = useCallback(() => {
     if (currentSection < 4) {
       setCurrentSection(currentSection + 1);
     }
-  };
+  }, [currentSection]);
 
   const handleBack = () => {
     if (currentSection > 0) {
       setCurrentSection(currentSection - 1);
     }
   };
+
+  const handleNextRef = useRef(handleNext);
+
+  useEffect(() => {
+    handleNextRef.current = handleNext;
+  }, [handleNext]);
+
+  useEffect(() => {
+    if (selectedBillTo !== null) {
+      handleNextRef.current();
+    }
+  }, [selectedBillTo]);
 
   return (
     <div className="w-[100%] h-[100vh] ">
