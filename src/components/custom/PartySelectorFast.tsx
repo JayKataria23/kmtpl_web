@@ -1,43 +1,25 @@
-import { useEffect, useState } from "react";
-import supabase from "@/utils/supabase";
+import { useState } from "react";
+
 import { ScrollArea } from "../ui";
 import { Delete } from "lucide-react";
-
-interface PartySelectorFastProps {
-  selectedBillTo: number | null;
-  setSelectedBillTo: React.Dispatch<React.SetStateAction<number | null>>;
-}
 
 interface Party {
   id: number;
   name: string;
 }
 
+interface PartySelectorFastProps {
+  selectedBillTo: number | null;
+  setSelectedBillTo: React.Dispatch<React.SetStateAction<number | null>>;
+  partyOptions: Party[];
+}
+
 function PartySelectorFast({
   selectedBillTo,
   setSelectedBillTo,
+  partyOptions,
 }: PartySelectorFastProps) {
-  const [partyOptions, setPartyOptions] = useState<Party[]>([]);
   const [inputValue, setInputValue] = useState<string>("");
-
-  const fetchPartyOptions = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("party_profiles")
-        .select("id, name")
-        .order("name");
-
-      if (error) throw error;
-
-      setPartyOptions(data);
-    } catch (error) {
-      console.error("Error fetching party options:", error);
-    }
-  };
-
-  useEffect(() => {
-    fetchPartyOptions();
-  }, []);
 
   return (
     <>

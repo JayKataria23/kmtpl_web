@@ -1,37 +1,20 @@
-import supabase from "@/utils/supabase";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Delete } from "lucide-react";
 
 interface DesignSelectorFastProps {
   currentSelectedDesign: string | null;
   setCurrentSelectedDesign: React.Dispatch<React.SetStateAction<string | null>>;
+  designs: string[];
 }
 
 function DesignSelectorFast({
   currentSelectedDesign,
   setCurrentSelectedDesign,
+  designs,
 }: DesignSelectorFastProps) {
-  const [designs, setDesigns] = useState<string[]>([]);
   const [filter, setFilter] = useState<string>("Regular");
   const [inputValue, setInputValue] = useState<string>("");
-
-  const fetchDesigns = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("designs")
-        .select("title")
-        .order("title");
-
-      if (error) throw error;
-
-      const designTitles = data.map((design) => design.title);
-      setDesigns(designTitles);
-    } catch (error) {
-      console.error("Error fetching designs:", error);
-      // Optionally, you can show an error message to the user
-    }
-  };
 
   const filteredDesigns = designs
     .filter((design) => {
@@ -84,9 +67,6 @@ function DesignSelectorFast({
       return 0; // No sorting for other cases
     });
 
-  useEffect(() => {
-    fetchDesigns();
-  }, []);
   return (
     <>
       <div className="flex space-x-2 mb-2">
