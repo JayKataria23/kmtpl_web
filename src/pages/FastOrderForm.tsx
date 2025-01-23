@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui";
 import PartySelectorFast from "@/components/custom/PartySelectorFast";
 import DesignSelectorFast from "@/components/custom/DesignSelectorFast";
+import ShadeSelectorFast from "@/components/custom/ShadeSelectorFast";
 
 function FastOrderForm() {
   const [currentSection, setCurrentSection] = useState(0);
@@ -9,6 +10,9 @@ function FastOrderForm() {
   const [currentSelectedDesign, setCurrentSelectedDesign] = useState<
     string | null
   >(null);
+  const [currentJSON, setCurrentJSON] = useState<{ [key: string]: string }[]>(
+    []
+  );
   const sections = [
     <PartySelectorFast
       selectedBillTo={selectedBillTo}
@@ -18,7 +22,10 @@ function FastOrderForm() {
       currentSelectedDesign={currentSelectedDesign}
       setCurrentSelectedDesign={setCurrentSelectedDesign}
     />,
-    <div>Section 3 Content</div>,
+    <ShadeSelectorFast
+      currentJSON={currentJSON}
+      setCurrentJSON={setCurrentJSON}
+    />,
     <div>Section 4 Content</div>,
     <div>Section 5 Content</div>,
   ];
@@ -47,17 +54,17 @@ function FastOrderForm() {
   }, [selectedBillTo]);
 
   return (
-    <div className="w-[100%] h-[100vh] ">
-      <div className="h-[85%] flex flex-col justify-center items-center">
+    <div>
+      <div className="flex flex-col justify-center items-center">
         <h1 className="text-2xl font-bold">Fast Order Form</h1>
 
         {sections[currentSection]}
       </div>
-      <div className="h-[15%] flex justify-around">
-        <Button className="w-[45%] h-[45%]" onClick={handleBack}>
+      <div className="flex justify-around">
+        <Button className="" onClick={handleBack}>
           Back
         </Button>
-        <Button className="w-[45%] h-[45%]" onClick={handleNext}>
+        <Button className="" onClick={handleNext}>
           Next
         </Button>
       </div>
