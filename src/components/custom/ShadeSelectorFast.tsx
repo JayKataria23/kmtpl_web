@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Button } from "../ui";
+import { Button, ScrollArea } from "../ui";
 
 interface ShadeItem {
   [key: string]: string;
@@ -131,7 +131,7 @@ function ShadeSelectorFast({
       </div>
 
       {/* Shade Selection Buttons */}
-      <div className="flex flex-wrap gap-2">
+      <ScrollArea className="flex flex-wrap gap-2">
         {currentJSON
           .map((item) => {
             const key = Object.keys(item)[0];
@@ -150,7 +150,7 @@ function ShadeSelectorFast({
               {key}
             </Button>
           ))}
-      </div>
+      </ScrollArea>
 
       {/* Modify Selected Keys */}
       <div className="flex items-center space-x-2">
