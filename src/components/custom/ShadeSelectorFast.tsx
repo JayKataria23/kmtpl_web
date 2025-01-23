@@ -110,27 +110,19 @@ function ShadeSelectorFast({
     [currentJSON]
   );
 
+  // Clear keys
+  const handleClearKeys = (keys: string[]) => {
+    setCurrentJSON((prev) =>
+      prev.map((item) => {
+        const key = Object.keys(item)[0];
+        return keys.includes(key) ? { [key]: "" } : item;
+      })
+    );
+  };
+
   return (
     <div className="w-full max-w-md mx-auto p-4 space-y-4 bg-white shadow-sm rounded-lg">
       {/* Current Shades Section */}
-      {Object.entries(groupedEntries).length > 0 && (
-        <div className="bg-gray-50 rounded-lg p-3">
-          <h3 className="text-lg font-semibold mb-2">Current Shades</h3>
-          <div className="space-y-2 max-h-40 overflow-y-auto">
-            {Object.entries(groupedEntries).map(([value, keys]) => (
-              <div
-                key={value}
-                className="flex flex-wrap items-center justify-between bg-white p-2 rounded"
-              >
-                <span className="font-medium text-gray-700 mr-2">
-                  {keys.join(", ")}
-                </span>
-                <span className="text-gray-500 break-words">{value}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* Custom Shade Addition */}
       <div className="space-y-3">
@@ -178,6 +170,52 @@ function ShadeSelectorFast({
             <Edit className="h-4 w-4" />
           </Button>
         </div>
+        {/* New buttons for modifying input value */}
+        <div className="flex justify-around gap-2">
+          <Button
+            className="text-xs shrink-0"
+            onClick={() =>
+              setNewValue((prev) => String((parseInt(prev) || 0) + 50))
+            }
+          >
+            +50
+          </Button>
+          <Button
+            className="text-xs shrink-0"
+            onClick={() =>
+              setNewValue((prev) => String((parseInt(prev) || 0) - 50))
+            }
+          >
+            -50
+          </Button>
+          <Button
+            className="text-xs shrink-0"
+            onClick={() =>
+              setNewValue((prev) => String((parseInt(prev) || 0) + 10))
+            }
+          >
+            +10
+          </Button>
+          <Button
+            className="text-xs shrink-0"
+            onClick={() =>
+              setNewValue((prev) => String((parseInt(prev) || 0) - 10))
+            }
+          >
+            -10
+          </Button>
+          <Button
+            className="text-xs shrink-0"
+            onClick={() =>
+              setNewValue((prev) => String((parseInt(prev) || 0) + 100))
+            }
+          >
+            +100
+          </Button>
+          <Button className="text-xs shrink-0" onClick={() => setNewValue("")}>
+            x
+          </Button>
+        </div>
       </div>
 
       {/* Shade Selection Buttons */}
@@ -198,6 +236,35 @@ function ShadeSelectorFast({
           ))}
         </div>
       </div>
+      {Object.entries(groupedEntries).length > 0 && (
+        <div className="bg-gray-50 rounded-lg p-3">
+          <h3 className="text-lg font-semibold mb-2">Current Shades</h3>
+          <div className=" max-h-40 overflow-y-auto flex flex-wrap space-x-2">
+            {Object.entries(groupedEntries)
+              .sort((a, b) => a[1].length - b[1].length) // Sort by length of keys
+              .map(([value, keys]) => (
+                <>
+                  <div key={value} className="items-center">
+                    <div className="font-medium text-gray-700 mr-2 border-b-2 w-full text-center">
+                      {keys.join("-")}
+                    </div>
+                    <div className="text-gray-500 break-words text-center w-full">
+                      {value}
+                    </div>
+                  </div>
+                  <Button
+                    onClick={() => handleClearKeys(keys)}
+                    variant="ghost"
+                    size="icon"
+                    className="relative left-[-10px]"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </>
+              ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
