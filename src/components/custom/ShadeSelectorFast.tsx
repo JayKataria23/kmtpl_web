@@ -1,12 +1,15 @@
 import React, { useEffect, useState } from "react";
 import { Button } from "../ui";
 
-interface ShadeSelectorFastProps {
-  currentJSON: { [key: string]: string }[];
-  setCurrentJSON: React.Dispatch<
-    React.SetStateAction<{ [key: string]: string }[]>
-  >;
+interface ShadeItem {
+  [key: string]: string;
 }
+
+interface ShadeSelectorFastProps {
+  currentJSON: ShadeItem[];
+  setCurrentJSON: React.Dispatch<React.SetStateAction<ShadeItem[]>>;
+}
+
 function ShadeSelectorFast({
   currentJSON,
   setCurrentJSON,
@@ -24,114 +27,144 @@ function ShadeSelectorFast({
     }
   }, [currentJSON, setCurrentJSON]);
 
+  // Group entries by their values
   const groupedEntries = currentJSON.reduce((acc, item) => {
-    Object.entries(item).forEach(([key, value]) => {
-      if (!acc[value]) {
-        acc[value] = [];
-      }
-      acc[value].push(key);
-    });
+    const [key] = Object.keys(item);
+    const value = item[key];
+    if (!acc[value]) {
+      acc[value] = [];
+    }
+    acc[value].push(key);
     return acc;
   }, {} as Record<string, string[]>);
 
+  // Add more empty shade entries
   const addElements = () => {
     if (currentJSON.length > 0) {
-      // Find the maximum shade number from existing shades
       const maxShadeNumber = Math.max(
-        ...currentJSON.map((item) => parseInt(Object.keys(item)[0]) || 0)
+        ...currentJSON
+          .map((item) => {
+            const key = Object.keys(item)[0];
+            return parseInt(key) || 0;
+          })
+          .filter((num) => !isNaN(num))
       );
 
-      // Create new shades based on the maximum shade number
       const newElements = Array.from({ length: 10 }, (_, i) => ({
         [`${maxShadeNumber + i + 1}`]: "",
       }));
 
-      // Update the state with the new elements
       setCurrentJSON((prev) => [...prev, ...newElements]);
     }
   };
 
+  // Add a custom shade
   const handleAddCustomShade = () => {
     if (newCustomShade.trim()) {
       const newShade = { [newCustomShade.trim().toUpperCase()]: "" };
-      setCurrentJSON((prev) => [...prev, newShade]);
-      setNewCustomShade("");
+
+      // Prevent duplicate keys
+      const isDuplicate = currentJSON.some(
+        (item) => Object.keys(item)[0] === newShade[Object.keys(newShade)[0]]
+      );
+
+      if (!isDuplicate) {
+        setCurrentJSON((prev) => [...prev, newShade]);
+        setNewCustomShade("");
+      } else {
+        alert("This shade name already exists!");
+      }
     }
   };
 
+  // Select a key for modification
   const handleSelectKey = (key: string) => {
-    setSelectedKeys((prevKeys) => [...prevKeys, key]);
-    console.log(`Key selected: ${key}`);
+    setSelectedKeys((prevKeys) =>
+      prevKeys.includes(key)
+        ? prevKeys.filter((k) => k !== key)
+        : [...prevKeys, key]
+    );
   };
 
+  // Modify selected keys' values
   const handleModifySelectedKeys = () => {
+    if (newValue.trim() === "") return;
+
     setCurrentJSON((prev) =>
       prev.map((item) => {
         const key = Object.keys(item)[0];
-        if (selectedKeys.includes(key)) {
-          return { [key]: newValue }; // Assign newValue to selected keys
-        }
-        return item; // Return unchanged item
+        return selectedKeys.includes(key) ? { [key]: newValue.trim() } : item;
       })
     );
-    setSelectedKeys([]); // Clear selected keys after modification
+
+    setSelectedKeys([]); // Clear selected keys
     setNewValue(""); // Clear the input field
-    console.log("Selected keys modified");
   };
 
   return (
-    <div>
+    <div className="space-y-4">
+      {/* Grouped Entries Display */}
       {Object.entries(groupedEntries)
         .filter(([value]) => value) // Only include groups with a value
         .map(([value, keys]) => (
-          <div key={value}>
-            <div>{keys.join("-")}</div>
-            <div>{value}</div>
+          <div key={value} className="flex items-center space-x-2">
+            <span className="font-bold">{keys.join(", ")}</span>
+            <span className="text-gray-600">{value}</span>
           </div>
         ))}
+
+      {/* Add More Shades Button */}
       <div>
-        <Button onClick={addElements}>+10</Button>
+        <Button onClick={addElements}>+10 Shades</Button>
       </div>
-      <div className="flex items-center mt-4">
+
+      {/* Custom Shade Addition */}
+      <div className="flex items-center space-x-2">
         <input
           type="text"
           value={newCustomShade}
           onChange={(e) => setNewCustomShade(e.target.value)}
           placeholder="Enter custom shade"
-          className="border rounded p-2"
+          className="border rounded p-2 flex-grow"
         />
-        <Button onClick={handleAddCustomShade} className="ml-2">
-          Add Custom Shade
-        </Button>
+        <Button onClick={handleAddCustomShade}>Add Custom Shade</Button>
       </div>
-      <div className="flex flex-wrap">
+
+      {/* Shade Selection Buttons */}
+      <div className="flex flex-wrap gap-2">
         {currentJSON
+          .map((item) => {
+            const key = Object.keys(item)[0];
+            return { key, value: item[key] };
+          })
           .filter(
             (item, index, self) =>
-              index ===
-              self.findIndex((t) => Object.keys(t)[0] === Object.keys(item)[0])
-          ) // Ensure unique keys
-          .map((item) => (
-            <div
-              key={item[Object.keys(item)[0]]}
-              style={{ display: "inline-block", marginRight: "8px" }}
+              self.findIndex((t) => t.key === item.key) === index
+          )
+          .map(({ key }) => (
+            <Button
+              key={key}
+              onClick={() => handleSelectKey(key)}
+              variant={selectedKeys.includes(key) ? "destructive" : "default"}
             >
-              <Button onClick={() => handleSelectKey(Object.keys(item)[0])}>
-                {Object.keys(item)[0]}
-              </Button>
-            </div>
+              {key}
+            </Button>
           ))}
       </div>
-      <div className="flex items-center mt-4">
+
+      {/* Modify Selected Keys */}
+      <div className="flex items-center space-x-2">
         <input
           type="text"
           value={newValue}
           onChange={(e) => setNewValue(e.target.value)}
           placeholder="Modify selected keys value"
-          className="border rounded p-2"
+          className="border rounded p-2 flex-grow"
         />
-
-        <Button onClick={handleModifySelectedKeys} className="ml-2">
+        <Button
+          onClick={handleModifySelectedKeys}
+          disabled={selectedKeys.length === 0 || newValue.trim() === ""}
+        >
           Modify Selected Keys
         </Button>
       </div>
