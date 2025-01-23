@@ -19,6 +19,13 @@ export default function HomePage() {
         <br />
         <Button
           className="w-64 text-lg h-12"
+          onClick={() => navigate("/fast-order-form")}
+        >
+          Fast Order Form
+        </Button>
+        <br />
+        <Button
+          className="w-64 text-lg h-12"
           onClick={() => navigate("/order-list")}
         >
           Order List

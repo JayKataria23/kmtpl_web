@@ -730,7 +730,9 @@ export default function OrderForm() {
                           </Label>
                           <Input
                             value={newCustomShade} // Use the value of the shade object
-                            onChange={e => setNewCustomShade(e.target.value.toUpperCase())} 
+                            onChange={(e) =>
+                              setNewCustomShade(e.target.value.toUpperCase())
+                            }
                             className="col-span-3"
                           />
                           <Button
@@ -757,10 +759,10 @@ export default function OrderForm() {
                         </div>
                         {currentEntry.shades.length > 0 && // Check if there are shades
                           currentEntry.shades.map((shade, index) => (
-                        <div
+                            <div
                               key={index}
-                          className="grid grid-cols-5 items-center gap-2"
-                        >
+                              className="grid grid-cols-5 items-center gap-2"
+                            >
                               <Label
                                 htmlFor={`shade-${index}`}
                                 className="text-right col-span-1"
@@ -794,9 +796,7 @@ export default function OrderForm() {
                               const maxShadeNumber = Math.max(
                                 ...currentEntry.shades.map(
                                   (shade) =>
-                                    parseInt(
-                                      Object.keys(shade)[0]
-                                    ) || 0
+                                    parseInt(Object.keys(shade)[0]) || 0
                                 )
                               );
 

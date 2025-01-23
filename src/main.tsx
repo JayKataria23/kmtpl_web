@@ -24,6 +24,7 @@ import CreateChallan from "./pages/CreateChallan";
 import ChallanView from "./pages/ChallanView";
 import ChallanList from "./pages/ChallanList";
 import EditChallan from "./pages/EditChallan";
+import FastOrderForm from "./pages/FastOrderForm";
 
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
@@ -37,6 +38,14 @@ createRoot(document.getElementById("root")!).render(
       <Router>
         <Routes>
           <Route path="/" element={<HomePage />} />
+          <Route
+            path="/fast-order-form"
+            element={
+              <ProtectedRoute>
+                <FastOrderForm />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/order-form"
             element={
