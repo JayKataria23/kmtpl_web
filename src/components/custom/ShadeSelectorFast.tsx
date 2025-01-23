@@ -234,7 +234,6 @@ function ShadeSelectorFast({
               size="sm"
               className="flex items-center"
             >
-              {selectedKeys.includes(key) && <X className="mr-1 h-3 w-3" />}
               {key}
             </Button>
           ))}
@@ -249,7 +248,7 @@ function ShadeSelectorFast({
             {Object.entries(groupedEntries)
               .sort((a, b) => a[1].length - b[1].length) // Sort by length of keys
               .map(([value, keys]) => (
-                <>
+                <div className="flex">
                   <div key={value} className="items-center">
                     <div className="font-medium text-gray-700 mr-2 border-b-2 w-full text-center">
                       {keys.join("-")}
@@ -266,7 +265,7 @@ function ShadeSelectorFast({
                   >
                     <X className="h-4 w-4" />
                   </Button>
-                </>
+                </div>
               ))}
           </div>
         </div>
