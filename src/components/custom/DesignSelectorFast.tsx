@@ -1,6 +1,7 @@
 import supabase from "@/utils/supabase";
 import React, { useEffect, useState } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Delete } from "lucide-react";
 
 interface DesignSelectorFastProps {
   currentSelectedDesign: string | null;
@@ -13,6 +14,7 @@ function DesignSelectorFast({
 }: DesignSelectorFastProps) {
   const [designs, setDesigns] = useState<string[]>([]);
   const [filter, setFilter] = useState<string>("");
+  const [inputValue, setInputValue] = useState<string>("");
 
   const fetchDesigns = async () => {
     try {
@@ -102,20 +104,58 @@ function DesignSelectorFast({
       </div>
 
       <ScrollArea className="h-1/2 w-full p-2 ">
-        {filteredDesigns.map((design) => (
-          <div
-            key={design}
-            onClick={() => setCurrentSelectedDesign(design)}
-            className={` p-2 text-center cursor-pointer text-white rounded-md ${
-              currentSelectedDesign === design ? "bg-blue-500" : "bg-black"
-            } my-2`}
-          >
-            {design}
-          </div>
-        ))}
+        {filteredDesigns
+          .filter((design) => design.includes(inputValue))
+          .map((design) => (
+            <div
+              key={design}
+              onClick={() => setCurrentSelectedDesign(design)}
+              className={` p-2 text-center cursor-pointer text-white rounded-md ${
+                currentSelectedDesign === design ? "bg-blue-500" : "bg-black"
+              } my-2`}
+            >
+              {design}
+            </div>
+          ))}
       </ScrollArea>
 
       <p>Selected Design: {currentSelectedDesign}</p>
+      <input
+        type="text"
+        value={inputValue}
+        onChange={(e) => setInputValue(e.target.value)}
+        className="my-2 p-2 border rounded"
+        placeholder="Type to filter..."
+      />
+
+      <div className="flex flex-wrap justify-center gap-2">
+        {Array.from(Array(26)).map((_, index) => {
+          const letter = String.fromCharCode(65 + index);
+          return (
+            <button
+              key={letter}
+              className="mx-1 p-2 bg-gray-300 rounded"
+              onClick={() => {
+                setInputValue((prev) => prev + letter);
+              }}
+            >
+              {letter}
+            </button>
+          );
+        })}
+        <button
+          className="mx-1 p-2 bg-red-500 text-white rounded"
+          onClick={() => setInputValue((prev) => prev.slice(0, -1))}
+        >
+          <Delete />
+        </button>
+        <button
+          className="mx-1 p-2 bg-blue-500 text-white rounded"
+          onClick={() => setInputValue("")}
+        >
+          Clear
+        </button>
+      </div>
     </>
   );
 }
