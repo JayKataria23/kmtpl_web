@@ -4,13 +4,39 @@ import { Button } from "@/components/ui";
 import PartySelectorFast from "@/components/custom/PartySelectorFast";
 import DesignSelectorFast from "@/components/custom/DesignSelectorFast";
 import ShadeSelectorFast from "@/components/custom/ShadeSelectorFast";
+import SavedDesignsFast from "@/components/custom/SavedDesignsFast";
+import OrderDetailsSection from "@/components/custom/OrderDetailsSection";
+import { useNavigate } from "react-router-dom";
+import { useToast } from "@/hooks/use-toast";
+import { useUser } from "@clerk/clerk-react";
 
 interface Party {
   id: number;
   name: string;
+  delivery_id: number | null;
+  broker_id: number | null;
+  transport_id: number | null;
+}
+
+interface DesignEntry {
+  id: string;
+  design: string;
+  price: string;
+  remark: string;
+  shades: { [key: string]: string }[];
+}
+
+interface PriceEntry {
+  design: string;
+  price: string;
 }
 
 function FastOrderForm() {
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const { user } = useUser();
+  const userName = user?.fullName || user?.firstName || "Unknown User";
+
   const [partyOptions, setPartyOptions] = useState<Party[]>([]);
   const [designs, setDesigns] = useState<string[]>([]);
   const [currentSection, setCurrentSection] = useState(0);
@@ -21,11 +47,33 @@ function FastOrderForm() {
   const [currentJSON, setCurrentJSON] = useState<{ [key: string]: string }[]>(
     []
   );
+  const [designEntries, setDesignEntries] = useState<DesignEntry[]>([]);
+  const [priceList, setPriceList] = useState<PriceEntry[]>([]);
+  const [selectedShipTo, setSelectedShipTo] = useState<number | null>(null);
+  const [selectedBroker, setSelectedBroker] = useState<number | null>(null);
+  const [selectedTransport, setSelectedTransport] = useState<number | null>(
+    null
+  );
+  const [orderNo, setOrderNo] = useState<string>("");
+  const [orderDate, setOrderDate] = useState<Date>(new Date());
+  const [transportOptions, setTransportOptions] = useState<
+    {
+      id: number;
+      name: string;
+    }[]
+  >([]);
+  const [brokerOptions, setBrokerOptions] = useState<
+    {
+      id: number;
+      name: string;
+    }[]
+  >([]);
+
   const fetchPartyOptions = async () => {
     try {
       const { data, error } = await supabase
         .from("party_profiles")
-        .select("id, name")
+        .select("id, name, delivery_id, broker_id, transport_id")
         .order("name");
 
       if (error) throw error;
@@ -33,6 +81,23 @@ function FastOrderForm() {
       setPartyOptions(data);
     } catch (error) {
       console.error("Error fetching party options:", error);
+      // Optionally, you can show an error message to the user
+    }
+  };
+  const generateUniqueOrderNo = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("orders")
+        .select("order_no")
+        .order("order_no", { ascending: false })
+        .limit(1);
+
+      if (error) throw error;
+      const lastOrderNo = data.length > 0 ? parseInt(data[0].order_no) : 0;
+      const newOrderNo = (lastOrderNo + 1).toString();
+      setOrderNo(newOrderNo);
+    } catch (error) {
+      console.error("Error generating unique order number:", error);
     }
   };
 
@@ -53,10 +118,58 @@ function FastOrderForm() {
     }
   };
 
+  const fetchPriceList = async (partyId: number) => {
+    const { data, error } = await supabase.rpc(
+      "get_latest_design_prices_by_party",
+      {
+        partyid: partyId,
+      }
+    );
+
+    if (error) throw error;
+    setPriceList(data);
+  };
+
+  const fetchTransportOptions = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("transport_profiles")
+        .select("id, name")
+        .order("name");
+
+      if (error) throw error;
+
+      setTransportOptions(data);
+    } catch (error) {
+      console.error("Error fetching transport options:", error);
+      // Optionally, you can show an error message to the user
+    }
+  };
+
+  const fetchBrokers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("brokers")
+        .select("id, name")
+        .order("name");
+
+      if (error) throw error;
+
+      setBrokerOptions(data);
+    } catch (error) {
+      console.error("Error fetching brokers:", error);
+      // Optionally, you can show an error message to the user
+    }
+  };
+
   useEffect(() => {
     fetchPartyOptions();
     fetchDesigns();
+    generateUniqueOrderNo();
+    fetchTransportOptions();
+    fetchBrokers();
   }, []);
+
   const sections = [
     <PartySelectorFast
       partyOptions={partyOptions}
@@ -73,17 +186,77 @@ function FastOrderForm() {
       setCurrentJSON={setCurrentJSON}
       currentSelectedDesign={currentSelectedDesign}
     />,
-    <div>Section 4 Content</div>,
-    <div>Section 5 Content</div>,
+    <SavedDesignsFast
+      designEntries={designEntries}
+      setDesignEntries={setDesignEntries}
+    />,
+    <OrderDetailsSection
+      orderNo={orderNo}
+      setOrderNo={setOrderNo}
+      orderDate={orderDate}
+      setOrderDate={setOrderDate}
+      selectedBillTo={selectedBillTo}
+      setSelectedBillTo={setSelectedBillTo}
+      selectedShipTo={selectedShipTo}
+      setSelectedShipTo={setSelectedShipTo}
+      selectedBroker={selectedBroker}
+      setSelectedBroker={setSelectedBroker}
+      selectedTransport={selectedTransport}
+      setSelectedTransport={setSelectedTransport}
+      partyOptions={partyOptions}
+      brokerOptions={brokerOptions}
+      transportOptions={transportOptions}
+    />,
   ];
+
   const handleNext = useCallback(() => {
-    if (currentSection < 4) {
+    if (currentSection === 2) {
+      if (
+        currentJSON.every((shade) =>
+          Object.values(shade).every((value) => value === "")
+        )
+      ) {
+        if (
+          window.confirm(
+            "No shades selected. Do you want to proceed without saving?"
+          )
+        ) {
+          setCurrentSelectedDesign(null);
+          setCurrentJSON([]);
+          setCurrentSection(1);
+        }
+        return;
+      }
+
+      const newEntry: DesignEntry = {
+        id: Math.random().toString(36).substr(2, 9),
+        design: currentSelectedDesign || "",
+        price:
+          priceList.find((p) => p.design === currentSelectedDesign)?.price ||
+          "0",
+        remark: "",
+        shades: currentJSON,
+      };
+
+      setDesignEntries((prev) => [...prev, newEntry]);
+
+      setCurrentSelectedDesign(null);
+      setCurrentJSON([]);
+      setCurrentSection(1);
+    } else if (currentSection === 1 && !currentSelectedDesign) {
+      setCurrentSection(3);
+    } else if (currentSection < 4) {
       setCurrentSection(currentSection + 1);
     }
-  }, [currentSection]);
+  }, [currentSection, currentSelectedDesign, currentJSON, priceList]);
 
   const handleBack = () => {
-    if (currentSection > 0) {
+    if (currentSection === 0) {
+      // Redirect to home page
+      window.location.href = "/"; // Adjust the path as necessary
+    } else if (currentSection === 3) {
+      setCurrentSection(1);
+    } else if (currentSection > 0) {
       setCurrentSection(currentSection - 1);
     }
   };
@@ -96,9 +269,26 @@ function FastOrderForm() {
 
   useEffect(() => {
     if (selectedBillTo !== null) {
+      fetchPriceList(selectedBillTo);
+      const selectedParty = partyOptions.find(
+        (party) => party.id === selectedBillTo
+      );
+      if (selectedParty) {
+        if (selectedParty.delivery_id) {
+          setSelectedShipTo(selectedParty.delivery_id);
+        } else {
+          setSelectedShipTo(selectedParty.id);
+        }
+        if (selectedParty.broker_id) {
+          setSelectedBroker(selectedParty.broker_id);
+        }
+        if (selectedParty.transport_id) {
+          setSelectedTransport(selectedParty.transport_id);
+        }
+      }
       handleNextRef.current();
     }
-  }, [selectedBillTo]);
+  }, [selectedBillTo, partyOptions]);
 
   useEffect(() => {
     if (currentSelectedDesign !== null) {
@@ -106,23 +296,95 @@ function FastOrderForm() {
     }
   }, [currentSelectedDesign]);
 
+  const handleSave = async () => {
+    if (!selectedBillTo) {
+      toast({
+        title: "Error",
+        description: "Bill To is required",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      // Insert the order
+      const { data: orderData, error: orderError } = await supabase
+        .from("orders")
+        .insert([
+          {
+            order_no: orderNo,
+            date: orderDate.toLocaleDateString("en-US", {
+              day: "2-digit",
+              month: "long",
+              year: "numeric",
+            }),
+            bill_to_id: selectedBillTo,
+            ship_to_id: selectedShipTo,
+            broker_id: selectedBroker,
+            transport_id: selectedTransport,
+            created_by: userName, // You'll need to add userName state from Clerk
+          },
+        ])
+        .select();
+
+      if (orderError) throw orderError;
+
+      const orderId = orderData[0].id;
+
+      // Insert design entries
+      const designEntriesData = designEntries.map((design) => ({
+        order_id: orderId,
+        design: design.design,
+        price: design.price,
+        remark: design.remark,
+        shades: design.shades,
+      }));
+
+      const { error: designEntriesError } = await supabase
+        .from("design_entries")
+        .insert(designEntriesData);
+
+      if (designEntriesError) throw designEntriesError;
+
+      toast({
+        title: "Order Saved",
+        description: `Order ${orderNo} has been saved successfully.`,
+      });
+
+      // Navigate to preview page
+      navigate(`/order-preview/${orderId}`);
+    } catch (error) {
+      console.error("Error saving order details:", error);
+      toast({
+        title: "Error",
+        description: `There was an error saving the order details: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`,
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
-    <div>
-      <div className="flex flex-col justify-center items-center">
+    <div className="">
+      <div className="text-center justify-center items-center">
         <h1 className="text-2xl font-bold">Fast Order Form</h1>
-        <h3>
-          {partyOptions.find((party) => party.id === selectedBillTo)?.name ||
-            "No party selected"}
-        </h3>
+
         {sections[currentSection]}
       </div>
-      <div className="flex justify-around">
-        <Button className="" onClick={handleBack}>
+      <div className="flex justify-between absolute bottom-0 left-0 right-0">
+        <Button className="text-lg p-4 h-20" onClick={handleBack}>
           Back
         </Button>
-        <Button className="" onClick={handleNext}>
-          Next
-        </Button>
+        {currentSection === sections.length - 1 ? (
+          <Button className="text-lg p-4 h-20" onClick={handleSave}>
+            Save
+          </Button>
+        ) : (
+          <Button className="text-lg p-4 h-20" onClick={handleNext}>
+            Next
+          </Button>
+        )}
       </div>
     </div>
   );

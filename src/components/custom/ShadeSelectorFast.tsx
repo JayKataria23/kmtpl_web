@@ -49,12 +49,10 @@ function ShadeSelectorFast({
   // Add more empty shade entries
   const addElements = () => {
     const maxShadeNumber = Math.max(
-      ...currentJSON
-        .map((item) => {
-          const key = Object.keys(item)[0];
-          return parseInt(key) || 0;
-        })
-        .filter((num) => !isNaN(num))
+      ...currentJSON.map((item) => {
+        const key = Object.keys(item)[0];
+        return parseInt(key) || 0;
+      })
     );
 
     const newElements = Array.from({ length: 10 }, (_, i) => ({
@@ -124,7 +122,7 @@ function ShadeSelectorFast({
 
   return (
     <div className="w-full max-w-md mx-auto p-4 space-y-4 bg-white shadow-sm rounded-lg">
-      {/* Current Shades Section */}
+      <h1 className="text-xl font-semibold mb-4 text-center">Select Shades</h1>
 
       {/* Custom Shade Addition */}
       <div className="space-y-3">
@@ -134,14 +132,14 @@ function ShadeSelectorFast({
             value={newCustomShade}
             onChange={(e) => setNewCustomShade(e.target.value)}
             placeholder="Enter custom shade"
-            className="flex-grow min-w-[150px] border rounded p-2"
+            className="flex-grow min-w-[150px] border rounded p-2 h-11"
           />
           <Button
             onClick={handleAddCustomShade}
             variant="outline"
             size="icon"
             disabled={!newCustomShade.trim()}
-            className="shrink-0"
+            className="shrink-0 h-11"
           >
             <Plus className="h-4 w-4" />
           </Button>
@@ -160,79 +158,51 @@ function ShadeSelectorFast({
             value={newValue}
             onChange={(e) => setNewValue(e.target.value)}
             placeholder="New value for selected keys"
-            className="flex-grow min-w-[150px] border rounded p-2"
+            className="flex-grow min-w-[150px] border rounded p-2 h-11"
           />
           <Button
             onClick={handleModifySelectedKeys}
             variant="outline"
             size="icon"
             disabled={selectedKeys.length === 0 || !newValue.trim()}
-            className="shrink-0"
+            className="shrink-0 h-11"
           >
             <Edit className="h-4 w-4" />
           </Button>
         </div>
-        {/* New buttons for modifying input value */}
+
+        {/* Numeric Buttons for modifying input value */}
         <div className="flex justify-around gap-2">
-          <Button
-            className="text-xs shrink-0"
-            onClick={() =>
-              setNewValue((prev) => String((parseInt(prev) || 0) + 50))
-            }
-          >
-            +50
-          </Button>
-          <Button
-            className="text-xs shrink-0"
-            onClick={() =>
-              setNewValue((prev) => String((parseInt(prev) || 0) - 50))
-            }
-          >
-            -50
-          </Button>
-          <Button
-            className="text-xs shrink-0"
-            onClick={() =>
-              setNewValue((prev) => String((parseInt(prev) || 0) + 10))
-            }
-          >
-            +10
-          </Button>
-          <Button
-            className="text-xs shrink-0"
-            onClick={() =>
-              setNewValue((prev) => String((parseInt(prev) || 0) - 10))
-            }
-          >
-            -10
-          </Button>
-          <Button
-            className="text-xs shrink-0"
-            onClick={() =>
-              setNewValue((prev) => String((parseInt(prev) || 0) + 100))
-            }
-          >
-            +100
-          </Button>
-          <Button className="text-xs shrink-0" onClick={() => setNewValue("")}>
+          {["+50", "-50", "+10", "-10", "+100"].map((label) => (
+            <Button
+              key={label}
+              className="h-11"
+              onClick={() => {
+                const value = parseInt(label) || 0;
+                setNewValue((prev) => String((parseInt(prev) || 0) + value));
+              }}
+            >
+              {label}
+            </Button>
+          ))}
+          <Button className="h-11" onClick={() => setNewValue("")}>
             x
           </Button>
         </div>
       </div>
 
       {/* Shade Selection Buttons */}
-      <div>
+      <div className="bg-gray-50 rounded-lg p-3 h-[35vh] overflow-y-auto">
         <h3 className="text-lg font-semibold mb-2">
           Select Shades for {currentSelectedDesign}
         </h3>
-        <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto">
+        <div className="grid grid-cols-4 gap-2">
           {uniqueKeys.map((key) => (
             <Button
               key={key}
               onClick={() => handleSelectKey(key)}
-              variant={selectedKeys.includes(key) ? "destructive" : "outline"}
-              size="sm"
-              className="flex items-center"
+              variant={selectedKeys.includes(key) ? "default" : "outline"}
+              className="w-full h-11"
             >
               {key}
             </Button>

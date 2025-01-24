@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Button, ScrollArea } from "../ui";
+import { Button, Input } from "../ui";
 import { X, Search } from "lucide-react";
 
 interface Party {
@@ -39,7 +39,7 @@ function PartySelectorFast({
       <Button
         key={letter}
         variant="outline"
-        className="px-2 py-1 h-11 w-12 text-lg"
+        className="px-2 py-1 h-10 w-10 text-lg"
         onClick={() => setInputValue((prev) => prev + letter)}
       >
         {letter}
@@ -48,68 +48,64 @@ function PartySelectorFast({
   });
 
   return (
-    <div className="flex flex-col h-[80vh]">
-      {/* Party List */}
-      <div className="flex-grow overflow-hidden rounded-t-lg bg-white shadow-sm">
-        <ScrollArea className="h-full w-screen">
-          <div className="p-2 space-y-2">
-            {filteredParties.map((party) => (
-              <Button
-                key={party.id}
-                variant={selectedBillTo === party.id ? "default" : "outline"}
-                className="w-[90%] mx-auto justify-start truncate"
-                onClick={() => setSelectedBillTo(party.id)}
-              >
-                <span className="truncate max-w-full block text-left">
-                  {party.name}
-                </span>
-              </Button>
-            ))}
-          </div>
-        </ScrollArea>
+    <div className="w-full max-w-md mx-auto p-4 space-y-4 bg-white shadow-sm rounded-lg">
+      <h1 className="text-xl font-semibold mb-4 text-center">Select Party</h1>
+
+      {/* Search Input */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+        <Input
+          type="text"
+          value={inputValue}
+          onChange={(e) => setInputValue(e.target.value)}
+          placeholder="Search parties..."
+          className="w-full pl-10 h-11"
+        />
+        {inputValue && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="absolute right-2 top-1/2 transform -translate-y-1/2"
+            onClick={() => setInputValue("")}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        )}
       </div>
 
-      {/* Filters Container */}
-      <div className="bg-gray-100 p-4 rounded-b-lg space-y-4 w-screen">
-        {/* Search Input */}
-        <div className="relative">
-          <input
-            type="text"
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            placeholder="Search parties..."
-            className="w-full p-2 pl-10 border rounded-md"
-          />
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-          {inputValue && (
+      {/* Party List */}
+      <div className="bg-gray-50 rounded-lg p-3 h-[40vh] overflow-y-auto">
+        <div className="space-y-2">
+          {filteredParties.map((party) => (
             <Button
-              variant="ghost"
-              size="icon"
-              className="absolute right-2 top-1/2 transform -translate-y-1/2"
-              onClick={() => setInputValue("")}
+              key={party.id}
+              variant={selectedBillTo === party.id ? "default" : "outline"}
+              className="w-full justify-start h-11"
+              onClick={() => setSelectedBillTo(party.id)}
             >
-              <X className="h-4 w-4" />
+              <span className="truncate">{party.name}</span>
             </Button>
-          )}
+          ))}
         </div>
+      </div>
 
-        {/* Alphabet Buttons */}
+      {/* Alphabet Buttons */}
+      <div className="space-y-4 bg-gray-50 p-3 rounded-lg">
         <div className="flex flex-wrap gap-1 justify-center">
           {alphabetButtons}
         </div>
 
-        {/* Quick Action Buttons */}
-        <div className="flex space-x-2">
+        <div className="flex gap-2 justify-center">
           <Button
             variant="secondary"
-            className="flex-grow"
+            className="h-11"
             onClick={() => setInputValue((prev) => prev.slice(0, -1))}
           >
             Backspace
           </Button>
           <Button
             variant="destructive"
-            className="flex-grow"
+            className="h-11"
             onClick={() => setInputValue("")}
           >
             Clear

@@ -75,7 +75,7 @@ function DesignSelectorFast({
             key={type}
             onClick={() => setFilter(type)}
             variant={filter === type ? "default" : "outline"}
-            size="sm"
+            className="h-10"
           >
             {type}
           </Button>
@@ -87,7 +87,7 @@ function DesignSelectorFast({
   // Render design list
   const renderDesignList = () => {
     return (
-      <div className="bg-gray-50 rounded-lg p-3 mb-4 h-64 overflow-y-auto">
+      <div className="bg-gray-50 rounded-lg p-3 h-[40vh] overflow-y-auto">
         <h3 className="text-lg font-semibold mb-2">Designs</h3>
         <div className="space-y-2">
           {filteredDesigns.map((design) => (
@@ -95,7 +95,7 @@ function DesignSelectorFast({
               key={design}
               onClick={() => setCurrentSelectedDesign(design)}
               variant={currentSelectedDesign === design ? "default" : "outline"}
-              className="w-full justify-center"
+              className="w-full justify-start h-11"
             >
               {design}
             </Button>
@@ -105,7 +105,7 @@ function DesignSelectorFast({
     );
   };
 
-  // Render input and selected design
+  // Render input section
   const renderInputSection = () => {
     return (
       <div className="space-y-3">
@@ -122,13 +122,13 @@ function DesignSelectorFast({
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             placeholder="Type to filter..."
-            className="flex-grow min-w-[150px] border rounded p-2"
+            className="flex-grow min-w-[150px] border rounded p-2 h-11"
           />
           <Button
             onClick={() => setInputValue("")}
             variant="outline"
             size="icon"
-            className="shrink-0"
+            className="shrink-0 h-11"
           >
             <X className="h-4 w-4" />
           </Button>
@@ -156,6 +156,7 @@ function DesignSelectorFast({
             key={char}
             variant="outline"
             size="sm"
+            className="h-10 w-10"
             onClick={() => setInputValue((prev) => prev + char)}
           >
             {char}
@@ -164,6 +165,7 @@ function DesignSelectorFast({
         <Button
           variant="destructive"
           size="sm"
+          className="h-10 w-10"
           onClick={() => setInputValue((prev) => prev.slice(0, -1))}
         >
           <Delete className="h-4 w-4" />
