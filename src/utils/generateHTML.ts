@@ -22,27 +22,36 @@ interface Order {
 function splitOrder(order: Order): Order[] {
   const parts: Order[] = [];
   let currentPart: Order = { ...order, designs: [] };
-  let currentRows = 0;
+  let currentHeight = 0;
+  // Reserve space for header and footer (in pixels)
+  const headerHeight = 250; // Height for logo, address, order details
+  const footerHeight = 50; // Height for total row
+  const pageHeight = 1123; // A4 height in pixels at 96 DPI
+  const availableHeight = pageHeight - headerHeight - footerHeight;
+  const designBaseHeight = 40; // Base height for each design row
+  const shadeRowHeight = 25; // Height for each row of shades
 
   for (let i = 0; i < order.designs.length; i++) {
     const design = order.designs[i];
-    console.log(design);
     const nonEmptyShades = design.shades.reduce(
       (count, shade) => (shade[Object.keys(shade)[0]] ? count + 1 : count),
       0
     );
 
-    const designRows =
-      Math.ceil(nonEmptyShades / 8) + (design.remark ? 0.2 : 0);
+    // Calculate exact height needed for this design
+    const shadeRows = Math.ceil(nonEmptyShades / 8);
+    const remarkHeight = design.remark ? 20 : 0;
+    const designHeight =
+      designBaseHeight + shadeRows * shadeRowHeight + remarkHeight;
 
-    if (currentRows + designRows > 15) {
+    if (currentHeight + designHeight > availableHeight) {
       parts.push(currentPart);
       currentPart = { ...order, designs: [] };
-      currentRows = 0;
+      currentHeight = 0;
     }
 
     currentPart.designs.push(design);
-    currentRows += designRows;
+    currentHeight += designHeight;
   }
 
   if (currentPart.designs.length > 0) {
@@ -156,13 +165,13 @@ export function generateHTML(order: Order): string {
 
     const shadesHTML = formattedShades
       .map((group) => {
-        return ` <div><div style='border-bottom: 1px solid #000;'>${group.keys.join(
+        return `<div style="display: inline-block;"><div style='border-bottom: 1px solid #000; line-height: 1;'>${group.keys.join(
           " - "
-        )}</div><div style='border-top: 1px solid #000;'>${
+        )}</div><div style='border-top: 1px solid #000; line-height: 1;'>${
           group.meters
         } mtr</div></div>`;
       })
-      .join("<div style='padding-left: 20px;'></div>"); // Join with line breaks for each group
+      .join("<span style='padding: 0 4px;'></span>");
 
     return shadesHTML;
   };
@@ -173,35 +182,29 @@ export function generateHTML(order: Order): string {
         const currentIndex = startIndex + index;
         return `
         <div style="border-bottom: 1px solid #000;">
-          <div style="display: flex; flex-direction: row;">
-            <div style="width: 5%; border-right: 1px solid #000; text-align: center; word-wrap: break-word;">
-              <p>${currentIndex + 1}</p>
+          <div style="display: flex; flex-direction: row; height: 32px;">
+            <div style="width: 5%; border-right: 1px solid #000; text-align: center; display: flex; align-items: center; justify-content: center;">
+              <span style="line-height: 1;">${currentIndex + 1}</span>
             </div>
-            <div style="width: 12%; border-right: 1px solid #000; text-align: center; word-wrap: break-word; font-weight: bold;">
-              <p>${design.design}</p>
+            <div style="width: 12%; border-right: 1px solid #000; text-align: center; display: flex; align-items: center; justify-content: center; font-weight: bold;">
+              <span style="line-height: 1;">${design.design}</span>
             </div>
-            <div style="width: 71%; border-right: 1px solid #000; text-align: center; display: flex; flex-direction: row; flex-wrap: wrap;">
-            <div style="width: 100%; font-size: 16px; text-align: center; display: flex; flex-direction: row; flex-wrap: wrap; padding-left: 8px;">
-              ${shadesRow(design)}
+            <div style="width: 71%; border-right: 1px solid #000; display: flex; align-items: center;">
+              <div style="width: 100%; display: flex; align-items: center; padding: 0 8px;">
+                ${shadesRow(design)}
+              </div>
+              ${design.remark ? `<div style="color: #f00; font-weight: bold;">
+                ${design.remark}
+              </div>` : ''}
             </div>
-            <div style="text-align: center; width: 100%;  color: #f00; font-weight: bold;">
-              ${design.remark ? design.remark : ""}
+            <div style="width: 4%; border-right: 1px solid #000; text-align: center; display: flex; align-items: center; justify-content: center;">
+              <span style="line-height: 1;">${Object.values(design.shades).filter(s => s[Object.keys(s)[0]] !== "").length}</span>
             </div>
-            </div>
-            <div style="width: 4%; border-right: 1px solid #000; text-align: center; word-wrap: break-word;">
-              <p>${
-                Object.values(design.shades).filter(
-                  (s) => s[Object.keys(s)[0]] !== ""
-                ).length
-              }</p>
-            </div>
-            <div style="width: 8%; text-align: center; word-wrap: break-word; font-weight: bold;">
-              <p>${design.price}</p>
+            <div style="width: 8%; text-align: center; display: flex; align-items: center; justify-content: center; font-weight: bold;">
+              <span style="line-height: 1;">${design.price}</span>
             </div>
           </div>
-          
-        </div>
-        `;
+        </div>`;
       })
       .join("");
 
