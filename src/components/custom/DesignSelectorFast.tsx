@@ -90,7 +90,7 @@ function DesignSelectorFast({
         }
         return true;
       })
-      .filter((design) => design.includes(inputValue))
+      .filter((design) => design.startsWith(inputValue))
       .sort((a, b) => {
         // Sorting logic
         if (filter === "Regular") {

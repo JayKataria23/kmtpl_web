@@ -373,20 +373,18 @@ function FastOrderForm() {
 
         {sections[currentSection]}
       </div>
-      <div className="flex justify-between absolute bottom-0 left-0 right-0">
-        <Button className="text-lg p-4 h-20" onClick={handleBack}>
-          Back
+      <Button className="text-lg p-4 h-20 absolute bottom-0 left-0" onClick={handleBack}>
+        Back
+      </Button>
+      {currentSection === sections.length - 1 ? (
+        <Button className="text-lg p-4 h-20 absolute bottom-0 right-0" onClick={handleSave}>
+          Save
         </Button>
-        {currentSection === sections.length - 1 ? (
-          <Button className="text-lg p-4 h-20" onClick={handleSave}>
-            Save
-          </Button>
-        ) : (
-          <Button className="text-lg p-4 h-20" onClick={handleNext}>
-            Next
-          </Button>
-        )}
-      </div>
+      ) : (
+        <Button className="text-lg p-4 h-20 absolute bottom-0 right-0" onClick={handleNext}>
+          Next
+        </Button>
+      )}
     </div>
   );
 }

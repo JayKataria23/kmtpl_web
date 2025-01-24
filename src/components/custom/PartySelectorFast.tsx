@@ -99,7 +99,11 @@ function PartySelectorFast({
           <Button
             variant="secondary"
             className="h-11"
-            onClick={() => setInputValue((prev) => prev.slice(0, -1))}
+            onClick={() =>
+              setInputValue((prev) =>
+                prev.length > 0 ? prev.slice(0, -1) : prev
+              )
+            }
           >
             Backspace
           </Button>
