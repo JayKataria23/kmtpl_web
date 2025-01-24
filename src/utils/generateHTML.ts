@@ -167,7 +167,7 @@ export function generateHTML(order: Order): string {
       .map((group) => {
         return `<div style="display: inline-block;"><div style='border-bottom: 1px solid #000; line-height: 1;'>${group.keys.join(
           " - "
-        )}</div><div style='border-top: 1px solid #000; line-height: 1;'>${
+        )}</div><div style='border-top: 1px solid #000; line-height: 1; text-align: center; '>${
           group.meters
         } mtr</div></div>`;
       })
@@ -182,7 +182,7 @@ export function generateHTML(order: Order): string {
         const currentIndex = startIndex + index;
         return `
         <div style="border-bottom: 1px solid #000;">
-          <div style="display: flex; flex-direction: row; height: 32px;">
+          <div style="display: flex; flex-direction: row; height: 38px;">
             <div style="width: 5%; border-right: 1px solid #000; text-align: center; display: flex; align-items: center; justify-content: center;">
               <span style="line-height: 1;">${currentIndex + 1}</span>
             </div>
