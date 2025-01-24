@@ -26,13 +26,14 @@ function splitOrder(order: Order): Order[] {
 
   for (let i = 0; i < order.designs.length; i++) {
     const design = order.designs[i];
-    console.log(design)
+    console.log(design);
     const nonEmptyShades = design.shades.reduce(
       (count, shade) => (shade[Object.keys(shade)[0]] ? count + 1 : count),
       0
     );
 
-    const designRows = Math.ceil(nonEmptyShades / 8) + (design.remark ? .2 : 0); ;
+    const designRows =
+      Math.ceil(nonEmptyShades / 8) + (design.remark ? 0.2 : 0);
 
     if (currentRows + designRows > 15) {
       parts.push(currentPart);
@@ -61,29 +62,64 @@ const formatDate = (dateString: string): string => {
 
 export function generateHTML(order: Order): string {
   order.designs.sort((a, b) => {
-    const nameA = a.design.toLowerCase();
-    const nameB = b.design.toLowerCase();
+    // Helper function to extract numeric parts
+    const extractNumericPart = (design: string) => {
+      const match = design.match(/^([A-Za-z-]+)(\d*)/);
+      return match
+        ? {
+            prefix: match[1],
+            numericPart: match[2] ? parseInt(match[2]) : null,
+          }
+        : { prefix: design, numericPart: null };
+    };
 
-    // Check if both names are purely numeric
-    const isANumeric = !isNaN(Number(nameA));
-    const isBNumeric = !isNaN(Number(nameB));
+    const aDetails = extractNumericPart(a.design);
+    const bDetails = extractNumericPart(b.design);
+
+    // Category 1: Designs with less than 3 digits, sorted alphabetically
+    const isAShort = !a.design.match(/\d{3,}/);
+    const isBShort = !b.design.match(/\d{3,}/);
+
+    if (isAShort && isBShort) {
+      return aDetails.prefix.localeCompare(bDetails.prefix);
+    }
+    if (isAShort) return -1;
+    if (isBShort) return 1;
+
+    // Category 2: Designs with - and 3-4 numeric digits
+    const isADashNumeric = a.design.match(/^[A-Za-z]+-\d{3,4}$/);
+    const isBDashNumeric = b.design.match(/^[A-Za-z]+-\d{3,4}$/);
+
+    if (isADashNumeric && isBDashNumeric) {
+      const aNumeric = parseInt(a.design.split("-")[1]);
+      const bNumeric = parseInt(b.design.split("-")[1]);
+      return aNumeric - bNumeric;
+    }
+    if (isADashNumeric) return -1;
+    if (isBDashNumeric) return 1;
+
+    // Category 3: Purely numeric designs
+    const isANumeric = !isNaN(Number(a.design));
+    const isBNumeric = !isNaN(Number(b.design));
 
     if (isANumeric && isBNumeric) {
-      return Number(nameA) - Number(nameB); // Sort numerically if both are numeric
+      return Number(a.design) - Number(b.design);
     }
-    if (isANumeric) return 1; // Numeric comes after alphabets
-    if (isBNumeric) return -1; // Numeric comes after alphabets
+    if (isANumeric) return 1;
+    if (isBNumeric) return -1;
 
-    if (nameA < nameB) return -1;
-    if (nameA > nameB) return 1;
-    return 0; // If they are equal
+    // For designs with same prefix, sort by numeric part
+    if (aDetails.prefix === bDetails.prefix) {
+      if (aDetails.numericPart !== null && bDetails.numericPart !== null) {
+        return aDetails.numericPart - bDetails.numericPart;
+      }
+    }
+
+    // Fallback to alphabetical sorting
+    return aDetails.prefix.localeCompare(bDetails.prefix);
   });
-  //sort such that all designs with - are at end
-  order.designs.sort((a, b) => {
-    if (a.design.includes("-") && !b.design.includes("-")) return 1;
-    if (!a.design.includes("-") && b.design.includes("-")) return -1;
-    return 0;
-  });
+
+  // Rest of the generateHTML function remains the same...
   const parts = splitOrder(order);
   let overallIndex = 0;
 
@@ -100,7 +136,8 @@ export function generateHTML(order: Order): string {
       const shadeName = Object.keys(shadeObj)[0]; // Get the shade name
       const shadeValue = shadeObj[shadeName]; // Get the shade value
 
-      if (shadeValue) { // Only process non-empty values
+      if (shadeValue) {
+        // Only process non-empty values
         const existingGroup = formattedShades.find(
           (group) => group.meters === shadeValue
         );
@@ -148,11 +185,15 @@ export function generateHTML(order: Order): string {
               ${shadesRow(design)}
             </div>
             <div style="text-align: center; width: 100%;  color: #f00; font-weight: bold;">
-              ${design.remark?design.remark:""}
+              ${design.remark ? design.remark : ""}
             </div>
             </div>
             <div style="width: 4%; border-right: 1px solid #000; text-align: center; word-wrap: break-word;">
-              <p>${Object.values(design.shades).filter((s) => s[Object.keys(s)[0]] !== "").length}</p>
+              <p>${
+                Object.values(design.shades).filter(
+                  (s) => s[Object.keys(s)[0]] !== ""
+                ).length
+              }</p>
             </div>
             <div style="width: 8%; text-align: center; word-wrap: break-word; font-weight: bold;">
               <p>${design.price}</p>
