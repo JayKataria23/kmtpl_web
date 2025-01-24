@@ -1,20 +1,71 @@
 import React, { useState, useMemo } from "react";
 import { Button } from "../ui";
 import { Delete, X } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
+import supabase from "@/utils/supabase";
 
 interface DesignSelectorFastProps {
   currentSelectedDesign: string | null;
   setCurrentSelectedDesign: React.Dispatch<React.SetStateAction<string | null>>;
   designs: string[];
+  setDesigns: React.Dispatch<React.SetStateAction<string[]>>;
 }
 
 function DesignSelectorFast({
   currentSelectedDesign,
   setCurrentSelectedDesign,
   designs,
+  setDesigns,
 }: DesignSelectorFastProps) {
   const [filter, setFilter] = useState<string>("Regular");
   const [inputValue, setInputValue] = useState<string>("");
+  const [isAddDesignOpen, setIsAddDesignOpen] = useState<boolean>(false);
+  const [newDesignInput, setNewDesignInput] = useState<string>("");
+
+  const fetchDesigns = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("designs")
+        .select("title")
+        .order("title");
+
+      if (error) throw error;
+
+      const designTitles = data.map((design) => design.title);
+      setDesigns(designTitles);
+    } catch (error) {
+      console.error("Error fetching designs:", error);
+      // Optionally, you can show an error message to the user
+    }
+  };
+
+  const handleAddDesign = async (newDesign: string) => {
+    if (newDesign.trim()) {
+      const { data, error } = await supabase
+        .from("designs")
+        .insert({ title: newDesign.trim().toUpperCase() }) // Convert to uppercase
+        .select();
+      if (error) {
+        toast({
+          title: "Error",
+          description: "Failed to add design",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Success",
+          description: `Design "${data[0].title}" added successfully`,
+        });
+        fetchDesigns();
+      }
+    }
+  };
+
+  const handleAddDesignSubmit = async () => {
+    await handleAddDesign(newDesignInput);
+    setNewDesignInput("");
+    setIsAddDesignOpen(false);
+  };
 
   // Memoized filtered and sorted designs
   const filteredDesigns = useMemo(() => {
@@ -80,6 +131,13 @@ function DesignSelectorFast({
             {type}
           </Button>
         ))}
+        <Button
+          variant="outline"
+          className="h-10"
+          onClick={() => setIsAddDesignOpen(true)}
+        >
+          Add Design
+        </Button>
       </div>
     );
   };
@@ -180,6 +238,33 @@ function DesignSelectorFast({
       {renderDesignList()}
       {renderInputSection()}
       {renderKeyboardButtons()}
+
+      {isAddDesignOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+          <div className="bg-white p-4 rounded-lg space-y-4 max-w-sm w-full mx-4">
+            <h3 className="text-lg font-semibold">Add New Design</h3>
+            <input
+              type="text"
+              value={newDesignInput}
+              onChange={(e) => setNewDesignInput(e.target.value)}
+              placeholder="Enter design name..."
+              className="w-full border rounded p-2"
+            />
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsAddDesignOpen(false);
+                  setNewDesignInput("");
+                }}
+              >
+                Cancel
+              </Button>
+              <Button onClick={handleAddDesignSubmit}>Add</Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

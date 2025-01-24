@@ -180,6 +180,7 @@ function FastOrderForm() {
       designs={designs}
       currentSelectedDesign={currentSelectedDesign}
       setCurrentSelectedDesign={setCurrentSelectedDesign}
+      setDesigns={setDesigns}
     />,
     <ShadeSelectorFast
       currentJSON={currentJSON}

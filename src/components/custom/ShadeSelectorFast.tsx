@@ -214,7 +214,7 @@ function ShadeSelectorFast({
           <h3 className="text-lg font-semibold mb-2">
             {currentSelectedDesign}
           </h3>
-          <div className=" max-h-40 overflow-y-auto flex flex-wrap space-x-2">
+          <div className=" max-h-40 overflow-y-auto flex flex-wrap space-x-2 px-10">
             {Object.entries(groupedEntries)
               .sort((a, b) => a[1].length - b[1].length) // Sort by length of keys
               .map(([value, keys]) => (
