@@ -193,12 +193,20 @@ export function generateHTML(order: Order): string {
               <div style="width: 100%; display: flex; align-items: center; padding: 0 8px;">
                 ${shadesRow(design)}
               </div>
-              ${design.remark ? `<div style="color: #f00; font-weight: bold;">
+              ${
+                design.remark
+                  ? `<div style="color: #f00; font-weight: bold;">
                 ${design.remark}
-              </div>` : ''}
+              </div>`
+                  : ""
+              }
             </div>
             <div style="width: 4%; border-right: 1px solid #000; text-align: center; display: flex; align-items: center; justify-content: center;">
-              <span style="line-height: 1;">${Object.values(design.shades).filter(s => s[Object.keys(s)[0]] !== "").length}</span>
+              <span style="line-height: 1;">${
+                Object.values(design.shades).filter(
+                  (s) => s[Object.keys(s)[0]] !== ""
+                ).length
+              }</span>
             </div>
             <div style="width: 8%; text-align: center; display: flex; align-items: center; justify-content: center; font-weight: bold;">
               <span style="line-height: 1;">${design.price}</span>
