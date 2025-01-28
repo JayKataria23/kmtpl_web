@@ -90,7 +90,14 @@ function DesignSelectorFast({
         }
         return true;
       })
-      .filter((design) => design.startsWith(inputValue))
+      .filter((design) => {
+        // Modified input value filtering
+        if (filter === "Digital" || filter === "Print") {
+          const afterHyphen = design.split("-")[1];
+          return afterHyphen.includes(inputValue);
+        }
+        return design.startsWith(inputValue);
+      })
       .sort((a, b) => {
         // Sorting logic
         if (filter === "Regular") {

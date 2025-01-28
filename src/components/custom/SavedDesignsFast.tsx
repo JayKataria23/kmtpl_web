@@ -63,7 +63,7 @@ function SavedDesignsFast({
               <div className="flex items-center gap-2">
                 <span className="text-gray-600 w-16">Price:</span>
                 <Input
-                  type="text"
+                  type="number"
                   value={entry.price}
                   onChange={(e) => handlePriceChange(entry.id, e.target.value)}
                   className="h-11"
