@@ -24,16 +24,18 @@ function splitOrder(order: Order): Order[] {
   let currentPart: Order = { ...order, designs: [] };
   let currentRows = 0;
 
-  for (let i = 0; i < order.designs.length; i++) {
-    const design = order.designs[i];
-    console.log(design);
-    const nonEmptyShades = design.shades.reduce(
-      (count, shade) => (shade[Object.keys(shade)[0]] ? count + 1 : count),
-      0
-    );
-
-    const designRows =
-      Math.ceil(nonEmptyShades / 8) + (design.remark ? 0.2 : 0);
+  for (const design of order.designs) {
+    // Calculate the number of shade groups
+    const shadeGroups = new Map<string, number>();
+    for (const shade of design.shades) {
+      const value = shade[Object.keys(shade)[0]];
+      if (value) {
+        shadeGroups.set(value, (shadeGroups.get(value) || 0) + 1);
+      }
+    }
+    const groupCount = shadeGroups.size;
+    const remarkRows = design.remark ? .5 : 0;
+    const designRows = groupCount + remarkRows;
 
     if (currentRows + designRows > 15) {
       parts.push(currentPart);

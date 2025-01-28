@@ -55,8 +55,9 @@ function OrderPreviewPage() {
       remark: orderDetails.remark,
       created_by: orderDetails.created_by,
     };
-
+    console.log(orderForPreview);
     const html = generateHTML(orderForPreview);
+    console.log(html);
     setGeneratedHtml(html);
 
     // Store generated HTML in state
