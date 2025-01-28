@@ -34,10 +34,10 @@ function splitOrder(order: Order): Order[] {
       }
     }
     const groupCount = shadeGroups.size;
-    const remarkRows = design.remark ? .5 : 0;
+    const remarkRows = design.remark ? 0.5 : 0;
     const designRows = groupCount + remarkRows;
 
-    if (currentRows + designRows > 15) {
+    if (currentRows + designRows > 18) {
       parts.push(currentPart);
       currentPart = { ...order, designs: [] };
       currentRows = 0;
@@ -169,45 +169,45 @@ export function generateHTML(order: Order): string {
     return shadesHTML;
   };
 
-  const generatePartHTML = (part: Order, startIndex: number): string => {
-    const designsHTML = part.designs
-      .map((design, index) => {
-        const currentIndex = startIndex + index;
-        return `
+ const generatePartHTML = (part: Order, startIndex: number): string => {
+   const designsHTML = part.designs
+     .map((design, index) => {
+       const currentIndex = startIndex + index;
+       return `
         <div style="border-bottom: 1px solid #000;">
           <div style="display: flex; flex-direction: row;">
-            <div style="width: 5%; border-right: 1px solid #000; text-align: center; word-wrap: break-word;">
-              <p>${currentIndex + 1}</p>
+            <div style="width: 5%; border-right: 1px solid #000; text-align: center; display: flex; align-items: center; justify-content: center; min-height: 24px;">
+              ${currentIndex + 1}
             </div>
-            <div style="width: 12%; border-right: 1px solid #000; text-align: center; word-wrap: break-word; font-weight: bold;">
-              <p>${design.design}</p>
+            <div style="width: 12%; border-right: 1px solid #000; text-align: center; display: flex; align-items: center; justify-content: center; font-weight: bold; padding: 2px; word-break: break-word; font-size: 16px; min-height: 24px;">
+              ${design.design}
             </div>
-            <div style="width: 71%; border-right: 1px solid #000; text-align: center; display: flex; flex-direction: row; flex-wrap: wrap;">
-            <div style="width: 100%; font-size: 16px; text-align: center; display: flex; flex-direction: row; flex-wrap: wrap; padding-left: 8px;">
-              ${shadesRow(design)}
+            <div style="width: 71%; border-right: 1px solid #000; text-align: center;">
+              <div style="width: 100%; font-size: 16px; text-align: center; display: flex; flex-direction: row; flex-wrap: wrap;  padding: 2px; padding-left: 8px;">
+                ${shadesRow(design)}
+              </div>
+              ${
+                design.remark
+                  ? `<div style="text-align: center; width: 100%; color: #f00; font-weight: bold;">${design.remark}</div>`
+                  : ""
+              }
             </div>
-            <div style="text-align: center; width: 100%;  color: #f00; font-weight: bold;">
-              ${design.remark ? design.remark : ""}
-            </div>
-            </div>
-            <div style="width: 4%; border-right: 1px solid #000; text-align: center; word-wrap: break-word;">
-              <p>${
+            <div style="width: 4%; border-right: 1px solid #000; text-align: center; display: flex; align-items: center; justify-content: center; min-height: 24px;">
+              ${
                 Object.values(design.shades).filter(
                   (s) => s[Object.keys(s)[0]] !== ""
                 ).length
-              }</p>
+              }
             </div>
-            <div style="width: 8%; text-align: center; word-wrap: break-word; font-weight: bold;">
-              <p>${design.price}</p>
+            <div style="width: 8%; text-align: center; display: flex; align-items: center; justify-content: center; font-weight: bold; min-height: 24px;">
+              ${design.price}
             </div>
           </div>
-          
-        </div>
-        `;
-      })
-      .join("");
+        </div>`;
+     })
+     .join("");
 
-    return `
+   return `
     <html>
       <head>
         <title>OrderForm</title>
@@ -303,7 +303,7 @@ export function generateHTML(order: Order): string {
         </div>
       </body>
     </html>`;
-  };
+ };
 
   return parts
     .map((part) => {
