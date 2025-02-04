@@ -279,12 +279,17 @@ function OrderFile() {
 
   const handleDownloadReport = (design: string) => {
     const orderDetails = designOrders[design];
-    console.log(designOrders[design]);
     const shadeMap: { [key: string]: { [key: string]: number } } = {};
     const totalMap: { [key: string]: number } = {}; // To store total quantities
 
+    // Create a unique identifier for each order to differentiate between multiple orders from the same party
+    const orderIdentifiers = orderDetails.map((order) => {
+      const nameParts = order.partyName.split(" "); // Split the party name into words
+      return nameParts.slice(0, 2).join(" ") + String(order.order_no);
+    });
+
     // Populate the shadeMap with distinct shade names and their quantities
-    designOrders[design].forEach((order) => {
+    designOrders[design].forEach((order, index) => {
       order.shades.forEach((shade) => {
         const shadeName = Object.keys(shade)[0];
         const quantity = Number(shade[shadeName]); // Ensure quantity is a number
@@ -294,11 +299,12 @@ function OrderFile() {
           totalMap[shadeName] = 0; // Initialize total for this shade
         }
 
-        if (!shadeMap[shadeName][order.partyName]) {
-          shadeMap[shadeName][order.partyName] = 0;
+        const orderIdentifier = orderIdentifiers[index];
+        if (!shadeMap[shadeName][orderIdentifier]) {
+          shadeMap[shadeName][orderIdentifier] = 0;
         }
 
-        shadeMap[shadeName][order.partyName] += quantity; // Accumulate quantities
+        shadeMap[shadeName][orderIdentifier] += quantity; // Accumulate quantities
         totalMap[shadeName] += quantity; // Update total quantity
       });
     });
@@ -314,26 +320,24 @@ function OrderFile() {
       ],
       [
         "Shade Name",
-        ...new Set(
-          orderDetails.map((o) => {
-            const nameParts = o.partyName.split(" "); // Split the party name into words
-            return nameParts.slice(0, 2).join(" ") + String(o.order_no); // Take the first two words and join them
-          })
-        ),
+        ...orderIdentifiers, // Use unique order identifiers
         "Total",
       ], // Header row
-    ]; // Initialize with header
+    ];
+
     let highestNonZeroRowIndex = -1; // Track the highest row index with a non-zero total
     const rowsToKeep: string[][] = []; // Explicitly define the type as a 2D array of strings
 
-    Object.entries(shadeMap).forEach(([shadeName, partyQuantities]) => {
+    Object.entries(shadeMap).forEach(([shadeName, orderQuantities]) => {
       const row: string[] = [shadeName]; // Define row as an array of strings
       let totalQuantity = 0; // Initialize total for this row
-      orderDetails.forEach((order) => {
-        const quantity = partyQuantities[order.partyName] || 0; // Get quantity or 0
+
+      orderIdentifiers.forEach((orderIdentifier) => {
+        const quantity = orderQuantities[orderIdentifier] || 0; // Get quantity or 0
         row.push(String(quantity)); // Fill in quantities or 0 as string
         totalQuantity += quantity; // Accumulate total quantity
       });
+
       row.push(String(totalQuantity)); // Add total quantity to the row
 
       // Check if the total is not zero and if the shadeName is a digit
