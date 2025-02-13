@@ -27,6 +27,7 @@ import InputWithAutocomplete from "@/components/custom/InputWithAutocomplete";
 // Add this import at the top of your file
 import { useUser } from "@clerk/clerk-react"; // Import useAuth
 import NewPartyDrawer from "@/components/custom/NewPartyDrawer";
+import { AddNewDesign } from "@/components/custom/AddNewDesign";
 
 interface DesignEntry {
   id: string;
@@ -92,6 +93,7 @@ export default function OrderForm() {
   const [priceList, setPriceList] = useState<PriceEntry[]>([]);
   const [isOpen, setIsOpen] = useState(false); // State to control drawer visibility
   const [newCustomShade, setNewCustomShade] = useState<string>("");
+  const [isAddDesignOpen, setIsAddDesignOpen] = useState(false);
 
   const fetchAllOptions = async () => {
     await Promise.all([
@@ -238,28 +240,6 @@ export default function OrderForm() {
       month: "long",
       year: "numeric",
     });
-  };
-
-  const handleAddDesign = async (newDesign: string) => {
-    if (newDesign.trim()) {
-      const { data, error } = await supabase
-        .from("designs")
-        .insert({ title: newDesign.trim().toUpperCase() }) // Convert to uppercase
-        .select();
-      if (error) {
-        toast({
-          title: "Error",
-          description: "Failed to add design",
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Success",
-          description: `Design "${data[0].title}" added successfully`,
-        });
-        fetchDesigns();
-      }
-    }
   };
 
   const handleDesignSelect = (design: string) => {
@@ -658,11 +638,7 @@ export default function OrderForm() {
                   </datalist>
                 </div>
                 {currentEntry && !designs.includes(currentEntry.design) && (
-                  <Button
-                    onClick={() =>
-                      handleAddDesign(currentEntry.design.toUpperCase())
-                    }
-                  >
+                  <Button onClick={() => setIsAddDesignOpen(true)}>
                     Add Design
                   </Button>
                 )}
@@ -827,6 +803,18 @@ export default function OrderForm() {
             </DialogContent>
           </Dialog>
         </div>
+
+        <AddNewDesign
+          isOpen={isAddDesignOpen}
+          onClose={() => setIsAddDesignOpen(false)}
+          onSuccess={() => {
+            fetchDesigns();
+            if (currentEntry) {
+              handleDesignSelect(currentEntry.design);
+            }
+          }}
+          designs={designs}
+        />
 
         {designEntries.length > 0 && (
           <div>

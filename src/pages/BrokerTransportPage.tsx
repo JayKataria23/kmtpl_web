@@ -9,6 +9,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { AddNewDesign } from "@/components/custom/AddNewDesign";
 
 interface Profile {
   id: number;
@@ -26,7 +27,7 @@ export default function BrokerTransportPage() {
   const [designs, setDesigns] = useState<Design[]>([]);
   const [newBroker, setNewBroker] = useState("");
   const [newTransport, setNewTransport] = useState("");
-  const [newDesign, setNewDesign] = useState("");
+  const [isAddDesignOpen, setIsAddDesignOpen] = useState(false);
   const [remarkOptions, setRemarkOptions] = useState<string[]>([]);
   const [newRemark, setNewRemark] = useState("");
   const navigate = useNavigate();
@@ -78,6 +79,7 @@ export default function BrokerTransportPage() {
       setDesigns(data);
     }
   };
+
   const fetchRemarkOptions = async () => {
     try {
       const { data, error } = await supabase.from("REMARKS").select("content");
@@ -94,7 +96,7 @@ export default function BrokerTransportPage() {
     if (newBroker.trim()) {
       const { data, error } = await supabase
         .from("brokers")
-        .insert({ name: newBroker.trim().toUpperCase() }) // Convert to uppercase
+        .insert({ name: newBroker.trim().toUpperCase() })
         .select();
       if (error) {
         toast({
@@ -117,7 +119,7 @@ export default function BrokerTransportPage() {
     if (newTransport.trim()) {
       const { data, error } = await supabase
         .from("transport_profiles")
-        .insert({ name: newTransport.trim().toUpperCase() }) // Convert to uppercase
+        .insert({ name: newTransport.trim().toUpperCase() })
         .select();
       if (error) {
         toast({
@@ -132,29 +134,6 @@ export default function BrokerTransportPage() {
         });
         setNewTransport("");
         fetchTransports();
-      }
-    }
-  };
-
-  const addDesign = async () => {
-    if (newDesign.trim()) {
-      const { data, error } = await supabase
-        .from("designs")
-        .insert({ title: newDesign.trim().toUpperCase() }) // Convert to uppercase
-        .select();
-      if (error) {
-        toast({
-          title: "Error",
-          description: "Failed to add design",
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Success",
-          description: `Design "${data[0].title}" added successfully`,
-        });
-        setNewDesign("");
-        fetchDesigns();
       }
     }
   };
@@ -258,7 +237,7 @@ export default function BrokerTransportPage() {
     if (title.trim()) {
       const { error } = await supabase
         .from("designs")
-        .update({ title: title.trim().toUpperCase() }) // Convert to uppercase
+        .update({ title: title.trim().toUpperCase() })
         .eq("id", id);
       if (error) {
         toast({
@@ -271,7 +250,7 @@ export default function BrokerTransportPage() {
           title: "Success",
           description: `Design updated successfully`,
         });
-        fetchDesigns(); // Refresh the designs list
+        fetchDesigns();
       }
     }
   };
@@ -365,13 +344,9 @@ export default function BrokerTransportPage() {
           <div className="space-y-2 mb-4">
             <Label htmlFor="newDesign">Add New Design</Label>
             <div className="flex space-x-2">
-              <Input
-                id="newDesign"
-                value={newDesign}
-                onChange={(e) => setNewDesign(e.target.value)}
-                placeholder="Enter design title"
-              />
-              <Button onClick={addDesign}>Add</Button>
+              <Button onClick={() => setIsAddDesignOpen(true)}>
+                Add Design
+              </Button>
             </div>
           </div>
           <Accordion type="single" collapsible className="w-full">
@@ -486,6 +461,12 @@ export default function BrokerTransportPage() {
           </Accordion>
         </div>
       </div>
+      <AddNewDesign
+        isOpen={isAddDesignOpen}
+        onClose={() => setIsAddDesignOpen(false)}
+        onSuccess={fetchDesigns}
+        designs={designs.map((d) => d.title)}
+      />
       <Toaster />
     </div>
   );
