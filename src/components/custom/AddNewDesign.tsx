@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import supabase from "@/utils/supabase";
@@ -8,6 +8,7 @@ interface AddNewDesignProps {
   onClose: () => void;
   onSuccess?: () => void;
   designs: string[];
+  val?: string | null;
 }
 
 export function AddNewDesign({
@@ -15,8 +16,9 @@ export function AddNewDesign({
   onClose,
   onSuccess,
   designs,
+  val,
 }: AddNewDesignProps) {
-  const [newDesignInput, setNewDesignInput] = useState<string>("");
+  const [newDesignInput, setNewDesignInput] = useState<string>(val ?? "");
 
   const handleAddDesign = async (newDesign: string) => {
     if (newDesign.trim()) {
@@ -39,6 +41,45 @@ export function AddNewDesign({
           if (!confirmAdd) {
             return;
           }
+        }
+      }
+      // Check for similar designs using string similarity
+      const similarDesigns = designs.filter(design => {
+        // Convert both strings to uppercase for case-insensitive comparison
+        const str1 = design.toUpperCase();
+        const str2 = newDesign.trim().toUpperCase();
+        
+        // Calculate Levenshtein distance
+        const m = str1.length;
+        const n = str2.length;
+        const dp: number[][] = Array(m + 1).fill(null).map(() => Array(n + 1).fill(0));
+        
+        for (let i = 0; i <= m; i++) dp[i][0] = i;
+        for (let j = 0; j <= n; j++) dp[0][j] = j;
+        
+        for (let i = 1; i <= m; i++) {
+          for (let j = 1; j <= n; j++) {
+            if (str1[i-1] === str2[j-1]) {
+              dp[i][j] = dp[i-1][j-1];
+            } else {
+              dp[i][j] = 1 + Math.min(dp[i-1][j], dp[i-1][j-1], dp[i][j-1]);
+            }
+          }
+        }
+
+        // Calculate similarity percentage
+        const maxLength = Math.max(m, n);
+        const similarity = ((maxLength - dp[m][n]) / maxLength) * 100;
+        
+        return similarity > 80 && design !== newDesign;
+      });
+
+      if (similarDesigns.length > 0) {
+        const confirmAdd = window.confirm(
+          `Similar designs found (>80% match):\n${similarDesigns.join(", ")}\n\nDo you want to add this design anyway?`
+        );
+        if (!confirmAdd) {
+          return;
         }
       }
 

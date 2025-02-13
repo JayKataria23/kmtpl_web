@@ -810,6 +810,7 @@ export default function OrderForm() {
         </div>
 
         <AddNewDesign
+          val={currentEntry?.design || null}
           isOpen={isAddDesignOpen}
           onClose={() => setIsAddDesignOpen(false)}
           onSuccess={() => {
