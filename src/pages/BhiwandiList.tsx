@@ -14,6 +14,7 @@ import { Toaster } from "@/components/ui";
 interface BhiwandiEntry {
   bhiwandi_date: string; // Date from the database
   count: number; // Count of entries for that date
+  comment?: string; // Add comment field
 }
 
 interface Entry {
@@ -70,14 +71,19 @@ const formatDate = (dateString: string): string => {
 
 const BhiwandiList = () => {
   const [bhiwandiEntries, setBhiwandiEntries] = useState<BhiwandiEntry[]>([]); // State to hold Bhiwandi entries
-  const [selectedEntries, setSelectedEntries] = useState<Set<string>>(new Set()); // New state for selected entries
+  const [selectedEntries, setSelectedEntries] = useState<Set<string>>(
+    new Set()
+  ); // New state for selected entries
   const [designEntries, setDesignEntries] = useState<GroupedOrder[]>([]); // State to hold design entries for the selected date
   const navigate = useNavigate();
   const { toast } = useToast();
   const [openAccordion, setOpenAccordion] = useState<string | null>(null);
+  const [comments, setComments] = useState<{ [key: string]: string }>({});
+  const [editingComment, setEditingComment] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchBhiwandiEntries(); // Fetch Bhiwandi entries on component mount
+    fetchBhiwandiEntries();
+    fetchComments();
   }, []);
 
   const fetchBhiwandiEntries = async () => {
@@ -96,6 +102,28 @@ const BhiwandiList = () => {
       setBhiwandiEntries(formattedData); // Set the fetched data to state
     } catch (error) {
       console.error("Error fetching Bhiwandi entries:", error);
+    }
+  };
+
+  const fetchComments = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("bhiwandi_comments")
+        .select("bhiwandi_date, comment");
+
+      if (error) throw error;
+
+      const commentMap = (data || []).reduce(
+        (acc: { [key: string]: string }, item) => {
+          acc[item.bhiwandi_date] = item.comment || "";
+          return acc;
+        },
+        {}
+      );
+
+      setComments(commentMap);
+    } catch (error) {
+      console.error("Error fetching comments:", error);
     }
   };
 
@@ -197,7 +225,8 @@ const BhiwandiList = () => {
     setSelectedEntries(updatedSelection); // Update state
   };
 
-  const combineBhiwandiLists = async () => { // Make the function async
+  const combineBhiwandiLists = async () => {
+    // Make the function async
     if (selectedEntries.size < 2) {
       toast({
         title: "Error",
@@ -206,29 +235,67 @@ const BhiwandiList = () => {
       });
       return;
     }
-    
-    const today = new Date(new Date().getTime() + 5.5 * 60 * 60 * 1000).toISOString(); 
-    
-      const { error } = await supabase
-        .from("design_entries")
-        .update({ bhiwandi_date: today }) 
-        .in("bhiwandi_date", Array.from(selectedEntries)); // Update only for selected entries
-    
 
-      if (error) {
-        toast({
-          title: "Error",
-          description: `Failed to combine Bhiwandi entries: ${
-            error instanceof Error ? error.message : "Unknown error"
-          }`,
-          variant: "destructive",
-        });
-        return; // Exit the function if there's an error
-      }
-    
+    const today = new Date(
+      new Date().getTime() + 5.5 * 60 * 60 * 1000
+    ).toISOString();
+
+    const { error } = await supabase
+      .from("design_entries")
+      .update({ bhiwandi_date: today })
+      .in("bhiwandi_date", Array.from(selectedEntries)); // Update only for selected entries
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: `Failed to combine Bhiwandi entries: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`,
+        variant: "destructive",
+      });
+      return; // Exit the function if there's an error
+    }
 
     // Refresh the page if there are no errors
     window.location.reload(); // Refresh the page
+  };
+
+  const handleCommentUpdate = async (
+    bhiwandi_date: string,
+    comment: string
+  ) => {
+    try {
+      const { error } = await supabase.from("bhiwandi_comments").upsert(
+        {
+          bhiwandi_date,
+          comment,
+        },
+        {
+          onConflict: "bhiwandi_date",
+        }
+      );
+
+      if (error) throw error;
+
+      setComments((prev) => ({
+        ...prev,
+        [bhiwandi_date]: comment,
+      }));
+      setEditingComment(null);
+
+      toast({
+        title: "Success!",
+        description: "Comment updated successfully",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: `Failed to update comment: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`,
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -262,19 +329,62 @@ const BhiwandiList = () => {
                   fetchDesignEntries(entry.bhiwandi_date);
                 }}
               >
-                <div>
-                  <input
-                    type="checkbox"
-                    checked={selectedEntries.has(entry.bhiwandi_date)}
-                    onChange={() => handleCheckboxChange(entry.bhiwandi_date)}
-                    className="mr-2"
-                  />
-                  <span className="text-lg font-semibold">
-                    {formatDate(entry.bhiwandi_date)}
-                  </span>
-                  <span className="text-sm text-gray-500 ml-2">
-                    Count: {entry.count}
-                  </span>
+                <div className="flex items-center justify-between w-full">
+                  <div>
+                    <input
+                      type="checkbox"
+                      checked={selectedEntries.has(entry.bhiwandi_date)}
+                      onChange={() => handleCheckboxChange(entry.bhiwandi_date)}
+                      className="mr-2"
+                    />
+                    <span className="text-lg font-semibold">
+                      {formatDate(entry.bhiwandi_date)}
+                    </span>
+                    <span className="text-sm text-gray-500 ml-2">
+                      Count: {entry.count}
+                    </span>
+                  </div>
+                  <div className="ml-4 flex items-center">
+                    {editingComment === entry.bhiwandi_date ? (
+                      <input
+                        type="text"
+                        value={comments[entry.bhiwandi_date] || ""}
+                        onChange={(e) => {
+                          setComments((prev) => ({
+                            ...prev,
+                            [entry.bhiwandi_date]: e.target.value,
+                          }));
+                        }}
+                        onBlur={() =>
+                          handleCommentUpdate(
+                            entry.bhiwandi_date,
+                            comments[entry.bhiwandi_date] || ""
+                          )
+                        }
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            handleCommentUpdate(
+                              entry.bhiwandi_date,
+                              comments[entry.bhiwandi_date] || ""
+                            );
+                          }
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                        className="px-2 py-1 border rounded"
+                        placeholder="Add comment..."
+                      />
+                    ) : (
+                      <span
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingComment(entry.bhiwandi_date);
+                        }}
+                        className="text-sm text-gray-600 cursor-pointer hover:text-gray-900"
+                      >
+                        {comments[entry.bhiwandi_date] || "Add comment..."}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </AccordionTrigger>
               <AccordionContent className="p-4 border rounded mt-2">
