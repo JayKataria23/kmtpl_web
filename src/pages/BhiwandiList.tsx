@@ -371,7 +371,7 @@ const BhiwandiList = () => {
                         }}
                         onClick={(e) => e.stopPropagation()}
                         className="px-2 py-1 border rounded"
-                        placeholder="Add comment..."
+                        placeholder="NA"
                       />
                     ) : (
                       <span
@@ -381,7 +381,7 @@ const BhiwandiList = () => {
                         }}
                         className="text-sm text-gray-600 cursor-pointer hover:text-gray-900"
                       >
-                        {comments[entry.bhiwandi_date] || "Add comment..."}
+                        {comments[entry.bhiwandi_date] || "NA"}
                       </span>
                     )}
                   </div>
