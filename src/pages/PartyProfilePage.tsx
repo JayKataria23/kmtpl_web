@@ -24,6 +24,7 @@ interface PartyProfile {
   address_line_1: string | null;
   address_line_2: string | null;
   address_line_3: string | null;
+  address_line_4: string | null;
   contact_number: string | null;
   broker_id: number | null;
   transport_id: number | null;
@@ -53,6 +54,7 @@ export default function PartyProfilePage() {
     address_line_1: null,
     address_line_2: null,
     address_line_3: null,
+    address_line_4: null,
     contact_number: null,
     broker_id: null,
     transport_id: null,
@@ -107,6 +109,7 @@ export default function PartyProfilePage() {
         address_line_1: null,
         address_line_2: null,
         address_line_3: null,
+        address_line_4: null,
         contact_number: null,
         broker_id: null,
         transport_id: null,
@@ -267,26 +270,27 @@ export default function PartyProfilePage() {
               )
             )}
 
-            {["address_line_1", "address_line_2", "address_line_3"].map(
-              (field) => (
-                <div key={field} className="space-y-2">
-                  <Label htmlFor={field}>
-                    {field
-                      .split("_")
-                      .map(
-                        (word) => word.charAt(0).toUpperCase() + word.slice(1)
-                      )
-                      .join(" ")}
-                  </Label>
-                  <Input
-                    id={field}
-                    name={field}
-                    value={currentParty[field as keyof PartyProfile] || ""}
-                    onChange={handleInputChange}
-                  />
-                </div>
-              )
-            )}
+            {[
+              "address_line_1",
+              "address_line_2",
+              "address_line_3",
+              "address_line_4",
+            ].map((field) => (
+              <div key={field} className="space-y-2">
+                <Label htmlFor={field}>
+                  {field
+                    .split("_")
+                    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+                    .join(" ")}
+                </Label>
+                <Input
+                  id={field}
+                  name={field}
+                  value={currentParty[field as keyof PartyProfile] || ""}
+                  onChange={handleInputChange}
+                />
+              </div>
+            ))}
 
             {[
               { name: "broker_id", options: brokers, label: "Broker" },
@@ -359,10 +363,17 @@ export default function PartyProfilePage() {
                       <br />
                     </span>
                   )}
-                  {party.address_line_3 && <span>{party.address_line_3}</span>}
+                  {party.address_line_3 && (
+                    <span>
+                      {party.address_line_3}
+                      <br />
+                    </span>
+                  )}
+                  {party.address_line_4 && <span>{party.address_line_4}</span>}
                   {!party.address_line_1 &&
                     !party.address_line_2 &&
                     !party.address_line_3 &&
+                    !party.address_line_4 &&
                     "N/A"}
                 </div>
                 <p className="text-sm text-gray-500">
@@ -420,6 +431,7 @@ export default function PartyProfilePage() {
                             party.address_line_1,
                             party.address_line_2,
                             party.address_line_3,
+                            party.address_line_4,
                           ]
                             .filter(Boolean)
                             .join("<br>")}
