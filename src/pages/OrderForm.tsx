@@ -638,7 +638,12 @@ export default function OrderForm() {
                   </datalist>
                 </div>
                 {currentEntry && !designs.includes(currentEntry.design) && (
-                  <Button onClick={() => setIsAddDesignOpen(true)}>
+                  <Button
+                    onClick={() => {
+                      setIsAddDesignOpen(true);
+                      setIsDialogOpen(false);
+                    }}
+                  >
                     Add Design
                   </Button>
                 )}
