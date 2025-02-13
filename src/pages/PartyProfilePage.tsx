@@ -25,6 +25,7 @@ interface PartyProfile {
   address_line_2: string | null;
   address_line_3: string | null;
   address_line_4: string | null;
+  address_line_5: string | null;
   contact_number: string | null;
   broker_id: number | null;
   transport_id: number | null;
@@ -55,6 +56,7 @@ export default function PartyProfilePage() {
     address_line_2: null,
     address_line_3: null,
     address_line_4: null,
+    address_line_5: null,
     contact_number: null,
     broker_id: null,
     transport_id: null,
@@ -110,6 +112,7 @@ export default function PartyProfilePage() {
         address_line_2: null,
         address_line_3: null,
         address_line_4: null,
+        address_line_5: null,
         contact_number: null,
         broker_id: null,
         transport_id: null,
@@ -275,6 +278,7 @@ export default function PartyProfilePage() {
               "address_line_2",
               "address_line_3",
               "address_line_4",
+              "address_line_5",
             ].map((field) => (
               <div key={field} className="space-y-2">
                 <Label htmlFor={field}>
@@ -369,11 +373,18 @@ export default function PartyProfilePage() {
                       <br />
                     </span>
                   )}
-                  {party.address_line_4 && <span>{party.address_line_4}</span>}
+                  {party.address_line_4 && (
+                    <span>
+                      {party.address_line_4}
+                      <br />
+                    </span>
+                  )}
+                  {party.address_line_5 && <span>{party.address_line_5}</span>}
                   {!party.address_line_1 &&
                     !party.address_line_2 &&
                     !party.address_line_3 &&
                     !party.address_line_4 &&
+                    !party.address_line_5 &&
                     "N/A"}
                 </div>
                 <p className="text-sm text-gray-500">
@@ -432,6 +443,7 @@ export default function PartyProfilePage() {
                             party.address_line_2,
                             party.address_line_3,
                             party.address_line_4,
+                            party.address_line_5,
                           ]
                             .filter(Boolean)
                             .join("<br>")}
