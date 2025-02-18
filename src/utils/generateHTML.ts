@@ -27,15 +27,21 @@ function splitOrder(order: Order): Order[] {
   for (const design of order.designs) {
     // Calculate the number of shade groups
     const shadeGroups = new Map<string, number>();
+    let nonZeroShadesCount = 0;
     for (const shade of design.shades) {
       const value = shade[Object.keys(shade)[0]];
       if (value) {
         shadeGroups.set(value, (shadeGroups.get(value) || 0) + 1);
+        nonZeroShadesCount++;
       }
     }
-    const groupCount = shadeGroups.size;
     const remarkRows = design.remark ? 0.5 : 0;
-    const designRows = groupCount + remarkRows;
+    let designRows = remarkRows;
+
+    // If a design has more than 8 non-zero shades, give it more lines
+    if (nonZeroShadesCount > 8) {
+      designRows += Math.ceil((nonZeroShadesCount - 8) / 4);
+    }
 
     if (currentRows + designRows > 18) {
       parts.push(currentPart);
