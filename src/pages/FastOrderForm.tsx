@@ -233,8 +233,11 @@ function FastOrderForm() {
         id: Math.random().toString(36).substr(2, 9),
         design: currentSelectedDesign || "",
         price:
-          priceList.find((p) => p.design === currentSelectedDesign)?.price ||
-          "0",
+          priceList.find(
+        (price) =>
+          price.design.split("-")[0] ===
+          currentSelectedDesign?.split("-")[0]
+          )?.price || "0",
         remark: "",
         shades: currentJSON,
       };

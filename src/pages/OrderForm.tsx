@@ -651,24 +651,28 @@ export default function OrderForm() {
                   <>
                     <div className="grid grid-cols-4 items-center gap-4">
                       <Label htmlFor="price" className="text-right">
-                        Price
+                      Price
                       </Label>
                       <Input
-                        id="price"
-                        value={currentEntry.price}
-                        onChange={(e) => handlePriceChange(e.target.value)}
-                        className="col-span-3"
-                        placeholder={
+                      id="price"
+                      value={currentEntry.price}
+                      onChange={(e) => handlePriceChange(e.target.value)}
+                      className="col-span-3"
+                      placeholder={
+                        priceList.find(
+                        (price) =>
+                          price.design.split("-")[0] ===
+                          currentEntry.design.split("-")[0]
+                        )?.price
+                        ? "Old Price " +
                           priceList.find(
-                            (price) => price.design === currentEntry.design
+                          (price) =>
+                            price.design.split("-")[0] ===
+                            currentEntry.design.split("-")[0]
                           )?.price
-                            ? "Old Price " +
-                              priceList.find(
-                                (price) => price.design === currentEntry.design
-                              )?.price
-                            : "Enter Price"
-                        }
-                        type="number"
+                        : "Enter Price"
+                      }
+                      type="number"
                       />
                     </div>
                     <div className="grid grid-cols-4 items-center gap-4">
