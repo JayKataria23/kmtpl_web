@@ -311,6 +311,7 @@ function FastOrderForm() {
     }
 
     try {
+      generateUniqueOrderNo();
       // Insert the order
       const { data: orderData, error: orderError } = await supabase
         .from("orders")
