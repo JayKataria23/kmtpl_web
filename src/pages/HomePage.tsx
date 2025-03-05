@@ -54,6 +54,13 @@ export default function HomePage() {
         <br />
         <Button
           className="w-64 text-lg h-12"
+          onClick={() => navigate("/party-dispatch-list")}
+        >
+          Party Dispatch List
+        </Button>
+        <br />
+        <Button
+          className="w-64 text-lg h-12"
           onClick={() => navigate("/dispatch-list")}
         >
           Dispatch List

@@ -25,6 +25,7 @@ import ChallanView from "./pages/ChallanView";
 import ChallanList from "./pages/ChallanList";
 import EditChallan from "./pages/EditChallan";
 import FastOrderForm from "./pages/FastOrderForm";
+import PartyDispatchList from "./pages/PartyDispatchList";
 
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
@@ -121,6 +122,14 @@ createRoot(document.getElementById("root")!).render(
             element={
               <ProtectedRoute>
                 <DispatchList />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/party-dispatch-list" // Add the new route
+            element={
+              <ProtectedRoute>
+                <PartyDispatchList />
               </ProtectedRoute>
             }
           />
