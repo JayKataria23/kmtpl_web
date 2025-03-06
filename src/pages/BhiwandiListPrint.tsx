@@ -2,7 +2,7 @@ import { useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { FileText, Share2 } from "lucide-react";
+import { FileText, Share2, Printer } from "lucide-react";
 import supabase from "@/utils/supabase";
 import html2pdf from "html2pdf.js";
 
@@ -44,24 +44,25 @@ function BhiwandiListPrint() {
   const { date } = useParams<{ date: string }>();
   const [designEntries, setDesignEntries] = useState<GroupedOrder[]>([]);
   const [generatedHtml, setGeneratedHtml] = useState<string | null>(null);
+  const [printMode, setPrintMode] = useState<"compact" | "standard">("compact");
 
   const formatDate = (dateString: string): string => {
     const date = new Date(dateString.substring(1));
     const optionsDate: Intl.DateTimeFormatOptions = {
       day: "numeric",
-      month: "long", // Change month to 'long'
+      month: "long",
       year: "numeric",
     };
     const optionsTime: Intl.DateTimeFormatOptions = {
       hour: "numeric",
       minute: "numeric",
-      hour12: false, // Set hour12 to false for 24-hour format
+      hour12: false,
     };
 
-    const formattedDate = date.toLocaleDateString("en-US", optionsDate); // Format date
-    const formattedTime = date.toLocaleTimeString("en-US", optionsTime); // Format time
+    const formattedDate = date.toLocaleDateString("en-US", optionsDate);
+    const formattedTime = date.toLocaleTimeString("en-US", optionsTime);
 
-    return `${formattedDate} ${formattedTime}`; // Return combined formatted date and time
+    return `${formattedDate} ${formattedTime}`;
   };
 
   useEffect(() => {
@@ -73,96 +74,186 @@ function BhiwandiListPrint() {
         );
 
         if (error) throw error;
-
-        // Group the entries by order_id
         const groupedEntries = groupByOrderId(data);
-
         setDesignEntries(groupedEntries);
       } catch (error) {
         console.error("Error fetching design entries:", error);
       }
     };
-    fetchDesignEntries(date as string); // Ensure fetchDesignEntries is defined in the scope
-  }, [date]); // Added fetchDesignEntries to the dependency array
+    fetchDesignEntries(date as string);
+  }, [date]);
 
   useEffect(() => {
     const handleGenerateHTML = (designEntries: GroupedOrder[]) => {
-      let html = `<div style="display: flex; justify-content: space-between; align-items: center; padding-right: 10px;">
-        <h1 style='font-size: 24px;'>Order Preview</h1>
-        <p style='font-size: 18px; line-height: 0.5;'>${formatDate(
-          date as string
-        )}</p>
-      </div>`;
+      // CSS for the compact print layout
+      const css = `
+        @page {
+          size: A4;
+          margin: 0.5cm;
+        }
+        body {
+          font-family: Arial, sans-serif;
+          font-size: ${printMode === "compact" ? "11px" : "14px"};
+          line-height: 1.2;
+        }
+        .header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 10px;
+          border-bottom: 1px solid #ccc;
+          padding-bottom: 5px;
+        }
+        .order-container {
+          page-break-inside: avoid;
+          margin-bottom: ${printMode === "compact" ? "10px" : "15px"};
+          border: 1px solid #ccc;
+          border-radius: 3px;
+        }
+        .order-header {
+          display: grid;
+          grid-template-columns: 2fr 2fr 1fr;
+          gap: 5px;
+          padding: 5px;
+          background-color: #f0f0f0;
+          border-bottom: 1px solid #ccc;
+        }
+        .order-info {
+          font-weight: bold;
+        }
+        .order-remark {
+          color: red;
+          font-weight: bold;
+        }
+        table {
+          width: 100%;
+          border-collapse: collapse;
+        }
+        th, td {
+          border: 1px solid #ddd;
+          padding: 4px;
+          text-align: left;
+          vertical-align: top;
+        }
+        th {
+          background-color: #f0f0f0;
+          font-weight: bold;
+        }
+        .shade-grid {
+          display: grid;
+          grid-template-columns: ${
+            printMode === "compact"
+              ? "repeat(auto-fill, minmax(100px, 1fr))"
+              : "repeat(auto-fill, minmax(180px, 1fr))"
+          };
+          gap: 3px;
+        }
+        .shade-box {
+          border: 1px solid #ddd;
+          text-align: center;
+          background-color: #f9f9f9;
+          padding: 2px;
+        }
+        .shade-names {
+          border-bottom: 1px solid #ddd;
+          font-size: ${printMode === "compact" ? "10px" : "12px"};
+          word-break: break-word;
+        }
+        .shade-meters {
+          font-weight: bold;
+          font-size: ${printMode === "compact" ? "10px" : "12px"};
+        }
+      `;
 
-      // Loop through designEntries to create HTML structure
+      let html = `
+      <html>
+      <head>
+        <style>${css}</style>
+      </head>
+      <body>
+        <div class="header">
+          <h1 style="margin: 0; font-size: ${
+            printMode === "compact" ? "16px" : "20px"
+          };">Bhiwandi Dispatch List</h1>
+          <p style="margin: 0;">${formatDate(date as string)}</p>
+        </div>
+      `;
+
+      // Sort by bill_to_party
       designEntries
         .sort((a, b) => a.bill_to_party.localeCompare(b.bill_to_party))
-        .forEach((entry: GroupedOrder, entryIndex: number) => {
+        .forEach((order) => {
           html += `
-        <div style="page-break-inside:avoid; page-break-after:auto; margin-bottom: 20px; background-color: ${
-          entryIndex % 2 === 0 ? "#f9f9f9" : "#ffffff"
-        }; padding: 10px; border: 1px solid #ccc; border-radius: 5px;">
-          <div style="page-break-inside:avoid;page-break-after:auto">
-            <p style="font-size: 18px; line-height: 0.5;"><strong>Bill To:</strong> ${
-              entry.bill_to_party
-            }</p>
-            <p style="font-size: 18px; line-height: 0.5;"><strong>Ship To:</strong> ${
-              entry.ship_to_party
-            }</p>
-            <p style="font-size: 18px; line-height: 0.5;">
-            <span><strong>Order No.:</strong> ${entry.order_no}
-            </span>
-            <span><strong style="color: red; margin:5px; margin-left:40px; line-height:1">${
-              entry.order_remark
-            }</strong></span>
-            <span></p>
-            <p style="font-size: 18px; line-height: 0.5"><strong>Transport:</strong> ${
-              entry.transporter_name
-            }</p>
-          </div>
+          <div class="order-container">
+            <div class="order-header">
+              <div>
+                <div><strong>Bill To:</strong> ${order.bill_to_party}</div>
+                <div><strong>Ship To:</strong> ${order.ship_to_party}</div>
+              </div>
+              <div>
+                <div><strong>Transport:</strong> ${order.transporter_name}</div>
+                <div><strong>Broker:</strong> ${
+                  order.broker_name || "N/A"
+                }</div>
+              </div>
+              <div>
+                <div><strong>Order No:</strong> ${order.order_no}</div>
+                <div class="order-remark">${order.order_remark || ""}</div>
+              </div>
+            </div>
+            
+            <table>
+              <thead>
+                <tr>
+                  <th style="width: ${
+                    printMode === "compact" ? "18%" : "20%"
+                  };">Design</th>
+                  <th style="width: ${
+                    printMode === "compact" ? "7%" : "8%"
+                  };">Price</th>
+                  <th style="width: ${
+                    printMode === "compact" ? "12%" : "12%"
+                  };">Remark</th>
+                  <th style="width: ${
+                    printMode === "compact" ? "63%" : "60%"
+                  };">Shades</th>
+                </tr>
+              </thead>
+              <tbody>
+          `;
 
-          <table style="width: 100%; border-collapse: collapse; margin-top: 10px; page-break-inside:avoid;">
-            <thead style="break-inside:avoid;">
-              <tr style="background-color: #f0f0f0;">
-                <th style="border: 1px solid #ccc; padding-left: 8px; text-align: left; width: 22%;">Design</th>
-                <th style="border: 1px solid #ccc; padding-left: 8px; text-align: left; width: 10%;">Price</th>
-                <th style="border: 1px solid #ccc; padding-left: 8px; text-align: left; width: 13%;">Remark</th>
-                <th style="border: 1px solid #ccc; padding-left: 8px; text-align: left; width: 55%;">Shades</th>
-              </tr>
-            </thead>
-            <tbody style="break-inside:avoid;">`;
-
-          // Loop through each design entry
-          entry.entries.forEach((order) => {
+          order.entries.forEach((entry) => {
             html += `
-            <tr style="page-break-inside:avoid;">
-              <td style="border: 1px solid #ccc; padding-left: 8px; width: 22%;">${
-                order.design
-              }</td>
-              <td style="border: 1px solid #ccc; padding-left: 8px; width: 10%;">${
-                order.price
-              }</td>
-              <td style="border: 1px solid #ccc; padding-left: 8px; width: 13%;">${
-                order.remark || "N/A"
-              }</td>
-              <td style="border: 1px solid #ccc; padding-left: 8px; width: 55%; ">
-              <div style="width: 100%; text-align: center; display: flex; flex-direction: row; flex-wrap: wrap;">
-              ${formatShades(order.shades)}
-              </div>  
-              </td>
-            </tr>`;
+                <tr>
+                  <td>${entry.design}</td>
+                  <td>${entry.price}</td>
+                  <td>${entry.remark || "N/A"}</td>
+                  <td>
+                    <div class="shade-grid">
+                      ${formatShadesCompact(entry.shades)}
+                    </div>
+                  </td>
+                </tr>
+            `;
           });
 
           html += `
-            </tbody>
-          </table>
-        </div>`;
+              </tbody>
+            </table>
+          </div>
+          `;
         });
+
+      html += `
+        </body>
+        </html>
+      `;
 
       return html;
     };
+
     setGeneratedHtml(handleGenerateHTML(designEntries));
-  }, [designEntries, date]);
+  }, [designEntries, date, printMode]);
 
   function groupByOrderId(entries: Entry[]): GroupedOrder[] {
     const grouped = new Map<string, GroupedOrder>();
@@ -183,9 +274,7 @@ function BhiwandiListPrint() {
         order_remark,
       } = entry;
 
-      // Check if the order_id already exists in the map
       if (!grouped.has(order_id)) {
-        // Create a new GroupedOrder if it doesn't exist
         grouped.set(order_id, {
           order_id,
           order_no,
@@ -194,20 +283,18 @@ function BhiwandiListPrint() {
           ship_to_party,
           broker_name,
           transporter_name,
-          entries: [], // Initialize with an empty entries array
+          entries: [],
         });
       }
 
-      // Get the existing group and push the design entry into it
       const group = grouped.get(order_id)!;
       group.entries.push({ design, price, remark, shades, design_entry_id });
     });
 
-    return Array.from(grouped.values()); // Return the grouped orders as an array
+    return Array.from(grouped.values());
   }
 
-  const formatShades = (shades: { [key: string]: string }[]): string => {
-    // Group shades by their values
+  const formatShadesCompact = (shades: { [key: string]: string }[]): string => {
     const formattedShades: {
       meters: string;
       shades: number[];
@@ -215,22 +302,21 @@ function BhiwandiListPrint() {
     }[] = [];
 
     shades.forEach((shadeObj, index) => {
-      const shadeName = Object.keys(shadeObj)[0]; // Get the shade name
-      const shadeValue = shadeObj[shadeName]; // Get the shade value
+      const shadeName = Object.keys(shadeObj)[0];
+      const shadeValue = shadeObj[shadeName];
 
       if (shadeValue) {
-        // Only process non-empty values
         const existingGroup = formattedShades.find(
           (group) => group.meters === shadeValue
         );
         if (existingGroup) {
-          existingGroup.shades.push(index + 1); // Add the index to the existing group
-          existingGroup.keys.push(shadeName); // Add the key to the existing group
+          existingGroup.shades.push(index + 1);
+          existingGroup.keys.push(shadeName);
         } else {
           formattedShades.push({
             meters: shadeValue,
             shades: [index + 1],
-            keys: [shadeName], // Create a new group with the key
+            keys: [shadeName],
           });
         }
       }
@@ -238,18 +324,18 @@ function BhiwandiListPrint() {
 
     return formattedShades
       .map((group) => {
-        return `<div>
-          <div style='border-bottom: 1px solid #000;'>${group.keys.join(
-            " - "
-          )}</div>
-          <div style='border-top: 1px solid #000;'>${group.meters} mtr</div>
-        </div>`;
+        return `
+          <div class="shade-box">
+            <div class="shade-names">${group.keys.join(" - ")}</div>
+            <div class="shade-meters">${group.meters} mtr</div>
+          </div>
+        `;
       })
-      .join("<div style='padding-left: 20px;'></div>");
+      .join("");
   };
 
   const handleShare = () => {
-    const currentUrl = window.location.href; // Get the current page URL
+    const currentUrl = window.location.href;
     const message = `Bhiwandi List ${formatDate(
       date as string
     )}: ${currentUrl}`;
@@ -257,47 +343,79 @@ function BhiwandiListPrint() {
     window.open(whatsappUrl, "_blank");
   };
 
+  const handlePrint = () => {
+    const iframe = document.querySelector("iframe");
+    if (iframe) {
+      iframe.contentWindow?.print();
+    }
+  };
+
+  const handleExportPDF = async () => {
+    if (generatedHtml && date) {
+      const options = {
+        margin: 5,
+        filename: `Bhiwandi List ${formatDate(date as string)}.pdf`,
+        image: { type: "jpeg", quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+      };
+
+      html2pdf().set(options).from(generatedHtml).save();
+    }
+  };
+
   return (
     <div className="p-4">
       <Card className="max-w-md mx-auto shadow-lg p-6">
         <h1 className="text-2xl font-bold mb-4">Bhiwandi List Print</h1>
-        <div className="flex justify-between mb-4">
+
+        <div className="mb-4">
+          <div className="flex items-center justify-between mb-2">
+            <label className="text-sm font-medium">Layout Mode:</label>
+            <div className="flex space-x-2">
+              <Button
+                variant={printMode === "compact" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setPrintMode("compact")}
+              >
+                Compact
+              </Button>
+              <Button
+                variant={printMode === "standard" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setPrintMode("standard")}
+              >
+                Standard
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-3 gap-2">
           <Button
-            onClick={() => {
-              const iframe = document.querySelector("iframe");
-              if (iframe) {
-                iframe.contentWindow?.print();
-              }
-            }}
-            className="flex-1 mr-2"
+            onClick={handlePrint}
+            className="flex items-center justify-center"
           >
+            <Printer className="mr-2 h-4 w-4" />
             Print
           </Button>
-          <Button onClick={handleShare} className="flex-1 mx-2">
+          <Button
+            onClick={handleShare}
+            className="flex items-center justify-center"
+          >
             <Share2 className="mr-2 h-4 w-4" />
             Share
           </Button>
           <Button
-            onClick={async () => {
-              if (generatedHtml && date) {
-                html2pdf(
-                  generatedHtml.replace(
-                    /font-size: 18px; line-height: 0.5;/g,
-                    "font-size: 18px; line-height: 1.5;"
-                  ),
-                  {
-                    margin: 5,
-                    filename: `Bhiwandi List ${formatDate(date as string)}.pdf`,
-                  }
-                );
-              }
-            }}
-            className="flex items-center ml-2"
+            onClick={handleExportPDF}
+            className="flex items-center justify-center"
           >
-            <FileText className="mr-2 h-4 w-4" /> PDF
+            <FileText className="mr-2 h-4 w-4" />
+            PDF
           </Button>
         </div>
       </Card>
+
       {generatedHtml && (
         <iframe
           srcDoc={generatedHtml}
@@ -308,7 +426,7 @@ function BhiwandiListPrint() {
             border: "1px solid #ccc",
             marginTop: "20px",
             display: "flex",
-            zoom: 0.5,
+            zoom: 0.75,
           }}
         />
       )}
