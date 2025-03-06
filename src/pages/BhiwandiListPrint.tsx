@@ -87,9 +87,9 @@ function BhiwandiListPrint() {
 
   useEffect(() => {
     // Set default font size based on print mode
-    if (printMode === "compact" && fontSize > 12) {
-      setFontSize(11);
-    } else if (printMode === "standard" && fontSize < 12) {
+    if (printMode === "compact") {
+      setFontSize(12);
+    } else if (printMode === "standard") {
       setFontSize(14);
     }
   }, [printMode]);
