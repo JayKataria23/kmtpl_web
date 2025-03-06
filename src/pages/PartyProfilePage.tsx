@@ -15,6 +15,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import supabase from "@/utils/supabase";
+import html2pdf from "html2pdf.js";
 
 interface PartyProfile {
   id?: number;
@@ -91,7 +92,7 @@ export default function PartyProfilePage() {
     setCurrentParty((prev) => ({
       ...prev,
       [name]: value ? value : null,
-    })); // Convert to uppercase
+    }));
   };
 
   const handleOpenModal = (party?: PartyProfile) => {
@@ -226,6 +227,111 @@ export default function PartyProfilePage() {
           .startsWith(searchQuery.toLowerCase()) // Filter by search query only
     );
   }, [parties, searchQuery]);
+
+  const handlePrint = (party: PartyProfile) => {
+    // Check if we're on a mobile device
+    const isMobile =
+      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+        navigator.userAgent
+      );
+
+    if (isMobile) {
+      // Create envelope HTML content
+      const envelopeHTML = `
+        <div style="
+          width: 220mm;
+          height: 110mm;
+          padding: 10mm 0 0 50%;
+          box-sizing: border-box;
+          font-family: Arial, sans-serif;
+        ">
+          <div style="font-size: 22px; font-weight: bold; line-height: 1; margin-bottom: 6px;">
+            ${party.name}
+          </div>
+          ${[
+            party.address_line_1,
+            party.address_line_2,
+            party.address_line_3,
+            party.address_line_4,
+            party.address_line_5,
+          ]
+            .filter(Boolean)
+            .map(
+              (line) =>
+                `<div style="font-size: 18px; line-height: 1.2; margin: 0;">${line}</div>`
+            )
+            .join("")}
+          ${
+            party.contact_number
+              ? `<div style="font-size: 18px; line-height: 1.2; margin-top: 6px;">Contact: ${party.contact_number}</div>`
+              : ""
+          }
+        </div>
+      `;
+
+      // Configure html2pdf options
+      const opt = {
+        margin: 0,
+        filename: `${party.name}-envelope.pdf`,
+        image: { type: "jpeg", quality: 0.98 },
+        html2canvas: {
+          scale: 2,
+          letterRendering: true,
+        },
+        jsPDF: {
+          unit: "mm",
+          format: [220, 110],
+          orientation: "landscape",
+        },
+      };
+
+      // Generate PDF
+      html2pdf().set(opt).from(envelopeHTML).save();
+    } else {
+      // Desktop printing - use existing functionality
+      const printContent = `
+        <style>
+          @media print {
+            @page {
+              size: 220mm 110mm; 
+            }
+            body {
+              overflow: visible;
+              padding-left:50%;
+            }
+          }
+        </style>
+        <div style="text-align: left;padding-top: 10mm; box-sizing: border-box;">
+          <p style="line-height:100%; font-size: 22px; font-weight:bold">${
+            party.name
+          }</p>
+          <p style="line-height:100%; font-size: 18px;">
+            ${[
+              party.address_line_1,
+              party.address_line_2,
+              party.address_line_3,
+              party.address_line_4,
+              party.address_line_5,
+            ]
+              .filter(Boolean)
+              .join("<br>")}
+          </p>
+          ${
+            party.contact_number
+              ? `<p style="line-height:120%; font-size: 18px;">Contact: ${party.contact_number}</p>`
+              : ""
+          }
+        </div>
+      `;
+
+      const printWindow = window.open("", "");
+      printWindow?.document.write(printContent);
+      printWindow?.document.close();
+      printWindow?.focus();
+      printWindow?.print();
+      printWindow?.close();
+    }
+  };
 
   return (
     <div className="container mx-auto mt-10 p-4">
@@ -420,48 +526,7 @@ export default function PartyProfilePage() {
                   Delete
                 </Button>
                 <Button
-                  onClick={() => {
-                    const printContent = `
-                      <style>
-                        @media print {
-                          @page {
-                            size: 220mm 110mm; 
-                          }
-                          body {
-                            overflow: visible;
-                            padding-left:50%;
-                          }
-                        }
-                      </style>
-                      <div style="text-align: left;padding-top: 10mm; box-sizing: border-box;">
-                        <p style="line-height:100%; font-size: 22px; font-weight:bold">${
-                          party.name
-                        }</p>
-                        <p style="line-height:100%; font-size: 18px;">
-                          ${[
-                            party.address_line_1,
-                            party.address_line_2,
-                            party.address_line_3,
-                            party.address_line_4,
-                            party.address_line_5,
-                          ]
-                            .filter(Boolean)
-                            .join("<br>")}
-                        </p>
-                        ${
-                          party.contact_number
-                            ? `<p style="line-height:120%; font-size: 18px;">Contact: ${party.contact_number}</p>`
-                            : ""
-                        }
-                      </div>
-                    `;
-                    const printWindow = window.open("", "");
-                    printWindow?.document.write(printContent);
-                    printWindow?.document.close();
-                    printWindow?.focus();
-                    printWindow?.print();
-                    printWindow?.close();
-                  }}
+                  onClick={() => handlePrint(party)}
                   variant="outline"
                   size="sm"
                   className="w-full"
