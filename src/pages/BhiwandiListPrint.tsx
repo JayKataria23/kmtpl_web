@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { FileText, Share2, Printer } from "lucide-react";
-import { Slider } from "@/components/ui/slider";
 import supabase from "@/utils/supabase";
 import html2pdf from "html2pdf.js";
 
@@ -46,7 +45,6 @@ function BhiwandiListPrint() {
   const [designEntries, setDesignEntries] = useState<GroupedOrder[]>([]);
   const [generatedHtml, setGeneratedHtml] = useState<string | null>(null);
   const [printMode, setPrintMode] = useState<"compact" | "standard">("compact");
-  const [fontSize, setFontSize] = useState<number>(11);
 
   const formatDate = (dateString: string): string => {
     const date = new Date(dateString.substring(1));
@@ -86,22 +84,8 @@ function BhiwandiListPrint() {
   }, [date]);
 
   useEffect(() => {
-    // Set default font size based on print mode
-    if (printMode === "compact") {
-      setFontSize(12);
-    } else if (printMode === "standard") {
-      setFontSize(14);
-    }
-  }, [printMode]);
-
-  useEffect(() => {
     const handleGenerateHTML = (designEntries: GroupedOrder[]) => {
-      // Base font size from slider
-      const baseFontSize = fontSize;
-      const headerFontSize = baseFontSize + 5;
-      const shadeFontSize = Math.max(baseFontSize - 1, 8);
-
-      // CSS for the print layout
+      // CSS for the compact print layout
       const css = `
         @page {
           size: A4;
@@ -109,7 +93,7 @@ function BhiwandiListPrint() {
         }
         body {
           font-family: Arial, sans-serif;
-          font-size: ${baseFontSize}px;
+          font-size: ${printMode === "compact" ? "11px" : "14px"};
           line-height: 1.2;
         }
         .header {
@@ -157,9 +141,11 @@ function BhiwandiListPrint() {
         }
         .shade-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(${
-            printMode === "compact" ? "120px" : "180px"
-          }, 1fr));
+          grid-template-columns: ${
+            printMode === "compact"
+              ? "repeat(auto-fill, minmax(100px, 1fr))"
+              : "repeat(auto-fill, minmax(180px, 1fr))"
+          };
           gap: 3px;
         }
         .shade-box {
@@ -170,12 +156,12 @@ function BhiwandiListPrint() {
         }
         .shade-names {
           border-bottom: 1px solid #ddd;
-          font-size: ${shadeFontSize}px;
+          font-size: ${printMode === "compact" ? "10px" : "12px"};
           word-break: break-word;
         }
         .shade-meters {
           font-weight: bold;
-          font-size: ${shadeFontSize}px;
+          font-size: ${printMode === "compact" ? "10px" : "12px"};
         }
       `;
 
@@ -186,7 +172,9 @@ function BhiwandiListPrint() {
       </head>
       <body>
         <div class="header">
-          <h1 style="margin: 0; font-size: ${headerFontSize}px;">Bhiwandi Dispatch List</h1>
+          <h1 style="margin: 0; font-size: ${
+            printMode === "compact" ? "16px" : "20px"
+          };">Bhiwandi Dispatch List</h1>
           <p style="margin: 0;">${formatDate(date as string)}</p>
         </div>
       `;
@@ -265,7 +253,7 @@ function BhiwandiListPrint() {
     };
 
     setGeneratedHtml(handleGenerateHTML(designEntries));
-  }, [designEntries, date, printMode, fontSize]);
+  }, [designEntries, date, printMode]);
 
   function groupByOrderId(entries: Entry[]): GroupedOrder[] {
     const grouped = new Map<string, GroupedOrder>();
@@ -399,27 +387,6 @@ function BhiwandiListPrint() {
               >
                 Standard
               </Button>
-            </div>
-          </div>
-
-          <div className="mt-4">
-            <div className="flex items-center justify-between mb-1">
-              <label className="text-sm font-medium">
-                Font Size: {fontSize}px
-              </label>
-            </div>
-            <Slider
-              value={[fontSize]}
-              min={8}
-              max={18}
-              step={1}
-              onValueChange={(value) => setFontSize(value[0])}
-              className="w-full"
-            />
-            <div className="flex justify-between text-xs text-gray-500 mt-1">
-              <span>Small</span>
-              <span>Medium</span>
-              <span>Large</span>
             </div>
           </div>
         </div>
