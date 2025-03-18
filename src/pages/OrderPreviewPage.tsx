@@ -97,7 +97,7 @@ function OrderPreviewPage() {
             )
             .eq("id", orderId)
             .single(),
-          supabase.from("design_entries").select("*").eq("order_id", orderId),
+          supabase.from("design_entries").select("*").eq("order_id", orderId).is("part", "FALSE"),
         ]);
 
         if (orderResponse.error) throw orderResponse.error;
