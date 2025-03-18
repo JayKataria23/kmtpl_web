@@ -239,10 +239,6 @@ function OrderFile() {
       return designCounts
         .filter((item) => !isNaN(Number(item.design))) // Filter out designs starting with "D-" or "P-"
         .sort((a, b) => Number(a.design) - Number(b.design)); // Sort numerically before returning
-    } else if (filter === "Part Orders") {
-      return designCounts
-        .filter((item) => item.part)
-        .sort((a, b) => a.design.localeCompare(b.design)); // Filter out designs starting with "P-"
     } else if (filter === "digital") {
       return designCounts
         .filter(
@@ -506,9 +502,7 @@ function OrderFile() {
           <ToggleGroupItem value="Design No." aria-label="Show Design No.">
             Design No.
           </ToggleGroupItem>
-          <ToggleGroupItem value="Part Orders" aria-label="Show Part Orders">
-            Part Orders
-          </ToggleGroupItem>
+          
         </ToggleGroup>
       </div>
       <Accordion
