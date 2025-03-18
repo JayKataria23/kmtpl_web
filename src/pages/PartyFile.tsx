@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import supabase from "@/utils/supabase";
 import { useToast } from "@/hooks/use-toast";
+import html2pdf from "html2pdf.js";
+import { FileText } from "lucide-react";
 import {
   Accordion,
   AccordionContent,
@@ -252,6 +254,102 @@ function PartyFile() {
     ]);
   };
 
+  const generatePartyReport = (party: string) => {
+    const orders = partyOrders[party];
+    if (!orders || orders.length === 0) return;
+
+    const today = new Date().toLocaleDateString("en-GB");
+
+    // Generate HTML content
+    let html = `
+      <html>
+        <head>
+          <style>
+            @page {
+              size: A4;
+              margin: 1cm;
+            }
+            body { font-family: Arial, sans-serif; margin: 0; padding: 20px; }
+            .header { text-align: center; margin-bottom: 20px; }
+            .company-name { font-size: 24px; font-weight: bold; margin-bottom: 10px; }
+            .report-title { font-size: 18px; margin-bottom: 20px; }
+            table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+            th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+            th { background-color: #f0f0f0; }
+            .totals { font-weight: bold; }
+            .shades { margin: 0; padding: 0; list-style: none; }
+            .shades li { margin-bottom: 4px; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div class="company-name">K.M. TEXTILES PVT. LTD.</div>
+            <div class="report-title">Party Report - ${party}</div>
+            <div>Date: ${today}</div>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Design</th>
+                <th>Order No.</th>
+                <th>Order Date</th>
+                <th>Price</th>
+                <th>Shades</th>
+                <th>Status</th>
+                <th>Remark</th>
+              </tr>
+            </thead>
+            <tbody>
+    `;
+
+    // Add order details
+    orders.forEach((order) => {
+      const status = order.canceled
+        ? "Cancelled"
+        : order.bhiwandi_date
+        ? "In Bhiwandi"
+        : "Active";
+
+      const shadesList = order.shades
+        .map((shade) => {
+          const shadeName = Object.keys(shade)[0];
+          const shadeValue = shade[shadeName];
+          if (shadeValue === "" || shadeValue === "NaN") return null;
+          return `<li>${shadeName}: ${shadeValue}m</li>`;
+        })
+        .filter(Boolean)
+        .join("");
+
+      html += `
+        <tr>
+          <td>${order.design}</td>
+          <td>${order.order_no}</td>
+          <td>${formatDate(order.order_date)}</td>
+          <td>${order.price}</td>
+          <td><ul class="shades">${shadesList}</ul></td>
+          <td>${status}</td>
+          <td>${order.remark || ""}</td>
+        </tr>
+      `;
+    });
+
+    html += `
+            </tbody>
+          </table>
+        </body>
+      </html>
+    `;
+
+    // Generate PDF
+    html2pdf(html, {
+      margin: 10,
+      filename: `${party}_report_${today}.pdf`,
+      image: { type: "jpeg", quality: 0.98 },
+      html2canvas: { scale: 2 },
+      jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+    });
+  };
+
   return (
     <div className="container mx-auto mt-10 p-4 relative">
       <AddPartOrder
@@ -423,7 +521,19 @@ function PartyFile() {
                 onClick={() => fetchOrderDetails(item.party_name)}
               >
                 <span className="text-left flex-grow">{item.party_name}</span>
-                <span className="text-sm min-w-20 text-gray-500 ml-2 ">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mx-2"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    generatePartyReport(item.party_name);
+                  }}
+                >
+                  <FileText className="w-4 h-4 mr-1" />
+                  Report
+                </Button>
+                <span className="text-sm min-w-20 text-gray-500 ml-2">
                   count: {item.design_entry_count}
                 </span>
               </AccordionTrigger>
