@@ -19,21 +19,6 @@ interface DesignEntry {
   shades: { [key: string]: string }[];
 }
 
-interface SelectedDesignDetail {
-  design: string;
-  shades: { [key: string]: string }[];
-  totalMeters: number;
-  remark: string;
-  canceled: boolean;
-  bhiwandi_date: string;
-  price: number;
-  design_entry_id: number;
-  party_name: string;
-  date: string; // New date attribute
-  order_date: string; // New date attribute
-  order_no: number;
-}
-
 interface AddPartOrderProps {
   open: boolean;
   onClose: () => void;
@@ -41,8 +26,6 @@ interface AddPartOrderProps {
   design_name: string;
   party_name: string;
   price: number;
-  setSelectedEntries: (entries: SelectedDesignDetail[]) => void;
-  selectedEntries: SelectedDesignDetail[];
 }
 
 function AddPartOrder({
@@ -52,8 +35,6 @@ function AddPartOrder({
   design_name,
   party_name,
   price,
-  setSelectedEntries,
-  selectedEntries,
 }: AddPartOrderProps) {
   const [currentEntry, setCurrentEntry] = useState<DesignEntry>();
   const { toast } = useToast();
@@ -109,58 +90,23 @@ function AddPartOrder({
         }`,
         variant: "destructive",
       });
+      return;
     }
 
     if (oldEntry) {
-      const newSelectedEntry = selectedEntries.map((entry) => {
-        const updatedShades = entry.shades.map((shade) => {
-          const shadeKey = Object.keys(shade)[0];
-          const currentShade = currentEntry?.shades.find(
-            (s) => Object.keys(s)[0] === shadeKey
-          );
-          if (currentShade) {
-            const newValue =
-              parseInt(shade[shadeKey]) -
-              (parseInt(currentShade[shadeKey]) || 0);
-            return { [shadeKey]: isNaN(newValue) ? "" : (newValue < 0 ? "" : newValue.toString()) }; // Update the value or set to empty string
-          }
-          return shade; // Return unchanged shade if no match found
-        });
-        return { ...entry, shades: updatedShades }; // Return updated entry
-      });
-      const { error } = await supabase
-        .from("design_entries")
-        .insert([
-          {
-            design: oldEntry[0].design,
-            order_id: oldEntry[0].order_id,
-            part: "true",
-            price: oldEntry[0].price,
-            remark: oldEntry[0].remark,
-            shades: currentEntry?.shades,
-          },
-        ])
-        .then(() => {
-          return supabase.from("design_entries").update({shades:newSelectedEntry[0].shades}).eq('id', design_entry_id)
-        })
-      
-      setSelectedEntries(
-        newSelectedEntry
-      );
-
-      setCurrentEntry({
-        id: design_entry_id,
-        design: design_name,
-        price: price.toString(),
-        remark: "",
-        shades: [
-          { "All Colours": "" },
-          ...Array.from({ length: 30 }, (_, i) => ({ [`${i + 1}`]: "" })),
-        ],
-      });
+      // Create new entry without modifying the old one
+      const { error } = await supabase.from("design_entries").insert([
+        {
+          design: oldEntry[0].design,
+          order_id: oldEntry[0].order_id,
+          part: "true",
+          price: oldEntry[0].price,
+          remark: oldEntry[0].remark,
+          shades: currentEntry?.shades,
+        },
+      ]);
 
       if (error) {
-        //toast
         toast({
           title: "Error",
           description: `Failed to create part order ${
@@ -175,6 +121,17 @@ function AddPartOrder({
           description: "Part order created successfully",
         });
       }
+
+      setCurrentEntry({
+        id: design_entry_id,
+        design: design_name,
+        price: price.toString(),
+        remark: "",
+        shades: [
+          { "All Colours": "" },
+          ...Array.from({ length: 30 }, (_, i) => ({ [`${i + 1}`]: "" })),
+        ],
+      });
     }
   };
   return (

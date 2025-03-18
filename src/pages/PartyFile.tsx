@@ -145,8 +145,6 @@ function PartyFile() {
         design_name={selectedOrder?.design || ""}
         party_name={selectedOrder?.party_name || ""}
         price={selectedOrder?.price || 0}
-        setSelectedEntries={setSelectedEntries}
-        selectedEntries={selectedEntries}
       />
       <div className="sticky top-0 bg-white z-10 p-4 border-b-2">
         <Button onClick={() => navigate("/")}>Home</Button>
