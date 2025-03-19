@@ -113,7 +113,9 @@ function BhiwandiListPrint() {
             <span><strong>Order No.:</strong> ${entry.order_no}
             </span>
             <span><strong style="color: red; margin:5px; margin-left:40px; line-height:1">${
-              entry.order_remark
+              entry.order_remark && entry.order_remark !== "N/A"
+                ? entry.order_remark
+                : ""
             }</strong></span>
             <span></p>
             <p style="font-size: 18px; line-height: 0.5"><strong>Transport:</strong> ${
@@ -125,8 +127,7 @@ function BhiwandiListPrint() {
             <thead style="break-inside:avoid;">
               <tr style="background-color: #f0f0f0;">
                 <th style="border: 1px solid #ccc; padding-left: 8px; text-align: left; width: 22%;">Design</th>
-                <th style="border: 1px solid #ccc; padding-left: 8px; text-align: left; width: 10%;">Price</th>
-                <th style="border: 1px solid #ccc; padding-left: 8px; text-align: left; width: 13%;">Remark</th>
+                <th style="border: 1px solid #ccc; padding-left: 8px; text-align: left; width: 10%;">Price</th>\
                 <th style="border: 1px solid #ccc; padding-left: 8px; text-align: left; width: 55%;">Shades</th>
               </tr>
             </thead>
@@ -142,13 +143,12 @@ function BhiwandiListPrint() {
               <td style="border: 1px solid #ccc; padding-left: 8px; width: 10%;">${
                 order.price
               }</td>
-              <td style="border: 1px solid #ccc; padding-left: 8px; width: 13%;">${
-                order.remark || "N/A"
-              }</td>
               <td style="border: 1px solid #ccc; padding-left: 8px; width: 55%; ">
               <div style="width: 100%; text-align: center; display: flex; flex-direction: row; flex-wrap: wrap;">
               ${formatShades(order.shades)}
-              </div>  
+              </div>  <strong style="color: red;">${
+                order.remark && order.remark !== "N/A" ? order.remark : ""
+              }</strong>
               </td>
             </tr>`;
           });
