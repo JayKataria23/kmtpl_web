@@ -26,6 +26,7 @@ import ChallanList from "./pages/ChallanList";
 import EditChallan from "./pages/EditChallan";
 import FastOrderForm from "./pages/FastOrderForm";
 import PartyDispatchList from "./pages/PartyDispatchList";
+import PartOrderFile from "./pages/PartOrderFile";
 
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
@@ -74,6 +75,14 @@ createRoot(document.getElementById("root")!).render(
             element={
               <ProtectedRoute>
                 <PartyFile />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/part-order-file"
+            element={
+              <ProtectedRoute>
+                <PartOrderFile />
               </ProtectedRoute>
             }
           />

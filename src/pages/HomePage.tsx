@@ -47,6 +47,13 @@ export default function HomePage() {
         <br />
         <Button
           className="w-64 text-lg h-12"
+          onClick={() => navigate("/part-order-file")}
+        >
+          Part Orders
+        </Button>
+        <br />
+        <Button
+          className="w-64 text-lg h-12"
           onClick={() => navigate("/bhiwandi-list")}
         >
           Bhiwandi List
