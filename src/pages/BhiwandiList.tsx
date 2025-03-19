@@ -80,6 +80,11 @@ const BhiwandiList = () => {
   const [openAccordion, setOpenAccordion] = useState<string | null>(null);
   const [comments, setComments] = useState<{ [key: string]: string }>({});
   const [editingComment, setEditingComment] = useState<string | null>(null);
+  const [editingRemark, setEditingRemark] = useState<{
+    orderId: string;
+    entryIndex: number;
+    design_entry_id: number;
+  } | null>(null);
 
   useEffect(() => {
     fetchBhiwandiEntries();
@@ -298,6 +303,45 @@ const BhiwandiList = () => {
     }
   };
 
+  // New function to handle updating remarks
+  const handleRemarkUpdate = async (design_entry_id: number, remark: string) => {
+    try {
+      const { error } = await supabase
+        .from("design_entries")
+        .update({ remark })
+        .eq("id", design_entry_id);
+
+      if (error) throw error;
+
+      // Update the local state to reflect the changes
+      setDesignEntries(
+        designEntries.map((orderGroup) => ({
+          ...orderGroup,
+          entries: orderGroup.entries.map((entry) =>
+            entry.design_entry_id === design_entry_id
+              ? { ...entry, remark }
+              : entry
+          ),
+        }))
+      );
+
+      setEditingRemark(null);
+
+      toast({
+        title: "Success!",
+        description: "Remark updated successfully",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: `Failed to update remark: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`,
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="container mx-auto mt-10 text-center">
       <h1 className="text-2xl font-bold">Bhiwandi List</h1>
@@ -397,25 +441,25 @@ const BhiwandiList = () => {
                   >
                     Open PDF
                   </Button>
-                  {designEntries.map((entry, index) => (
+                  {designEntries.map((orderGroup, orderIndex) => (
                     <div
-                      key={index}
-                      className={index % 2 === 0 ? "bg-white" : "bg-gray-100"}
+                      key={orderIndex}
+                      className={orderIndex % 2 === 0 ? "bg-white" : "bg-gray-100"}
                     >
                       <p style={{ textAlign: "left" }}>
-                        <strong>Bill To:</strong> {entry.bill_to_party}
+                        <strong>Bill To:</strong> {orderGroup.bill_to_party}
                       </p>
                       <p style={{ textAlign: "left" }}>
-                        <strong>Ship To:</strong> {entry.ship_to_party}
+                        <strong>Ship To:</strong> {orderGroup.ship_to_party}
                       </p>
                       <p style={{ textAlign: "left" }}>
-                        <strong>Order No.:</strong> {entry.order_no}
+                        <strong>Order No.:</strong> {orderGroup.order_no}
                       </p>
                       <p style={{ textAlign: "left" }}>
-                        <strong>Transport:</strong> {entry.transporter_name}
+                        <strong>Transport:</strong> {orderGroup.transporter_name}
                       </p>
                       <div>
-                        {entry.entries.map((designEntry, designIndex) => (
+                        {orderGroup.entries.map((designEntry, designIndex) => (
                           <div
                             key={designIndex}
                             className="flex justify-between border-b p-4"
@@ -427,9 +471,46 @@ const BhiwandiList = () => {
                               <p className="text-sm md:text-base font-semibold">
                                 Price: {designEntry.price}
                               </p>
-                              <p className="text-sm md:text-base">
-                                Remark: {designEntry.remark || "N/A"}
-                              </p>
+                              <div className="text-sm md:text-base">
+                                <span className="mr-2">Remark:</span>
+                                {editingRemark && 
+                                  editingRemark.orderId === orderGroup.order_id && 
+                                  editingRemark.entryIndex === designIndex ? (
+                                  <input
+                                    type="text"
+                                    value={designEntry.remark || ""}
+                                    onChange={(e) => {
+                                      const updatedEntries = [...designEntries];
+                                      updatedEntries[orderIndex].entries[designIndex].remark = e.target.value;
+                                      setDesignEntries(updatedEntries);
+                                    }}
+                                    onBlur={() => 
+                                      handleRemarkUpdate(designEntry.design_entry_id, designEntry.remark)
+                                    }
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter") {
+                                        handleRemarkUpdate(designEntry.design_entry_id, designEntry.remark);
+                                      }
+                                    }}
+                                    className="px-2 py-1 border rounded"
+                                    placeholder="Enter remark"
+                                    autoFocus
+                                  />
+                                ) : (
+                                  <span 
+                                    onClick={() => 
+                                      setEditingRemark({
+                                        orderId: orderGroup.order_id,
+                                        entryIndex: designIndex,
+                                        design_entry_id: designEntry.design_entry_id
+                                      })
+                                    }
+                                    className="cursor-pointer hover:text-blue-600 hover:underline"
+                                  >
+                                    {designEntry.remark || "N/A"}
+                                  </span>
+                                )}
+                              </div>
                             </div>
                             <div className="text-left w-2/6">
                               <p className="font-semibold text-base md:text-lg">
@@ -440,7 +521,7 @@ const BhiwandiList = () => {
                                   const shadeName = Object.keys(shade)[0];
                                   const shadeValue = shade[shadeName];
                                   if (shadeValue == "") {
-                                    return;
+                                    return null;
                                   }
                                   return (
                                     <div key={idx}>
@@ -458,7 +539,7 @@ const BhiwandiList = () => {
                                   setDesignEntries(
                                     designEntries.filter(
                                       (entry) =>
-                                        entry.order_id !== entry.order_id
+                                        entry.order_id !== orderGroup.order_id
                                     )
                                   );
                                   closeAllAccordions();
