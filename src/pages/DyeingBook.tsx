@@ -21,6 +21,7 @@ import supabase from "@/utils/supabase";
 import { AddDyeingProgramForm } from "@/components/dyeing/AddDyeingProgramForm";
 import { AddGoodsReceiptForm } from "@/components/dyeing/AddGoodsReceiptForm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 
 export interface DyeingProgram {
   id: string;
@@ -51,6 +52,13 @@ function DyeingBook() {
   const [selectedProgram, setSelectedProgram] = useState<DyeingProgram | null>(
     null
   );
+  const [isEditProgramOpen, setIsEditProgramOpen] = useState(false);
+  const [selectedProgramForEdit, setSelectedProgramForEdit] =
+    useState<DyeingProgram | null>(null);
+  const [editingLotNumber, setEditingLotNumber] = useState<{
+    id: string;
+    value: string;
+  } | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -175,6 +183,36 @@ function DyeingBook() {
     }
   };
 
+  const handleEditButtonClick = (program: DyeingProgram) => {
+    setSelectedProgramForEdit(program);
+    setIsEditProgramOpen(true);
+  };
+
+  const handleLotNumberUpdate = async (programId: string, newValue: string) => {
+    try {
+      const { error } = await supabase
+        .from("dyeing_programs")
+        .update({ lot_number: newValue || null })
+        .eq("id", programId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Lot number updated successfully",
+      });
+      fetchPrograms();
+      setEditingLotNumber(null);
+    } catch (error) {
+      console.error("Error updating lot number:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update lot number",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="max-w-[95%] mx-auto p-6 bg-white">
       <div className="flex justify-between items-center mb-6">
@@ -229,8 +267,52 @@ function DyeingBook() {
                 <TableCell>
                   {roundToTwoDecimals(program.total_meters)}
                 </TableCell>
-                <TableCell>{program.dyeing_unit}</TableCell>
-                <TableCell>{program.lot_number || "-"}</TableCell>
+                <TableCell className="text-red-600 font-medium">
+                  {program.dyeing_unit}
+                </TableCell>
+                <TableCell>
+                  {editingLotNumber?.id === program.id ? (
+                    <Input
+                      value={editingLotNumber.value}
+                      onChange={(e) =>
+                        setEditingLotNumber({
+                          id: program.id,
+                          value: e.target.value,
+                        })
+                      }
+                      onBlur={() =>
+                        handleLotNumberUpdate(
+                          program.id,
+                          editingLotNumber.value
+                        )
+                      }
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          handleLotNumberUpdate(
+                            program.id,
+                            editingLotNumber.value
+                          );
+                        } else if (e.key === "Escape") {
+                          setEditingLotNumber(null);
+                        }
+                      }}
+                      className="w-24"
+                      autoFocus
+                    />
+                  ) : (
+                    <span
+                      onClick={() =>
+                        setEditingLotNumber({
+                          id: program.id,
+                          value: program.lot_number || "",
+                        })
+                      }
+                      className="cursor-pointer hover:text-blue-600 text-red-500"
+                    >
+                      {program.lot_number || "-"}
+                    </span>
+                  )}
+                </TableCell>
                 <TableCell>
                   <span
                     className={`px-2 py-1 rounded-full text-xs ${
@@ -342,7 +424,9 @@ function DyeingBook() {
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Dyeing Unit</p>
-                  <p>{program.dyeing_unit}</p>
+                  <p className="text-red-600 font-medium">
+                    {program.dyeing_unit}
+                  </p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Takas</p>
@@ -354,7 +438,47 @@ function DyeingBook() {
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Lot Number</p>
-                  <p>{program.lot_number || "-"}</p>
+                  {editingLotNumber?.id === program.id ? (
+                    <Input
+                      value={editingLotNumber.value}
+                      onChange={(e) =>
+                        setEditingLotNumber({
+                          id: program.id,
+                          value: e.target.value,
+                        })
+                      }
+                      onBlur={() =>
+                        handleLotNumberUpdate(
+                          program.id,
+                          editingLotNumber.value
+                        )
+                      }
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          handleLotNumberUpdate(
+                            program.id,
+                            editingLotNumber.value
+                          );
+                        } else if (e.key === "Escape") {
+                          setEditingLotNumber(null);
+                        }
+                      }}
+                      className="mt-1"
+                      autoFocus
+                    />
+                  ) : (
+                    <p
+                      onClick={() =>
+                        setEditingLotNumber({
+                          id: program.id,
+                          value: program.lot_number || "",
+                        })
+                      }
+                      className="cursor-pointer hover:text-blue-600 text-red-500"
+                    >
+                      {program.lot_number || "-"}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Remaining Meters</p>
@@ -362,6 +486,14 @@ function DyeingBook() {
                 </div>
               </div>
               <div className="pt-2 flex gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleEditButtonClick(program)}
+                  className="flex-1"
+                >
+                  Edit
+                </Button>
                 {program.status === "Completed" ? (
                   <>
                     <Button
@@ -414,6 +546,55 @@ function DyeingBook() {
                   </>
                 )}
               </div>
+              {/* Expandable Details */}
+              <details className="mt-2">
+                <summary className="cursor-pointer text-sm text-blue-600">
+                  View Details
+                </summary>
+                <div className="mt-2 space-y-4">
+                  {/* Shades Details */}
+                  <div>
+                    <h4 className="font-medium mb-2">Shades Details</h4>
+                    <div className="space-y-1">
+                      {program.shades_details.map((shade, index) => (
+                        <div key={index} className="border p-2 rounded">
+                          <p className="text-sm">
+                            Shade:{" "}
+                            <span className="font-medium">{shade.shade}</span>
+                          </p>
+                          <p className="text-sm">
+                            Takas:{" "}
+                            <span className="font-medium">{shade.takas}</span>
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* GRN Details */}
+                  <div>
+                    <h4 className="font-medium mb-2">GRN Details</h4>
+                    <div className="space-y-1">
+                      {program.goods_receipts?.map((receipt) => (
+                        <div key={receipt.id} className="border p-2 rounded">
+                          <p className="text-sm">
+                            GRN Number: {receipt.grn_number}
+                          </p>
+                          <p className="text-sm">
+                            Meters Received: {receipt.meters_received}
+                          </p>
+                          <p className="text-sm">
+                            Date Received:{" "}
+                            {new Date(
+                              receipt.date_received
+                            ).toLocaleDateString()}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </details>
             </CardContent>
           </Card>
         ))}
@@ -449,6 +630,27 @@ function DyeingBook() {
               fetchPrograms();
               setIsAddReceiptOpen(false);
               setSelectedProgram(null);
+            }}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Program Dialog */}
+      <Dialog open={isEditProgramOpen} onOpenChange={setIsEditProgramOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Edit Dyeing Program</DialogTitle>
+          </DialogHeader>
+          <AddDyeingProgramForm
+            initialData={selectedProgramForEdit}
+            onClose={() => {
+              setIsEditProgramOpen(false);
+              setSelectedProgramForEdit(null);
+            }}
+            onSuccess={() => {
+              fetchPrograms();
+              setIsEditProgramOpen(false);
+              setSelectedProgramForEdit(null);
             }}
           />
         </DialogContent>

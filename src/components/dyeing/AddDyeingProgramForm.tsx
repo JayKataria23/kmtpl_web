@@ -5,47 +5,76 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import supabase from "@/utils/supabase";
 import { ShadesSelector } from "./ShadesSelector";
+import { DyeingProgram } from "@/pages/DyeingBook";
 
 interface Props {
+  initialData?: DyeingProgram | null;
   onClose: () => void;
   onSuccess: () => void;
 }
 
-export function AddDyeingProgramForm({ onClose, onSuccess }: Props) {
+export function AddDyeingProgramForm({
+  initialData,
+  onClose,
+  onSuccess,
+}: Props) {
   const { toast } = useToast();
   const [formData, setFormData] = useState({
-    supplier_name: "",
-    slip_number: "",
-    total_takas: "",
-    total_meters: "",
-    design_name: "",
-    shades_details: [] as { shade: string; takas: number }[],
-    dyeing_unit: "",
+    supplier_name: initialData?.supplier_name || "",
+    slip_number: initialData?.slip_number || "",
+    total_takas: initialData?.total_takas?.toString() || "",
+    total_meters: initialData?.total_meters?.toString() || "",
+    design_name: initialData?.design_name || "",
+    shades_details: initialData?.shades_details || [],
+    dyeing_unit: initialData?.dyeing_unit || "",
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     try {
-      const { error } = await supabase.from("dyeing_programs").insert({
-        ...formData,
-        total_takas: parseInt(formData.total_takas),
-        total_meters: parseFloat(formData.total_meters),
-        shades_details: formData.shades_details,
-      });
+      if (initialData) {
+        // Update existing program
+        const { error } = await supabase
+          .from("dyeing_programs")
+          .update({
+            ...formData,
+            total_takas: parseInt(formData.total_takas),
+            total_meters: parseFloat(formData.total_meters),
+            shades_details: formData.shades_details,
+          })
+          .eq("id", initialData.id);
 
-      if (error) throw error;
+        if (error) throw error;
 
-      toast({
-        title: "Success",
-        description: "Dyeing program added successfully",
-      });
+        toast({
+          title: "Success",
+          description: "Dyeing program updated successfully",
+        });
+      } else {
+        // Add new program
+        const { error } = await supabase.from("dyeing_programs").insert({
+          ...formData,
+          total_takas: parseInt(formData.total_takas),
+          total_meters: parseFloat(formData.total_meters),
+          shades_details: formData.shades_details,
+        });
+
+        if (error) throw error;
+
+        toast({
+          title: "Success",
+          description: "Dyeing program added successfully",
+        });
+      }
       onSuccess();
     } catch (error) {
-      console.error("Error adding program:", error);
+      console.error("Error saving program:", error);
       toast({
         title: "Error",
-        description: "Failed to add dyeing program",
+        description: `Failed to ${
+          initialData ? "update" : "add"
+        } dyeing program`,
         variant: "destructive",
       });
     }
@@ -145,7 +174,9 @@ export function AddDyeingProgramForm({ onClose, onSuccess }: Props) {
         <Button variant="outline" onClick={onClose}>
           Cancel
         </Button>
-        <Button type="submit">Add Program</Button>
+        <Button type="submit">
+          {initialData ? "Update Program" : "Add Program"}
+        </Button>
       </div>
     </form>
   );
