@@ -42,6 +42,9 @@ export interface DyeingProgram {
   status: "Pending" | "In Process" | "Completed";
   created_at: string;
   goods_receipts?: GoodsReceipt[];
+  bill_number: string | null;
+  bill_date: string | null;
+  rate: string | null;
 }
 
 export interface GoodsReceipt {
@@ -71,6 +74,18 @@ function DyeingBook() {
     value: string;
   } | null>(null);
   const [editingGRNDate, setEditingGRNDate] = useState<{
+    id: string;
+    value: string;
+  } | null>(null);
+  const [editingBillNumber, setEditingBillNumber] = useState<{
+    id: string;
+    value: string;
+  } | null>(null);
+  const [editingBillDate, setEditingBillDate] = useState<{
+    id: string;
+    value: string;
+  } | null>(null);
+  const [editingRate, setEditingRate] = useState<{
     id: string;
     value: string;
   } | null>(null);
@@ -323,6 +338,84 @@ function DyeingBook() {
       toast({
         title: "Error",
         description: "Failed to delete GRN entry",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleBillNumberUpdate = async (
+    programId: string,
+    newValue: string
+  ) => {
+    try {
+      const { error } = await supabase
+        .from("dyeing_programs")
+        .update({ bill_number: newValue || null })
+        .eq("id", programId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Bill number updated successfully",
+      });
+      fetchPrograms();
+      setEditingBillNumber(null);
+    } catch (error) {
+      console.error("Error updating bill number:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update bill number",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleBillDateUpdate = async (programId: string, newValue: string) => {
+    try {
+      const { error } = await supabase
+        .from("dyeing_programs")
+        .update({ bill_date: newValue })
+        .eq("id", programId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Bill date updated successfully",
+      });
+      fetchPrograms();
+      setEditingBillDate(null);
+    } catch (error) {
+      console.error("Error updating bill date:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update bill date",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleRateUpdate = async (programId: string, newValue: string) => {
+    try {
+      const { error } = await supabase
+        .from("dyeing_programs")
+        .update({ rate: newValue || null })
+        .eq("id", programId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Rate updated successfully",
+      });
+      fetchPrograms();
+      setEditingRate(null);
+    } catch (error) {
+      console.error("Error updating rate:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update rate",
         variant: "destructive",
       });
     }
@@ -810,6 +903,144 @@ function DyeingBook() {
                   View Details
                 </summary>
                 <div className="mt-2 space-y-4">
+                  {/* Bill Details */}
+                  <div>
+                    <h4 className="font-medium mb-2">Bill Details</h4>
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm">Bill Number:</span>
+                        {editingBillNumber?.id === program.id ? (
+                          <Input
+                            value={editingBillNumber.value}
+                            onChange={(e) =>
+                              setEditingBillNumber({
+                                id: program.id,
+                                value: e.target.value,
+                              })
+                            }
+                            onBlur={() =>
+                              handleBillNumberUpdate(
+                                program.id,
+                                editingBillNumber.value
+                              )
+                            }
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                handleBillNumberUpdate(
+                                  program.id,
+                                  editingBillNumber.value
+                                );
+                              } else if (e.key === "Escape") {
+                                setEditingBillNumber(null);
+                              }
+                            }}
+                            className="w-40"
+                            autoFocus
+                          />
+                        ) : (
+                          <span
+                            onClick={() =>
+                              setEditingBillNumber({
+                                id: program.id,
+                                value: program.bill_number || "",
+                              })
+                            }
+                            className="cursor-pointer hover:text-blue-600 text-red-500"
+                          >
+                            {program.bill_number || "-"}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm">Bill Date:</span>
+                        {editingBillDate?.id === program.id ? (
+                          <Input
+                            type="date"
+                            value={editingBillDate.value}
+                            onChange={(e) =>
+                              setEditingBillDate({
+                                id: program.id,
+                                value: e.target.value,
+                              })
+                            }
+                            onBlur={() =>
+                              handleBillDateUpdate(
+                                program.id,
+                                editingBillDate.value
+                              )
+                            }
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                handleBillDateUpdate(
+                                  program.id,
+                                  editingBillDate.value
+                                );
+                              } else if (e.key === "Escape") {
+                                setEditingBillDate(null);
+                              }
+                            }}
+                            className="w-40"
+                            autoFocus
+                          />
+                        ) : (
+                          <span
+                            onClick={() =>
+                              setEditingBillDate({
+                                id: program.id,
+                                value: program.bill_date
+                                  ? program.bill_date.split("T")[0]
+                                  : "",
+                              })
+                            }
+                            className="cursor-pointer hover:text-blue-600 text-red-500"
+                          >
+                            {program.bill_date
+                              ? new Date(program.bill_date).toLocaleDateString()
+                              : "-"}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm">Rate:</span>
+                        {editingRate?.id === program.id ? (
+                          <Input
+                            value={editingRate.value}
+                            onChange={(e) =>
+                              setEditingRate({
+                                id: program.id,
+                                value: e.target.value,
+                              })
+                            }
+                            onBlur={() =>
+                              handleRateUpdate(program.id, editingRate.value)
+                            }
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                handleRateUpdate(program.id, editingRate.value);
+                              } else if (e.key === "Escape") {
+                                setEditingRate(null);
+                              }
+                            }}
+                            className="w-40"
+                            autoFocus
+                          />
+                        ) : (
+                          <span
+                            onClick={() =>
+                              setEditingRate({
+                                id: program.id,
+                                value: program.rate || "",
+                              })
+                            }
+                            className="cursor-pointer hover:text-blue-600 text-red-500"
+                          >
+                            {program.rate || "-"}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
                   {/* Shades Details */}
                   <div>
                     <h4 className="font-medium mb-2">Shades Details</h4>
