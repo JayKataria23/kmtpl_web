@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { X, Plus } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface Shade {
   shade: string;
@@ -74,39 +75,41 @@ export function ShadesSelector({ shades, onChange }: ShadesSelectorProps) {
         </Button>
       </div>
 
-      <div className="space-y-2">
-        {shades.map((shade, index) => (
-          <div key={index} className="flex gap-2 items-end">
-            <div className="flex-1">
-              <Label>Shade Name</Label>
-              <Input
-                value={shade.shade}
-                onChange={(e) =>
-                  handleUpdateShade(index, "shade", e.target.value)
-                }
-              />
+      <ScrollArea className="h-[150px] w-full rounded-md border p-4">
+        <div className="space-y-2">
+          {shades.map((shade, index) => (
+            <div key={index} className="flex gap-2 items-end">
+              <div className="flex-1">
+                <Input
+                  value={shade.shade}
+                  onChange={(e) =>
+                    handleUpdateShade(index, "shade", e.target.value)
+                  }
+                  placeholder="Shade name"
+                />
+              </div>
+              <div className="flex-1">
+                <Input
+                  type="number"
+                  value={shade.takas}
+                  onChange={(e) =>
+                    handleUpdateShade(index, "takas", e.target.value)
+                  }
+                  placeholder="Takas"
+                />
+              </div>
+              <Button
+                variant="destructive"
+                size="icon"
+                onClick={() => handleRemoveShade(index)}
+                className="self-end"
+              >
+                <X className="h-4 w-4" />
+              </Button>
             </div>
-            <div className="flex-1">
-              <Label>Takas</Label>
-              <Input
-                type="number"
-                value={shade.takas}
-                onChange={(e) =>
-                  handleUpdateShade(index, "takas", e.target.value)
-                }
-              />
-            </div>
-            <Button
-              variant="destructive"
-              size="icon"
-              onClick={() => handleRemoveShade(index)}
-              className="self-end"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      </ScrollArea>
     </div>
   );
 }
