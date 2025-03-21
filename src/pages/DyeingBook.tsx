@@ -440,7 +440,7 @@ function DyeingBook() {
   });
 
   return (
-    <div className="max-w-[95%] mx-auto p-6 bg-white">
+    <div className="max-w-[95%] mx-auto p-6 pb-24 bg-white min-h-screen">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Dyeing Book</h1>
         <Button
@@ -707,88 +707,85 @@ function DyeingBook() {
       {/* Mobile Card View */}
       <div className="md:hidden space-y-4">
         {filteredPrograms.map((program) => (
-          <Card key={program.id}>
-            <CardHeader>
-              <CardTitle className="flex justify-between items-center">
-                <span>{program.design_name}</span>
-                <span
-                  className={`px-2 py-1 rounded-full text-xs ${
-                    program.status === "Completed"
-                      ? "bg-green-100 text-green-800"
-                      : program.status === "In Process"
-                      ? "bg-blue-100 text-blue-800"
-                      : "bg-yellow-100 text-yellow-800"
-                  }`}
-                >
-                  {program.status}
+          <Card
+            key={program.id}
+            className={program.status === "Completed" ? "bg-green-100" : ""}
+          >
+            <CardHeader className="p-2">
+              <div className="flex justify-between items-center ">
+                <span className="font-medium">
+                  {calculateRemainingTakas(program)}
                 </span>
+                {editingDate?.id === program.id ? (
+                  <Input
+                    type="date"
+                    value={editingDate.value}
+                    onChange={(e) =>
+                      setEditingDate({
+                        id: program.id,
+                        value: e.target.value,
+                      })
+                    }
+                    onBlur={() =>
+                      handleDateUpdate(program.id, editingDate.value)
+                    }
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        handleDateUpdate(program.id, editingDate.value);
+                      } else if (e.key === "Escape") {
+                        setEditingDate(null);
+                      }
+                    }}
+                    className="w-32"
+                    autoFocus
+                  />
+                ) : (
+                  <span
+                    onClick={() =>
+                      setEditingDate({
+                        id: program.id,
+                        value: program.created_at.split("T")[0],
+                      })
+                    }
+                    className="cursor-pointer hover:text-blue-600"
+                  >
+                    {new Date(program.created_at).toLocaleDateString()}
+                  </span>
+                )}
+              </div>
+              <CardTitle className="text-center">
+                {program.supplier_name}
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-2">
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <p className="text-sm text-gray-500">Date</p>
-                  {editingDate?.id === program.id ? (
-                    <Input
-                      type="date"
-                      value={editingDate.value}
-                      onChange={(e) =>
-                        setEditingDate({
-                          id: program.id,
-                          value: e.target.value,
-                        })
-                      }
-                      onBlur={() =>
-                        handleDateUpdate(program.id, editingDate.value)
-                      }
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          handleDateUpdate(program.id, editingDate.value);
-                        } else if (e.key === "Escape") {
-                          setEditingDate(null);
-                        }
-                      }}
-                      className="mt-1"
-                      autoFocus
-                    />
-                  ) : (
-                    <p
-                      onClick={() =>
-                        setEditingDate({
-                          id: program.id,
-                          value: program.created_at.split("T")[0],
-                        })
-                      }
-                      className="cursor-pointer hover:text-blue-600"
-                    >
-                      {new Date(program.created_at).toLocaleDateString()}
+            <CardContent className="space-y-4">
+              {/* Program Details */}
+              <div className="text-center space-y-2">
+                <div className="grid grid-cols-3 gap-2 mb-4">
+                  <div>
+                    <p className="text-sm text-gray-500">Slip Number</p>
+                    <p className="font-medium">{program.slip_number}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Total Meters</p>
+                    <p className="font-medium">
+                      {roundToTwoDecimals(program.total_meters)}
                     </p>
-                  )}
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Takas</p>
+                    <p className="font-medium">{program.total_takas}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm text-gray-500">Supplier</p>
-                  <p>{program.supplier_name}</p>
+
+                <div className="text-xl font-semibold mb-2">
+                  {program.design_name}
                 </div>
-                <div>
-                  <p className="text-sm text-gray-500">Slip Number</p>
-                  <p>{program.slip_number}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Dyeing Unit</p>
-                  <p className="text-red-600 font-medium">
+
+                <div className="flex justify-between">
+                  {" "}
+                  <div className="text-red-600 font-bold mb-4">
                     {program.dyeing_unit}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Takas</p>
-                  <p>{program.total_takas}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Total Meters</p>
-                  <p>{roundToTwoDecimals(program.total_meters)}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Lot Number</p>
+                  </div>
                   {editingLotNumber?.id === program.id ? (
                     <Input
                       value={editingLotNumber.value}
@@ -814,37 +811,27 @@ function DyeingBook() {
                           setEditingLotNumber(null);
                         }
                       }}
-                      className="mt-1"
+                      className="w-24"
                       autoFocus
                     />
                   ) : (
-                    <p
+                    <span
                       onClick={() =>
                         setEditingLotNumber({
                           id: program.id,
                           value: program.lot_number || "",
                         })
                       }
-                      className="cursor-pointer hover:text-blue-600 text-red-500"
+                      className="cursor-pointer hover:text-blue-600 text-red-500 font-bold"
                     >
-                      {program.lot_number || "-"}
-                    </p>
+                      Lot: {program.lot_number || "-"}
+                    </span>
                   )}
                 </div>
-                <div>
-                  <p className="text-sm text-gray-500">Remaining Takas</p>
-                  <p>{calculateRemainingTakas(program)}</p>
-                </div>
               </div>
-              <div className="pt-4 flex flex-wrap gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => handleEditButtonClick(program)}
-                  className="flex-1 min-w-[100px] items-center justify-center"
-                >
-                  Edit
-                </Button>
+
+              {/* Action Buttons */}
+              <div className="flex flex-wrap gap-2">
                 {program.status === "Completed" ? (
                   <>
                     <Button
@@ -854,6 +841,14 @@ function DyeingBook() {
                       className="flex-1 min-w-[100px] items-center justify-center"
                     >
                       Reverse Status
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleEditButtonClick(program)}
+                      className="flex-1 min-w-[100px] items-center justify-center"
+                    >
+                      Edit
                     </Button>
                     <Button
                       size="sm"
@@ -888,6 +883,14 @@ function DyeingBook() {
                     </Button>
                     <Button
                       size="sm"
+                      variant="outline"
+                      onClick={() => handleEditButtonClick(program)}
+                      className="flex-1 min-w-[100px] items-center justify-center"
+                    >
+                      Edit
+                    </Button>
+                    <Button
+                      size="sm"
                       variant="destructive"
                       onClick={() => handleDeleteProgram(program)}
                       className="flex-1 min-w-[100px] items-center justify-center"
@@ -897,6 +900,7 @@ function DyeingBook() {
                   </>
                 )}
               </div>
+
               {/* Expandable Details */}
               <details className="mt-2">
                 <summary className="cursor-pointer text-sm text-blue-600">
