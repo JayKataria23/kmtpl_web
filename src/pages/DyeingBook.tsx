@@ -59,6 +59,12 @@ function DyeingBook() {
     id: string;
     value: string;
   } | null>(null);
+  const [filters, setFilters] = useState({
+    supplier: "",
+    dyeingUnit: "",
+    design: "",
+    status: "",
+  });
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -213,6 +219,24 @@ function DyeingBook() {
     }
   };
 
+  const filteredPrograms = programs.filter((program) => {
+    return (
+      (!filters.supplier ||
+        program.supplier_name
+          .toLowerCase()
+          .includes(filters.supplier.toLowerCase())) &&
+      (!filters.dyeingUnit ||
+        program.dyeing_unit
+          .toLowerCase()
+          .includes(filters.dyeingUnit.toLowerCase())) &&
+      (!filters.design ||
+        program.design_name
+          .toLowerCase()
+          .includes(filters.design.toLowerCase())) &&
+      (!filters.status || program.status === filters.status)
+    );
+  });
+
   return (
     <div className="max-w-[95%] mx-auto p-6 bg-white">
       <div className="flex justify-between items-center mb-6">
@@ -227,13 +251,68 @@ function DyeingBook() {
         </Button>
       </div>
 
-      <div className="mb-6">
+      <div className="mb-6 space-y-4">
         <Button
           onClick={() => setIsAddProgramOpen(true)}
           className="flex items-center"
         >
           <Plus className="mr-2 h-4 w-4" /> Add New Program
         </Button>
+
+        <details className="border rounded-lg p-4">
+          <summary className="cursor-pointer text-sm text-blue-600 font-medium">
+            Show Filters
+          </summary>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
+            <div>
+              <Input
+                placeholder="Filter by supplier..."
+                value={filters.supplier}
+                onChange={(e) =>
+                  setFilters((prev) => ({ ...prev, supplier: e.target.value }))
+                }
+                className="w-full"
+              />
+            </div>
+            <div>
+              <Input
+                placeholder="Filter by dyeing unit..."
+                value={filters.dyeingUnit}
+                onChange={(e) =>
+                  setFilters((prev) => ({
+                    ...prev,
+                    dyeingUnit: e.target.value,
+                  }))
+                }
+                className="w-full"
+              />
+            </div>
+            <div>
+              <Input
+                placeholder="Filter by design..."
+                value={filters.design}
+                onChange={(e) =>
+                  setFilters((prev) => ({ ...prev, design: e.target.value }))
+                }
+                className="w-full"
+              />
+            </div>
+            <div>
+              <select
+                className="w-full h-10 px-3 rounded-md border border-input bg-background"
+                value={filters.status}
+                onChange={(e) =>
+                  setFilters((prev) => ({ ...prev, status: e.target.value }))
+                }
+              >
+                <option value="">All Statuses</option>
+                <option value="Pending">Pending</option>
+                <option value="In Process">In Process</option>
+                <option value="Completed">Completed</option>
+              </select>
+            </div>
+          </div>
+        </details>
       </div>
 
       {/* Desktop Table View */}
@@ -255,7 +334,7 @@ function DyeingBook() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {programs.map((program) => (
+            {filteredPrograms.map((program) => (
               <TableRow key={program.id}>
                 <TableCell>
                   {new Date(program.created_at).toLocaleDateString()}
@@ -328,14 +407,14 @@ function DyeingBook() {
                 </TableCell>
                 <TableCell>{calculateRemainingMeters(program)}</TableCell>
                 <TableCell>
-                  <div className="flex gap-2">
+                  <div className="flex items-center gap-2 min-w-[300px]">
                     {program.status === "Completed" ? (
                       <>
                         <Button
                           size="sm"
                           variant="outline"
                           onClick={() => handleReverseStatus(program)}
-                          className="flex items-center"
+                          className="flex-1 items-center justify-center"
                         >
                           Reverse Status
                         </Button>
@@ -343,7 +422,7 @@ function DyeingBook() {
                           size="sm"
                           variant="destructive"
                           onClick={() => handleDeleteProgram(program)}
-                          className="flex items-center"
+                          className="flex-1 items-center justify-center"
                         >
                           Delete
                         </Button>
@@ -357,7 +436,7 @@ function DyeingBook() {
                             setSelectedProgram(program);
                             setIsAddReceiptOpen(true);
                           }}
-                          className="flex items-center"
+                          className="flex-1 items-center justify-center"
                         >
                           <Receipt className="mr-2 h-4 w-4" />
                           Add Receipt
@@ -366,7 +445,7 @@ function DyeingBook() {
                           size="sm"
                           variant="default"
                           onClick={() => handleCompleteProgram(program)}
-                          className="flex items-center"
+                          className="flex-1 items-center justify-center"
                         >
                           Complete
                         </Button>
@@ -374,7 +453,7 @@ function DyeingBook() {
                           size="sm"
                           variant="destructive"
                           onClick={() => handleDeleteProgram(program)}
-                          className="flex items-center"
+                          className="flex-1 items-center justify-center"
                         >
                           Delete
                         </Button>
@@ -390,7 +469,7 @@ function DyeingBook() {
 
       {/* Mobile Card View */}
       <div className="md:hidden space-y-4">
-        {programs.map((program) => (
+        {filteredPrograms.map((program) => (
           <Card key={program.id}>
             <CardHeader>
               <CardTitle className="flex justify-between items-center">
@@ -485,12 +564,12 @@ function DyeingBook() {
                   <p>{calculateRemainingMeters(program)}</p>
                 </div>
               </div>
-              <div className="pt-2 flex gap-2">
+              <div className="pt-4 flex flex-wrap gap-2">
                 <Button
                   size="sm"
                   variant="outline"
                   onClick={() => handleEditButtonClick(program)}
-                  className="flex-1"
+                  className="flex-1 min-w-[100px] items-center justify-center"
                 >
                   Edit
                 </Button>
@@ -500,7 +579,7 @@ function DyeingBook() {
                       size="sm"
                       variant="outline"
                       onClick={() => handleReverseStatus(program)}
-                      className="flex-1"
+                      className="flex-1 min-w-[100px] items-center justify-center"
                     >
                       Reverse Status
                     </Button>
@@ -508,7 +587,7 @@ function DyeingBook() {
                       size="sm"
                       variant="destructive"
                       onClick={() => handleDeleteProgram(program)}
-                      className="flex-1"
+                      className="flex-1 min-w-[100px] items-center justify-center"
                     >
                       Delete
                     </Button>
@@ -522,7 +601,7 @@ function DyeingBook() {
                         setSelectedProgram(program);
                         setIsAddReceiptOpen(true);
                       }}
-                      className="flex-1 flex items-center justify-center"
+                      className="flex-1 min-w-[100px] items-center justify-center"
                     >
                       <Receipt className="mr-2 h-4 w-4" />
                       Add Receipt
@@ -531,7 +610,7 @@ function DyeingBook() {
                       size="sm"
                       variant="default"
                       onClick={() => handleCompleteProgram(program)}
-                      className="flex-1"
+                      className="flex-1 min-w-[100px] items-center justify-center"
                     >
                       Complete
                     </Button>
@@ -539,7 +618,7 @@ function DyeingBook() {
                       size="sm"
                       variant="destructive"
                       onClick={() => handleDeleteProgram(program)}
-                      className="flex-1"
+                      className="flex-1 min-w-[100px] items-center justify-center"
                     >
                       Delete
                     </Button>
