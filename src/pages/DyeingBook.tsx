@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Home, Plus, Receipt } from "lucide-react";
+import { Home, Plus, Receipt, FileDown } from "lucide-react";
 import supabase from "@/utils/supabase";
 import { AddDyeingProgramForm } from "@/components/dyeing/AddDyeingProgramForm";
 import { AddGoodsReceiptForm } from "@/components/dyeing/AddGoodsReceiptForm";
@@ -28,6 +28,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import html2pdf from "html2pdf.js";
 
 export interface DyeingProgram {
   id: string;
@@ -439,6 +440,117 @@ function DyeingBook() {
     );
   });
 
+  const generatePDF = useCallback(() => {
+    const printElement = document.createElement("div");
+    printElement.className = "pdf-content";
+
+    const table = document.createElement("table");
+    table.style.width = "100%";
+    table.style.borderCollapse = "collapse";
+    table.style.fontSize = "10px";
+
+    const thead = document.createElement("thead");
+    thead.innerHTML = `
+      <tr>
+        <th style="border: 0.5px solid black; padding: 2px; text-align: left; width: 8%">Date</th>
+        <th style="border: 0.5px solid black; padding: 2px; text-align: left; width: 12%">Supplier</th>
+        <th style="border: 0.5px solid black; padding: 2px; text-align: left; width: 7%">Slip#</th>
+        <th style="border: 0.5px solid black; padding: 2px; text-align: left; width: 12%">Design</th>
+        <th style="border: 0.5px solid black; padding: 2px; text-align: right; width: 6%">Takas</th>
+        <th style="border: 0.5px solid black; padding: 2px; text-align: right; width: 8%">Meters</th>
+        <th style="border: 0.5px solid black; padding: 2px; text-align: left; width: 8%">Unit</th>
+        <th style="border: 0.5px solid black; padding: 2px; text-align: left; width: 7%">Lot#</th>
+        <th style="border: 0.5px solid black; padding: 2px; text-align: left; width: 8%">Status</th>
+        <th style="border: 0.5px solid black; padding: 2px; text-align: right; width: 6%">Rem.</th>
+        <th style="border: 0.5px solid black; padding: 2px; text-align: left; width: 18%">Shades</th>
+      </tr>
+    `;
+    table.appendChild(thead);
+
+    const tbody = document.createElement("tbody");
+    filteredPrograms.forEach((program) => {
+      const tr = document.createElement("tr");
+
+      const shadesText = program.shades_details
+        .map((shade) => `${shade.shade}(${shade.takas})`)
+        .join(", ");
+
+      tr.innerHTML = `
+        <td style="border: 0.5px solid black; padding: 2px">${new Date(
+          program.created_at
+        ).toLocaleDateString()}</td>
+        <td style="border: 0.5px solid black; padding: 2px">${
+          program.supplier_name
+        }</td>
+        <td style="border: 0.5px solid black; padding: 2px">${
+          program.slip_number
+        }</td>
+        <td style="border: 0.5px solid black; padding: 2px">${
+          program.design_name
+        }</td>
+        <td style="border: 0.5px solid black; padding: 2px; text-align: right">${
+          program.total_takas
+        }</td>
+        <td style="border: 0.5px solid black; padding: 2px; text-align: right">${roundToTwoDecimals(
+          program.total_meters
+        )}</td>
+        <td style="border: 0.5px solid black; padding: 2px">${
+          program.dyeing_unit
+        }</td>
+        <td style="border: 0.5px solid black; padding: 2px">${
+          program.lot_number || "-"
+        }</td>
+        <td style="border: 0.5px solid black; padding: 2px">${
+          program.status
+        }</td>
+        <td style="border: 0.5px solid black; padding: 2px; text-align: right">${calculateRemainingTakas(
+          program
+        )}</td>
+        <td style="border: 0.5px solid black; padding: 2px; ">${shadesText}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+    printElement.appendChild(table);
+
+    const opt = {
+      margin: [0.3, 0.2, 0.3, 0.2],
+      filename: "dyeing-book-report.pdf",
+      image: { type: "jpeg", quality: 0.98 },
+      html2canvas: {
+        scale: 2,
+        letterRendering: true,
+      },
+      jsPDF: {
+        unit: "in",
+        format: "a4",
+        orientation: "portrait",
+        compress: true,
+        precision: 2,
+        putOnlyUsedFonts: true,
+      },
+    };
+
+    html2pdf()
+      .set(opt)
+      .from(printElement)
+      .save()
+      .then(() => {
+        toast({
+          title: "Success",
+          description: "PDF generated successfully",
+        });
+      })
+      .catch((error) => {
+        console.error("Error generating PDF:", error);
+        toast({
+          title: "Error",
+          description: "Failed to generate PDF",
+          variant: "destructive",
+        });
+      });
+  }, [filteredPrograms, calculateRemainingTakas, roundToTwoDecimals, toast]);
+
   return (
     <div className="max-w-[95%] mx-auto p-6 pb-24 bg-white min-h-screen">
       <div className="flex justify-between items-center mb-6">
@@ -454,12 +566,22 @@ function DyeingBook() {
       </div>
 
       <div className="mb-6 space-y-4">
-        <Button
-          onClick={() => setIsAddProgramOpen(true)}
-          className="flex items-center"
-        >
-          <Plus className="mr-2 h-4 w-4" /> Add New Program
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            onClick={() => setIsAddProgramOpen(true)}
+            className="flex items-center"
+          >
+            <Plus className="mr-2 h-4 w-4" /> Add New Program
+          </Button>
+
+          <Button
+            onClick={generatePDF}
+            variant="outline"
+            className="flex items-center"
+          >
+            <FileDown className="mr-2 h-4 w-4" /> Export PDF
+          </Button>
+        </div>
 
         <details className="border rounded-lg p-4">
           <summary className="cursor-pointer text-sm text-blue-600 font-medium">
