@@ -478,7 +478,13 @@ function DyeingBook() {
       tr.innerHTML = `
         <td style="border: 0.5px solid black; padding: 2px">${new Date(
           program.created_at
-        ).toLocaleDateString()}</td>
+        )
+          .toLocaleDateString("en-GB", {
+            day: "2-digit",
+            month: "2-digit",
+            year: "2-digit",
+          })
+          .replace(/\//g, ".")}</td>
         <td style="border: 0.5px solid black; padding: 2px">${
           program.supplier_name
         }</td>
@@ -541,7 +547,7 @@ function DyeingBook() {
           description: "PDF generated successfully",
         });
       })
-      .catch((error) => {
+      .catch((error: Error) => {
         console.error("Error generating PDF:", error);
         toast({
           title: "Error",
@@ -694,7 +700,13 @@ function DyeingBook() {
                       }
                       className="cursor-pointer hover:text-blue-600"
                     >
-                      {new Date(program.created_at).toLocaleDateString()}
+                      {new Date(program.created_at)
+                        .toLocaleDateString("en-GB", {
+                          day: "2-digit",
+                          month: "2-digit",
+                          year: "2-digit",
+                        })
+                        .replace(/\//g, ".")}
                     </span>
                   )}
                 </TableCell>
@@ -871,7 +883,13 @@ function DyeingBook() {
                     }
                     className="cursor-pointer hover:text-blue-600"
                   >
-                    {new Date(program.created_at).toLocaleDateString()}
+                    {new Date(program.created_at)
+                      .toLocaleDateString("en-GB", {
+                        day: "2-digit",
+                        month: "2-digit",
+                        year: "2-digit",
+                      })
+                      .replace(/\//g, ".")}
                   </span>
                 )}
               </div>
