@@ -59,6 +59,10 @@ function DyeingBook() {
     id: string;
     value: string;
   } | null>(null);
+  const [editingDate, setEditingDate] = useState<{
+    id: string;
+    value: string;
+  } | null>(null);
   const [filters, setFilters] = useState({
     supplier: "",
     dyeingUnit: "",
@@ -219,6 +223,31 @@ function DyeingBook() {
     }
   };
 
+  const handleDateUpdate = async (programId: string, newValue: string) => {
+    try {
+      const { error } = await supabase
+        .from("dyeing_programs")
+        .update({ created_at: newValue })
+        .eq("id", programId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Date updated successfully",
+      });
+      fetchPrograms();
+      setEditingDate(null);
+    } catch (error) {
+      console.error("Error updating date:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update date",
+        variant: "destructive",
+      });
+    }
+  };
+
   const filteredPrograms = programs.filter((program) => {
     return (
       (!filters.supplier ||
@@ -337,7 +366,42 @@ function DyeingBook() {
             {filteredPrograms.map((program) => (
               <TableRow key={program.id}>
                 <TableCell>
-                  {new Date(program.created_at).toLocaleDateString()}
+                  {editingDate?.id === program.id ? (
+                    <Input
+                      type="date"
+                      value={editingDate.value}
+                      onChange={(e) =>
+                        setEditingDate({
+                          id: program.id,
+                          value: e.target.value,
+                        })
+                      }
+                      onBlur={() =>
+                        handleDateUpdate(program.id, editingDate.value)
+                      }
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          handleDateUpdate(program.id, editingDate.value);
+                        } else if (e.key === "Escape") {
+                          setEditingDate(null);
+                        }
+                      }}
+                      className="w-32"
+                      autoFocus
+                    />
+                  ) : (
+                    <span
+                      onClick={() =>
+                        setEditingDate({
+                          id: program.id,
+                          value: program.created_at.split("T")[0],
+                        })
+                      }
+                      className="cursor-pointer hover:text-blue-600"
+                    >
+                      {new Date(program.created_at).toLocaleDateString()}
+                    </span>
+                  )}
                 </TableCell>
                 <TableCell>{program.supplier_name}</TableCell>
                 <TableCell>{program.slip_number}</TableCell>
@@ -491,7 +555,42 @@ function DyeingBook() {
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <p className="text-sm text-gray-500">Date</p>
-                  <p>{new Date(program.created_at).toLocaleDateString()}</p>
+                  {editingDate?.id === program.id ? (
+                    <Input
+                      type="date"
+                      value={editingDate.value}
+                      onChange={(e) =>
+                        setEditingDate({
+                          id: program.id,
+                          value: e.target.value,
+                        })
+                      }
+                      onBlur={() =>
+                        handleDateUpdate(program.id, editingDate.value)
+                      }
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          handleDateUpdate(program.id, editingDate.value);
+                        } else if (e.key === "Escape") {
+                          setEditingDate(null);
+                        }
+                      }}
+                      className="mt-1"
+                      autoFocus
+                    />
+                  ) : (
+                    <p
+                      onClick={() =>
+                        setEditingDate({
+                          id: program.id,
+                          value: program.created_at.split("T")[0],
+                        })
+                      }
+                      className="cursor-pointer hover:text-blue-600"
+                    >
+                      {new Date(program.created_at).toLocaleDateString()}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Supplier</p>
