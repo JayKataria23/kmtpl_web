@@ -43,6 +43,7 @@ export interface GoodsReceipt {
   grn_number: string;
   meters_received: number;
   date_received: string;
+  taka_received: number | null;
 }
 
 function DyeingBook() {
@@ -109,13 +110,13 @@ function DyeingBook() {
     return Number(value.toFixed(2));
   };
 
-  const calculateRemainingMeters = (program: DyeingProgram) => {
-    const receivedMeters =
+  const calculateRemainingTakas = (program: DyeingProgram) => {
+    const receivedTakas =
       program.goods_receipts?.reduce(
-        (sum, receipt) => sum + receipt.meters_received,
+        (sum, receipt) => sum + (receipt.taka_received || 0),
         0
       ) || 0;
-    return roundToTwoDecimals(program.total_meters - receivedMeters);
+    return roundToTwoDecimals(program.total_takas - receivedTakas);
   };
 
   const handleCompleteProgram = async (program: DyeingProgram) => {
@@ -261,6 +262,19 @@ function DyeingBook() {
 
       if (error) throw error;
 
+      // Check if we need to auto-complete the program
+      const program = programs.find((p) =>
+        p.goods_receipts?.some((r) => r.id === receiptId)
+      );
+
+      if (
+        program &&
+        calculateRemainingTakas(program) <= 0 &&
+        program.status !== "Completed"
+      ) {
+        await handleCompleteProgram(program);
+      }
+
       toast({
         title: "Success",
         description: "GRN date updated successfully",
@@ -272,6 +286,37 @@ function DyeingBook() {
       toast({
         title: "Error",
         description: "Failed to update GRN date",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteGRN = async (receiptId: string) => {
+    // Show confirmation dialog
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this GRN entry?"
+    );
+
+    if (!confirmed) return;
+
+    try {
+      const { error } = await supabase
+        .from("goods_receipts")
+        .delete()
+        .eq("id", receiptId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "GRN entry deleted successfully",
+      });
+      fetchPrograms();
+    } catch (error) {
+      console.error("Error deleting GRN:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete GRN entry",
         variant: "destructive",
       });
     }
@@ -387,7 +432,7 @@ function DyeingBook() {
               <TableHead>Dyeing Unit</TableHead>
               <TableHead>Lot Number</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead>Remaining Meters</TableHead>
+              <TableHead>Remaining Takas</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -498,7 +543,7 @@ function DyeingBook() {
                     {program.status}
                   </span>
                 </TableCell>
-                <TableCell>{calculateRemainingMeters(program)}</TableCell>
+                <TableCell>{calculateRemainingTakas(program)}</TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2 min-w-[300px]">
                     {program.status === "Completed" ? (
@@ -688,8 +733,8 @@ function DyeingBook() {
                   )}
                 </div>
                 <div>
-                  <p className="text-sm text-gray-500">Remaining Meters</p>
-                  <p>{calculateRemainingMeters(program)}</p>
+                  <p className="text-sm text-gray-500">Remaining Takas</p>
+                  <p>{calculateRemainingTakas(program)}</p>
                 </div>
               </div>
               <div className="pt-4 flex flex-wrap gap-2">
@@ -783,12 +828,37 @@ function DyeingBook() {
                     <h4 className="font-medium mb-2">GRN Details</h4>
                     <div className="space-y-1">
                       {program.goods_receipts?.map((receipt) => (
-                        <div key={receipt.id} className="border p-2 rounded">
+                        <div
+                          key={receipt.id}
+                          className="border p-2 rounded relative"
+                        >
+                          <button
+                            onClick={() => handleDeleteGRN(receipt.id)}
+                            className="absolute top-2 right-2 text-gray-500 hover:text-red-500"
+                          >
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              width="16"
+                              height="16"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
+                              <line x1="18" y1="6" x2="6" y2="18"></line>
+                              <line x1="6" y1="6" x2="18" y2="18"></line>
+                            </svg>
+                          </button>
                           <p className="text-sm">
                             GRN Number: {receipt.grn_number}
                           </p>
                           <p className="text-sm">
                             Meters Received: {receipt.meters_received}
+                          </p>
+                          <p className="text-sm">
+                            Takas Received: {receipt.taka_received || 0}
                           </p>
                           <p className="text-sm">
                             Date Received:{" "}

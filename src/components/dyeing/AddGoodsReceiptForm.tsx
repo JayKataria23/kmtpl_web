@@ -18,6 +18,7 @@ export function AddGoodsReceiptForm({ program, onClose, onSuccess }: Props) {
   const [formData, setFormData] = useState({
     grn_number: "",
     meters_received: "",
+    taka_received: "",
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -30,6 +31,7 @@ export function AddGoodsReceiptForm({ program, onClose, onSuccess }: Props) {
         dyeing_program_id: program.id,
         grn_number: formData.grn_number,
         meters_received: parseFloat(formData.meters_received),
+        taka_received: parseFloat(formData.taka_received) || null,
       });
 
       if (error) throw error;
@@ -86,6 +88,19 @@ export function AddGoodsReceiptForm({ program, onClose, onSuccess }: Props) {
             setFormData({ ...formData, meters_received: e.target.value })
           }
           required
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="taka_received">Takas Received</Label>
+        <Input
+          id="taka_received"
+          type="number"
+          value={formData.taka_received}
+          onChange={(e) =>
+            setFormData({ ...formData, taka_received: e.target.value })
+          }
+          placeholder="Optional"
         />
       </div>
 
