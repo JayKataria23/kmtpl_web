@@ -12,13 +12,14 @@ export default function HomePage() {
     { path: "/order-file", label: "Design Wise Order" },
     { path: "/party-file", label: "Party Wise Order" },
     { path: "/part-order-file", label: "Part Orders" },
+    { path: "/dyeing-book", label: "Dyeing Book" },
     { path: "/bhiwandi-list", label: "Bhiwandi List" },
     { path: "/party-dispatch-list", label: "Party Dispatch List" },
     { path: "/dispatch-list", label: "Dispatch List" },
     { path: "/create-challan", label: "Create Challan" },
     { path: "/challan-list", label: "Challan List" },
     { path: "/party-profiles", label: "Party Profiles" },
-    { path: "/broker-transport", label: "Master" }
+    { path: "/broker-transport", label: "Master" },
   ];
 
   return (
