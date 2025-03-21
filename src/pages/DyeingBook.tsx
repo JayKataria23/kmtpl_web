@@ -144,6 +144,37 @@ function DyeingBook() {
     }
   };
 
+  const handleDeleteProgram = async (program: DyeingProgram) => {
+    // Show confirmation dialog
+    const confirmed = window.confirm(
+      `Are you sure you want to delete the dyeing program for ${program.design_name}?`
+    );
+
+    if (!confirmed) return;
+
+    try {
+      const { error } = await supabase
+        .from("dyeing_programs")
+        .delete()
+        .eq("id", program.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Program deleted successfully",
+      });
+      fetchPrograms();
+    } catch (error) {
+      console.error("Error deleting program:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete program",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="max-w-[95%] mx-auto p-6 bg-white">
       <div className="flex justify-between items-center mb-6">
@@ -217,14 +248,24 @@ function DyeingBook() {
                 <TableCell>
                   <div className="flex gap-2">
                     {program.status === "Completed" ? (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleReverseStatus(program)}
-                        className="flex items-center"
-                      >
-                        Reverse Status
-                      </Button>
+                      <>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleReverseStatus(program)}
+                          className="flex items-center"
+                        >
+                          Reverse Status
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => handleDeleteProgram(program)}
+                          className="flex items-center"
+                        >
+                          Delete
+                        </Button>
+                      </>
                     ) : (
                       <>
                         <Button
@@ -246,6 +287,14 @@ function DyeingBook() {
                           className="flex items-center"
                         >
                           Complete
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => handleDeleteProgram(program)}
+                          className="flex items-center"
+                        >
+                          Delete
                         </Button>
                       </>
                     )}
@@ -314,14 +363,24 @@ function DyeingBook() {
               </div>
               <div className="pt-2 flex gap-2">
                 {program.status === "Completed" ? (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleReverseStatus(program)}
-                    className="flex-1"
-                  >
-                    Reverse Status
-                  </Button>
+                  <>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleReverseStatus(program)}
+                      className="flex-1"
+                    >
+                      Reverse Status
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={() => handleDeleteProgram(program)}
+                      className="flex-1"
+                    >
+                      Delete
+                    </Button>
+                  </>
                 ) : (
                   <>
                     <Button
@@ -343,6 +402,14 @@ function DyeingBook() {
                       className="flex-1"
                     >
                       Complete
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={() => handleDeleteProgram(program)}
+                      className="flex-1"
+                    >
+                      Delete
                     </Button>
                   </>
                 )}
