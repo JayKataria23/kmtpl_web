@@ -63,6 +63,10 @@ function DyeingBook() {
     id: string;
     value: string;
   } | null>(null);
+  const [editingGRNDate, setEditingGRNDate] = useState<{
+    id: string;
+    value: string;
+  } | null>(null);
   const [filters, setFilters] = useState({
     supplier: "",
     dyeingUnit: "",
@@ -243,6 +247,31 @@ function DyeingBook() {
       toast({
         title: "Error",
         description: "Failed to update date",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleGRNDateUpdate = async (receiptId: string, newValue: string) => {
+    try {
+      const { error } = await supabase
+        .from("goods_receipts")
+        .update({ date_received: newValue })
+        .eq("id", receiptId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "GRN date updated successfully",
+      });
+      fetchPrograms();
+      setEditingGRNDate(null);
+    } catch (error) {
+      console.error("Error updating GRN date:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update GRN date",
         variant: "destructive",
       });
     }
@@ -763,9 +792,50 @@ function DyeingBook() {
                           </p>
                           <p className="text-sm">
                             Date Received:{" "}
-                            {new Date(
-                              receipt.date_received
-                            ).toLocaleDateString()}
+                            {editingGRNDate?.id === receipt.id ? (
+                              <Input
+                                type="date"
+                                value={editingGRNDate.value}
+                                onChange={(e) =>
+                                  setEditingGRNDate({
+                                    id: receipt.id,
+                                    value: e.target.value,
+                                  })
+                                }
+                                onBlur={() =>
+                                  handleGRNDateUpdate(
+                                    receipt.id,
+                                    editingGRNDate.value
+                                  )
+                                }
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") {
+                                    handleGRNDateUpdate(
+                                      receipt.id,
+                                      editingGRNDate.value
+                                    );
+                                  } else if (e.key === "Escape") {
+                                    setEditingGRNDate(null);
+                                  }
+                                }}
+                                className="mt-1 w-full"
+                                autoFocus
+                              />
+                            ) : (
+                              <span
+                                onClick={() =>
+                                  setEditingGRNDate({
+                                    id: receipt.id,
+                                    value: receipt.date_received.split("T")[0],
+                                  })
+                                }
+                                className="cursor-pointer hover:text-blue-600"
+                              >
+                                {new Date(
+                                  receipt.date_received
+                                ).toLocaleDateString()}
+                              </span>
+                            )}
                           </p>
                         </div>
                       ))}
