@@ -42,6 +42,11 @@ interface Party {
   order_no: number;
 }
 
+interface Order {
+  id: string;
+  order_no: number;
+}
+
 interface PriceEntry {
   design: string;
   price: string;
@@ -58,6 +63,7 @@ function PartOrderFile() {
   const [parties, setParties] = useState<Party[]>([]);
   const [designs, setDesigns] = useState<string[]>([]);
   const [selectedParty, setSelectedParty] = useState<Party | null>(null);
+  const [partyOrders, setPartyOrders] = useState<Order[]>([]);
   const [selectedDesign, setSelectedDesign] = useState<string>("");
   const [price, setPrice] = useState<string>("");
   const [remark, setRemark] = useState<string>("");
@@ -299,19 +305,20 @@ function PartOrderFile() {
         ...Array.from({ length: 30 }, (_, i) => ({ [`${i + 1}`]: "" })),
       ]);
 
-      // Get the most recent order for this party
+      // Get all orders for this party
       const { data: orderData, error: orderError } = await supabase
         .from("orders")
         .select("id, order_no")
         .eq("bill_to_id", partyId)
-        .order("order_no", { ascending: false })
-        .limit(1);
+        .order("order_no", { ascending: false });
 
       if (orderError) throw orderError;
 
       const party = parties.find((p) => p.id === partyId);
       if (party) {
         if (orderData && orderData.length > 0) {
+          setPartyOrders(orderData);
+          // Set the latest order as selected by default
           setSelectedParty({
             ...party,
             order_id: orderData[0].id,
@@ -325,6 +332,7 @@ function PartOrderFile() {
             order_id: "",
             order_no: 0,
           });
+          setPartyOrders([]);
           toast({
             title: "Warning",
             description:
@@ -339,6 +347,16 @@ function PartOrderFile() {
         title: "Error",
         description: "Failed to fetch party order details",
         variant: "destructive",
+      });
+    }
+  };
+
+  const handleOrderSelect = (orderId: string, orderNo: number) => {
+    if (selectedParty) {
+      setSelectedParty({
+        ...selectedParty,
+        order_id: orderId,
+        order_no: orderNo,
       });
     }
   };
@@ -450,9 +468,24 @@ function PartOrderFile() {
                 <Label className="text-right">Order No</Label>
                 <div className="col-span-3">
                   {selectedParty.order_no ? (
-                    <div className="text-sm text-gray-700">
-                      Latest Order: #{selectedParty.order_no}
-                    </div>
+                    <select
+                      value={selectedParty.order_id}
+                      onChange={(e) => {
+                        const order = partyOrders.find(
+                          (o) => o.id === e.target.value
+                        );
+                        if (order) {
+                          handleOrderSelect(order.id, order.order_no);
+                        }
+                      }}
+                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    >
+                      {partyOrders.map((order) => (
+                        <option key={order.id} value={order.id}>
+                          Order #{order.order_no}
+                        </option>
+                      ))}
+                    </select>
                   ) : (
                     <div className="text-sm text-red-500">
                       No orders found for this party
