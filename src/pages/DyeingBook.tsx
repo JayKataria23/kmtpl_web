@@ -22,6 +22,12 @@ import { AddDyeingProgramForm } from "@/components/dyeing/AddDyeingProgramForm";
 import { AddGoodsReceiptForm } from "@/components/dyeing/AddGoodsReceiptForm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 
 export interface DyeingProgram {
   id: string;
@@ -918,11 +924,11 @@ function DyeingBook() {
         ))}
       </div>
 
-      <Dialog open={isAddProgramOpen} onOpenChange={setIsAddProgramOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Add New Dyeing Program</DialogTitle>
-          </DialogHeader>
+      <Sheet open={isAddProgramOpen} onOpenChange={setIsAddProgramOpen}>
+        <SheetContent className="sm:max-w-[425px]" side="top">
+          <SheetHeader>
+            <SheetTitle>Add New Dyeing Program</SheetTitle>
+          </SheetHeader>
           <AddDyeingProgramForm
             onClose={() => setIsAddProgramOpen(false)}
             onSuccess={() => {
@@ -930,8 +936,8 @@ function DyeingBook() {
               setIsAddProgramOpen(false);
             }}
           />
-        </DialogContent>
-      </Dialog>
+        </SheetContent>
+      </Sheet>
 
       <Dialog open={isAddReceiptOpen} onOpenChange={setIsAddReceiptOpen}>
         <DialogContent className="sm:max-w-[425px]">
