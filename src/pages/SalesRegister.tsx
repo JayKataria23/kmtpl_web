@@ -63,19 +63,83 @@ function SalesRegister() {
   };
 
   // New matching function that counts matching characters
-  const countMatchingCharacters = (str1: string, str2: string): number => {
-    const s1 = str1.toLowerCase().replace(/\s+/g, "");
-    const s2 = str2.toLowerCase().replace(/\s*\[.*?\]\s*$/g, "");
 
+  const extractWords = (name: string): string[] => {
+    return name
+      .toLowerCase()
+      .replace(/[^\w\s]/g, "") // Remove punctuation
+      .split(/\s+/)
+      .filter((word) => word.length > 1); // Only keep words with length > 1
+  };
+
+  const calculateWordSimilarity = (str1: string, str2: string): number => {
+    const words1 = extractWords(str1);
+    const words2 = extractWords(str2);
+
+    let matchCount = 0;
+    let partialMatchCount = 0;
+
+    // Check for complete word matches and partial matches
+    for (const word1 of words1) {
+      let bestPartialMatch = 0;
+
+      for (const word2 of words2) {
+        // Complete word match
+        if (word1 === word2) {
+          matchCount++;
+          bestPartialMatch = 1;
+          break;
+        }
+
+        // Check for partial match (one word is substring of another)
+        if (word1.length >= 3 && word2.length >= 3) {
+          if (word1.includes(word2) || word2.includes(word1)) {
+            const partialScore =
+              Math.min(word1.length, word2.length) /
+              Math.max(word1.length, word2.length);
+            bestPartialMatch = Math.max(bestPartialMatch, partialScore);
+          }
+
+          // Check for common prefix (first 3+ characters match)
+          const minLength = Math.min(word1.length, word2.length);
+          if (minLength >= 3) {
+            const prefix = word1.substring(0, minLength);
+            if (word2.startsWith(prefix)) {
+              const prefixScore =
+                prefix.length / Math.max(word1.length, word2.length);
+              bestPartialMatch = Math.max(bestPartialMatch, prefixScore);
+            }
+          }
+        }
+      }
+
+      partialMatchCount += bestPartialMatch;
+    }
+
+    // Calculate similarity score
+    const totalWords = Math.max(words1.length, words2.length);
+    if (totalWords === 0) return 0;
+
+    // Give more weight to complete matches
+    const weightedScore = (matchCount * 1.5 + partialMatchCount) / totalWords;
+    return Math.min(1, weightedScore); // Cap at 1
+  };
+
+  // Calculate character-level similarity
+  const calculateCharSimilarity = (str1: string, str2: string): number => {
+    const s1 = str1.toLowerCase().replace(/\s+/g, "");
+    const s2 = str2.toLowerCase().replace(/\s+/g, "");
+
+    if (s1.length === 0 || s2.length === 0) return 0;
+
+    // Count matching characters
     let matches = 0;
     const charMap: Record<string, number> = {};
 
-    // Count characters in first string
     for (const char of s1) {
       charMap[char] = (charMap[char] || 0) + 1;
     }
 
-    // Count matching characters in second string
     for (const char of s2) {
       if (charMap[char] && charMap[char] > 0) {
         matches++;
@@ -83,39 +147,30 @@ function SalesRegister() {
       }
     }
 
-    // Calculate a normalized score based on the length of both strings
-    return matches;
+    // Calculate similarity score
+    return matches / Math.max(s1.length, s2.length);
   };
 
   const findBestMatch = (buyerName: string): { name: string; id: number } => {
     let bestMatch = { name: buyerName, id: -1 };
-    let highestMatchCount = 0;
-    let matchPercentage = 0;
+    let highestScore = 0;
 
     for (const party of parties) {
-      const matchCount = countMatchingCharacters(buyerName, party.name);
+      // Calculate both word-based and character-based similarity
+      const wordSimilarity = calculateWordSimilarity(buyerName, party.name);
+      const charSimilarity = calculateCharSimilarity(buyerName, party.name);
 
-      // Calculate match percentage based on the length of the longer string
-      const maxLength = Math.max(
-        buyerName.toLowerCase().replace(/\s+/g, "").length,
-        party.name.toLowerCase().replace(/\s*\[.*?\]\s*$/g, "").length
-      );
-      const currentMatchPercentage =
-        maxLength > 0 ? (matchCount / maxLength) * 100 : 0;
+      // Combined score (favoring word similarity)
+      const combinedScore = wordSimilarity * 0.7 + charSimilarity * 0.3;
 
-      if (
-        matchCount > highestMatchCount ||
-        (matchCount === highestMatchCount &&
-          currentMatchPercentage > matchPercentage)
-      ) {
-        highestMatchCount = matchCount;
-        matchPercentage = currentMatchPercentage;
+      if (combinedScore > highestScore) {
+        highestScore = combinedScore;
         bestMatch = { name: party.name, id: party.id };
       }
     }
 
-    // Only consider it a match if at least 40% of characters match
-    return matchPercentage >= 20 ? bestMatch : { name: buyerName, id: -1 };
+    // Only consider it a match if score is above threshold
+    return bestMatch;
   };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
