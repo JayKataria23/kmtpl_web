@@ -28,6 +28,7 @@ import FastOrderForm from "./pages/FastOrderForm";
 import PartyDispatchList from "./pages/PartyDispatchList";
 import PartOrderFile from "./pages/PartOrderFile";
 import DyeingBook from "./pages/DyeingBook";
+import SalesRegister from "./pages/SalesRegister";
 
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
@@ -62,6 +63,7 @@ createRoot(document.getElementById("root")!).render(
             element={<OrderPreviewPage />}
           />
           <Route path="/challan-view/:challanId" element={<ChallanView />} />
+          <Route path="/sales-register" element={<SalesRegister />} />
           <Route path="/challan-edit/:challanId" element={<EditChallan />} />
           <Route
             path="/order-file"

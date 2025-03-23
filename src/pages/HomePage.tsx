@@ -13,6 +13,7 @@ export default function HomePage() {
     { path: "/party-file", label: "Party Wise Order" },
     { path: "/part-order-file", label: "Part Orders" },
     { path: "/dyeing-book", label: "Dyeing Book" },
+    { path: "/sales-register", label: "Sales Register" },
     { path: "/bhiwandi-list", label: "Bhiwandi List" },
     { path: "/party-dispatch-list", label: "Party Dispatch List" },
     { path: "/dispatch-list", label: "Dispatch List" },
