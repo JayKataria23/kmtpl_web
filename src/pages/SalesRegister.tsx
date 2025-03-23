@@ -65,7 +65,7 @@ function SalesRegister() {
   // New matching function that counts matching characters
   const countMatchingCharacters = (str1: string, str2: string): number => {
     const s1 = str1.toLowerCase().replace(/\s+/g, "");
-    const s2 = str2.toLowerCase().replace(/\s+/g, "");
+    const s2 = str2.toLowerCase().replace(/\s*\[.*?\]\s*$/g, "");
 
     let matches = 0;
     const charMap: Record<string, number> = {};
@@ -87,10 +87,8 @@ function SalesRegister() {
     return matches;
   };
 
-  const findBestMatch = (
-    buyerName: string
-  ): { name: string; id?: number | null } => {
-    let bestMatch = { name: buyerName };
+  const findBestMatch = (buyerName: string): { name: string; id: number } => {
+    let bestMatch = { name: buyerName, id: -1 };
     let highestMatchCount = 0;
     let matchPercentage = 0;
 
@@ -100,7 +98,7 @@ function SalesRegister() {
       // Calculate match percentage based on the length of the longer string
       const maxLength = Math.max(
         buyerName.toLowerCase().replace(/\s+/g, "").length,
-        party.name.toLowerCase().replace(/\s+/g, "").length
+        party.name.toLowerCase().replace(/\s*\[.*?\]\s*$/g, "").length
       );
       const currentMatchPercentage =
         maxLength > 0 ? (matchCount / maxLength) * 100 : 0;
@@ -117,7 +115,7 @@ function SalesRegister() {
     }
 
     // Only consider it a match if at least 40% of characters match
-    return matchPercentage >= 40 ? bestMatch : { name: buyerName };
+    return matchPercentage >= 20 ? bestMatch : { name: buyerName, id: -1 };
   };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -162,7 +160,7 @@ function SalesRegister() {
             },
           },
           {
-            text: "Extract the following information from this invoice image: buyer name, tax invoice number, and total amount before tax. Return only these three fields in JSON format.",
+            text: "Extract the following information from this invoice image: buyer name, tax invoice number, and total amount before tax. The buyer name should include the address location writen bellow it",
           },
         ]);
 
