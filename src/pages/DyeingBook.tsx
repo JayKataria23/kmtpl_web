@@ -28,7 +28,6 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import html2pdf from "html2pdf.js";
 
 export interface DyeingProgram {
   id: string;
@@ -40,12 +39,12 @@ export interface DyeingProgram {
   shades_details: { shade: string; takas: number }[];
   dyeing_unit: string;
   lot_number: string | null;
-  status: "Pending" | "In Process" | "Completed";
   created_at: string;
   goods_receipts?: GoodsReceipt[];
   bill_number: string | null;
   bill_date: string | null;
   rate: string | null;
+  complete: boolean;
 }
 
 export interface GoodsReceipt {
@@ -94,7 +93,8 @@ function DyeingBook() {
     supplier: "",
     dyeingUnit: "",
     design: "",
-    status: "",
+    complete: "incomplete",
+    lotNumber: "",
   });
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -145,7 +145,7 @@ function DyeingBook() {
     try {
       const { error } = await supabase
         .from("dyeing_programs")
-        .update({ status: "Completed" })
+        .update({ complete: true })
         .eq("id", program.id);
 
       if (error) throw error;
@@ -165,18 +165,18 @@ function DyeingBook() {
     }
   };
 
-  const handleReverseStatus = async (program: DyeingProgram) => {
+  const handleReverseComplete = async (program: DyeingProgram) => {
     try {
       const { error } = await supabase
         .from("dyeing_programs")
-        .update({ status: "In Process" })
+        .update({ complete: false })
         .eq("id", program.id);
 
       if (error) throw error;
 
       toast({
         title: "Success",
-        description: "Program status reversed to In Process",
+        description: "Program status reversed",
       });
       fetchPrograms();
     } catch (error) {
@@ -292,7 +292,7 @@ function DyeingBook() {
       if (
         program &&
         calculateRemainingTakas(program) <= 0 &&
-        program.status !== "Completed"
+        program.complete === false
       ) {
         await handleCompleteProgram(program);
       }
@@ -436,126 +436,100 @@ function DyeingBook() {
         program.design_name
           .toLowerCase()
           .includes(filters.design.toLowerCase())) &&
-      (!filters.status || program.status === filters.status)
+      (!filters.lotNumber ||
+        (program.lot_number &&
+          program.lot_number
+            .toLowerCase()
+            .includes(filters.lotNumber.toLowerCase()))) &&
+      (filters.complete === "all" ||
+        (filters.complete === "complete" && program.complete) ||
+        (filters.complete === "incomplete" && !program.complete))
     );
   });
 
-  const generatePDF = useCallback(() => {
-    const printElement = document.createElement("div");
-    printElement.className = "pdf-content";
+  const printTable = useCallback(() => {
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) return;
 
-    const table = document.createElement("table");
-    table.style.width = "100%";
-    table.style.borderCollapse = "collapse";
-    table.style.fontSize = "10px";
-
-    const thead = document.createElement("thead");
-    thead.innerHTML = `
-      <tr>
-        <th style="border: 0.5px solid black; padding: 2px; text-align: left; width: 8%">Date</th>
-        <th style="border: 0.5px solid black; padding: 2px; text-align: left; width: 12%">Supplier</th>
-        <th style="border: 0.5px solid black; padding: 2px; text-align: left; width: 7%">Slip#</th>
-        <th style="border: 0.5px solid black; padding: 2px; text-align: left; width: 12%">Design</th>
-        <th style="border: 0.5px solid black; padding: 2px; text-align: right; width: 6%">Takas</th>
-        <th style="border: 0.5px solid black; padding: 2px; text-align: right; width: 8%">Meters</th>
-        <th style="border: 0.5px solid black; padding: 2px; text-align: left; width: 8%">Unit</th>
-        <th style="border: 0.5px solid black; padding: 2px; text-align: left; width: 7%">Lot#</th>
-        <th style="border: 0.5px solid black; padding: 2px; text-align: left; width: 8%">Status</th>
-        <th style="border: 0.5px solid black; padding: 2px; text-align: right; width: 6%">Rem.</th>
-        <th style="border: 0.5px solid black; padding: 2px; text-align: left; width: 18%">Shades</th>
-      </tr>
+    const printContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Dyeing Book Report</title>
+          <style>
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              font-size: 12px;
+              font-family: Arial, sans-serif;
+            }
+            th, td {
+              border: 1px solid black;
+              padding: 4px;
+              text-align: left;
+            }
+            th {
+              background-color: #f0f0f0;
+            }
+            
+          </style>
+        </head>
+        <body>
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 10%">Date</th>
+                <th style="width: 20%">Design</th>
+                <th style="width: 8%; text-align: right">Takas</th>
+                <th style="width: 12%; text-align: right">Meters</th>
+                <th style="width: 15%">Dyeing Unit</th>
+                <th style="width: 10%">Lot#</th>
+                <th style="width: 25%">Shades</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${filteredPrograms
+                .map(
+                  (program) => `
+                <tr>
+                  <td>${new Date(program.created_at)
+                    .toLocaleDateString("en-GB", {
+                      day: "2-digit",
+                      month: "2-digit",
+                      year: "2-digit",
+                    })
+                    .replace(/\//g, ".")}</td>
+                  <td>${program.design_name}</td>
+                  <td style="text-align: right">${program.total_takas}</td>
+                  <td style="text-align: right">${roundToTwoDecimals(
+                    program.total_meters
+                  )}</td>
+                  <td>${program.dyeing_unit}</td>
+                  <td>${program.lot_number || "-"}</td>
+                  <td>${program.shades_details
+                    .map((shade) => `${shade.shade}`)
+                    .join(", ")}</td>
+                </tr>
+              `
+                )
+                .join("")}
+            </tbody>
+          </table>
+          <script>
+            window.onload = function() {
+              window.print();
+              window.onafterprint = function() {
+                window.close();
+              };
+            }
+          </script>
+        </body>
+      </html>
     `;
-    table.appendChild(thead);
 
-    const tbody = document.createElement("tbody");
-    filteredPrograms.forEach((program) => {
-      const tr = document.createElement("tr");
-
-      const shadesText = program.shades_details
-        .map((shade) => `${shade.shade}(${shade.takas})`)
-        .join(", ");
-
-      tr.innerHTML = `
-        <td style="border: 0.5px solid black; padding: 2px">${new Date(
-          program.created_at
-        )
-          .toLocaleDateString("en-GB", {
-            day: "2-digit",
-            month: "2-digit",
-            year: "2-digit",
-          })
-          .replace(/\//g, ".")}</td>
-        <td style="border: 0.5px solid black; padding: 2px">${
-          program.supplier_name
-        }</td>
-        <td style="border: 0.5px solid black; padding: 2px">${
-          program.slip_number
-        }</td>
-        <td style="border: 0.5px solid black; padding: 2px">${
-          program.design_name
-        }</td>
-        <td style="border: 0.5px solid black; padding: 2px; text-align: right">${
-          program.total_takas
-        }</td>
-        <td style="border: 0.5px solid black; padding: 2px; text-align: right">${roundToTwoDecimals(
-          program.total_meters
-        )}</td>
-        <td style="border: 0.5px solid black; padding: 2px">${
-          program.dyeing_unit
-        }</td>
-        <td style="border: 0.5px solid black; padding: 2px">${
-          program.lot_number || "-"
-        }</td>
-        <td style="border: 0.5px solid black; padding: 2px">${
-          program.status
-        }</td>
-        <td style="border: 0.5px solid black; padding: 2px; text-align: right">${calculateRemainingTakas(
-          program
-        )}</td>
-        <td style="border: 0.5px solid black; padding: 2px; ">${shadesText}</td>
-      `;
-      tbody.appendChild(tr);
-    });
-    table.appendChild(tbody);
-    printElement.appendChild(table);
-
-    const opt = {
-      margin: [0.3, 0.2, 0.3, 0.2],
-      filename: "dyeing-book-report.pdf",
-      image: { type: "jpeg", quality: 0.98 },
-      html2canvas: {
-        scale: 2,
-        letterRendering: true,
-      },
-      jsPDF: {
-        unit: "in",
-        format: "a4",
-        orientation: "portrait",
-        compress: true,
-        precision: 2,
-        putOnlyUsedFonts: true,
-      },
-    };
-
-    html2pdf()
-      .set(opt)
-      .from(printElement)
-      .save()
-      .then(() => {
-        toast({
-          title: "Success",
-          description: "PDF generated successfully",
-        });
-      })
-      .catch((error: Error) => {
-        console.error("Error generating PDF:", error);
-        toast({
-          title: "Error",
-          description: "Failed to generate PDF",
-          variant: "destructive",
-        });
-      });
-  }, [filteredPrograms, calculateRemainingTakas, roundToTwoDecimals, toast]);
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+  }, [filteredPrograms, roundToTwoDecimals]);
 
   return (
     <div className="max-w-[95%] mx-auto p-6 pb-24 bg-white min-h-screen">
@@ -581,11 +555,11 @@ function DyeingBook() {
           </Button>
 
           <Button
-            onClick={generatePDF}
+            onClick={printTable}
             variant="outline"
             className="flex items-center"
           >
-            <FileDown className="mr-2 h-4 w-4" /> Export PDF
+            <FileDown className="mr-2 h-4 w-4" /> Print Report
           </Button>
         </div>
 
@@ -593,7 +567,7 @@ function DyeingBook() {
           <summary className="cursor-pointer text-sm text-blue-600 font-medium">
             Show Filters
           </summary>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mt-4">
             <div>
               <Input
                 placeholder="Filter by supplier..."
@@ -628,17 +602,26 @@ function DyeingBook() {
               />
             </div>
             <div>
+              <Input
+                placeholder="Filter by lot number..."
+                value={filters.lotNumber}
+                onChange={(e) =>
+                  setFilters((prev) => ({ ...prev, lotNumber: e.target.value }))
+                }
+                className="w-full"
+              />
+            </div>
+            <div>
               <select
                 className="w-full h-10 px-3 rounded-md border border-input bg-background"
-                value={filters.status}
+                value={filters.complete}
                 onChange={(e) =>
-                  setFilters((prev) => ({ ...prev, status: e.target.value }))
+                  setFilters((prev) => ({ ...prev, complete: e.target.value }))
                 }
               >
-                <option value="">All Statuses</option>
-                <option value="Pending">Pending</option>
-                <option value="In Process">In Process</option>
-                <option value="Completed">Completed</option>
+                <option value="incomplete">Non Complete</option>
+                <option value="complete">Complete</option>
+                <option value="all">All Programs</option>
               </select>
             </div>
           </div>
@@ -658,14 +641,16 @@ function DyeingBook() {
               <TableHead>Total Meters</TableHead>
               <TableHead>Dyeing Unit</TableHead>
               <TableHead>Lot Number</TableHead>
-              <TableHead>Status</TableHead>
               <TableHead>Remaining Takas</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredPrograms.map((program) => (
-              <TableRow key={program.id}>
+              <TableRow
+                key={program.id}
+                className={program.complete ? "bg-green-100" : ""}
+              >
                 <TableCell>
                   {editingDate?.id === program.id ? (
                     <Input
@@ -763,31 +748,18 @@ function DyeingBook() {
                     </span>
                   )}
                 </TableCell>
-                <TableCell>
-                  <span
-                    className={`px-2 py-1 rounded-full text-xs ${
-                      program.status === "Completed"
-                        ? "bg-green-100 text-green-800"
-                        : program.status === "In Process"
-                        ? "bg-blue-100 text-blue-800"
-                        : "bg-yellow-100 text-yellow-800"
-                    }`}
-                  >
-                    {program.status}
-                  </span>
-                </TableCell>
                 <TableCell>{calculateRemainingTakas(program)}</TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2 min-w-[300px]">
-                    {program.status === "Completed" ? (
+                    {program.complete ? (
                       <>
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => handleReverseStatus(program)}
+                          onClick={() => handleReverseComplete(program)}
                           className="flex-1 items-center justify-center"
                         >
-                          Reverse Status
+                          Reverse Complete
                         </Button>
                         <Button
                           size="sm"
@@ -843,7 +815,7 @@ function DyeingBook() {
         {filteredPrograms.map((program) => (
           <Card
             key={program.id}
-            className={program.status === "Completed" ? "bg-green-100" : ""}
+            className={program.complete ? "bg-green-100" : ""}
           >
             <CardHeader className="p-2">
               <div className="flex justify-between items-center ">
@@ -972,15 +944,15 @@ function DyeingBook() {
 
               {/* Action Buttons */}
               <div className="flex flex-wrap gap-2">
-                {program.status === "Completed" ? (
+                {program.complete ? (
                   <>
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => handleReverseStatus(program)}
+                      onClick={() => handleReverseComplete(program)}
                       className="flex-1 min-w-[100px] items-center justify-center"
                     >
-                      Reverse Status
+                      Reverse Complete
                     </Button>
                     <Button
                       size="sm"
