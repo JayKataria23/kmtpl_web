@@ -278,29 +278,40 @@ function OrderFile() {
     const shadeMap: { [key: string]: { [key: string]: number } } = {};
     const totalMap: { [key: string]: number } = {}; // To store total quantities
 
-    // Create a unique identifier for each order to differentiate between multiple orders from the same party
+    // Use design entry ID as the unique identifier
     const orderIdentifiers = orderDetails.map((order) => {
-      const nameParts = order.partyName.split(" "); // Split the party name into words
-      return nameParts.slice(0, 2).join(" ") + String(order.order_no);
+      return `Entry-${order.id}`; // Use the design entry ID as the unique identifier
     });
 
     // Populate the shadeMap with distinct shade names and their quantities
     designOrders[design].forEach((order, index) => {
+      const orderIdentifier = orderIdentifiers[index];
+
+      // Process each shade in the order
       order.shades.forEach((shade) => {
         const shadeName = Object.keys(shade)[0];
-        const quantity = Number(shade[shadeName]); // Ensure quantity is a number
+        const shadeValue = shade[shadeName];
 
+        // Skip empty quantities
+        if (shadeValue === "") {
+          return;
+        }
+
+        const quantity = Number(shadeValue); // Ensure quantity is a number
+
+        // Initialize shade in maps if not present
         if (!shadeMap[shadeName]) {
           shadeMap[shadeName] = {};
           totalMap[shadeName] = 0; // Initialize total for this shade
         }
 
-        const orderIdentifier = orderIdentifiers[index];
+        // Initialize the quantity for this order and shade if not present
         if (!shadeMap[shadeName][orderIdentifier]) {
           shadeMap[shadeName][orderIdentifier] = 0;
         }
 
-        shadeMap[shadeName][orderIdentifier] += quantity; // Accumulate quantities
+        // Add the quantity for this shade and order
+        shadeMap[shadeName][orderIdentifier] += quantity;
         totalMap[shadeName] += quantity; // Update total quantity
       });
     });
@@ -316,7 +327,13 @@ function OrderFile() {
       ],
       [
         "Shade Name",
-        ...orderIdentifiers, // Use unique order identifiers
+        ...orderIdentifiers.map((id, index) => {
+          // Create more readable column headers for orders
+          const order = orderDetails[index];
+          return `${order.partyName.split(" ").slice(0, 2).join(" ")} (${
+            order.order_no
+          })`;
+        }),
         "Total",
       ], // Header row
     ];
@@ -360,7 +377,7 @@ function OrderFile() {
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Report");
 
-    // Export the Excel file without applying borders
+    // Export the Excel file
     XLSX.writeFile(workbook, `${design}_report.xlsx`);
   };
 

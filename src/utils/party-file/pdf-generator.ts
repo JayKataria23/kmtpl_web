@@ -77,78 +77,40 @@ const generateTableHeader = (): string => `
 `;
 
 /**
- * Generate a single order row
- */
-const generateOrderRow = (order: DesignDetail, index: number): string => {
-  const nonEmptyShades = order.shades.filter(
-    (shade) => shade[Object.keys(shade)[0]] !== ""
-  );
-
-  return `
-    <div class="order-row" style="border-bottom: 1px solid #000; display: flex; flex-direction: row; ${
-      order.bhiwandi_date ? "background-color: #fef9c3;" : ""
-    }">
-      <div style="width: 5%; border-right: 1px solid #000; text-align: center; font-size: small; padding: 4px;">${
-        index + 1
-      }</div>
-      <div style="width: 8%; border-right: 1px solid #000; text-align: center; font-size: small; padding: 4px;">${
-        order.order_no || "-"
-      }</div>
-      <div style="width: 12%; border-right: 1px solid #000; text-align: center; font-size: small; padding: 4px; font-weight: bold;">${
-        order.design
-      }</div>
-      <div style="width: 66%; border-right: 1px solid #000; font-size: small; padding: 4px;">
-        <div style="display: flex; flex-wrap: wrap; gap: 4px; ">
-          ${formatShades(order.shades)}
-        </div>
-        ${
-          order.remark
-            ? `<div style="color: red; margin-top: 4px;">Remark: ${order.remark}</div>`
-            : ""
-        }
-      </div>
-      <div style="width: 4%; border-right: 1px solid #000; text-align: center; font-size: small; padding: 4px;">${
-        nonEmptyShades.length
-      }</div>
-      <div style="width: 5%; text-align: center; font-size: small; padding: 4px;">${
-        order.price || "-"
-      }</div>
-    </div>
-  `;
-};
-
-/**
- * Generate the footer with totals
- */
-const generateFooter = (totalPieces: number): string => `
-  <div style="display: flex; flex-direction: row; border-top: 1px solid #000;">
-    <div style="width: 91%; border-right: 1px solid #000; text-align: right; padding: 4px; font-weight: bold;">Total</div>
-    <div style="width: 5%; border-right: 1px solid #000; text-align: center; font-weight: bold; padding: 4px;">
-      ${totalPieces}
-    </div>
-    <div style="width: 4%;"></div>
-  </div>
-`;
-
-/**
  * Generate and export a PDF report for a party's orders
  * @param party - The party name
  * @param orders - List of design details/orders
  */
-export const generatePartyReport = (
-  party: string,
-  orders: DesignDetail[]
-): void => {
-  if (!orders?.length) return;
+export const generatePartyReport = (party: string, orders: DesignDetail[]) => {
+  if (!orders || orders.length === 0) return;
 
-  // Sort orders by design name for better organization
-  const sortedOrders = [...orders].sort((a, b) =>
-    a.design.localeCompare(b.design)
-  );
-  const today = new Date().toLocaleDateString("en-GB");
+  // Create a unique key combining party_name, order_no, and design to identify truly unique orders
+  const getUniqueKey = (order: DesignDetail) =>
+    `${order.party_name}_${order.order_no}_${order.design}_${order.design_entry_id}`;
 
-  // Calculate total pieces once instead of in template
-  const totalPieces = sortedOrders.reduce(
+  // Sort orders by order number, then design name
+  const sortedOrders = [...orders].sort((a, b) => {
+    if (a.order_no !== b.order_no) {
+      return (a.order_no || 0) - (b.order_no || 0);
+    }
+    if (a.party_name !== b.party_name) {
+      return a.party_name.localeCompare(b.party_name);
+    }
+    return a.design.localeCompare(b.design);
+  });
+
+  // Create a Map to track unique orders using the composite key
+  const uniqueOrders = new Map<string, DesignDetail>();
+  sortedOrders.forEach((order) => {
+    const key = getUniqueKey(order);
+    if (!uniqueOrders.has(key)) {
+      uniqueOrders.set(key, order);
+    }
+  });
+
+  // Convert back to array and calculate totals
+  const finalOrders = Array.from(uniqueOrders.values());
+  const totalPieces = finalOrders.reduce(
     (total, order) =>
       total +
       order.shades.filter((shade) => shade[Object.keys(shade)[0]] !== "")
@@ -163,6 +125,7 @@ export const generatePartyReport = (
         <style>
           @page {
             size: A4;
+            margin: 1cm;
           }
           body {
             margin: 0;
@@ -171,23 +134,22 @@ export const generatePartyReport = (
           }
           .container {
             border: 2px solid #000;
-            display: flex;
-            flex-direction: column;
           }
           .order-row {
             page-break-inside: avoid;
           }
-          .content {
-            flex-grow: 0;
-            flex-shrink: 0;
+          .shade-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            justify-content: flex-start;
+            align-items: center;
           }
-          .footer {
-            flex-grow: 0;
-            flex-shrink: 0;
-          }
-          table {
-            width: 100%;
-            border-collapse: collapse;
+          .shade-box {
+            display: inline-flex;
+            flex-direction: column;
+            margin: 2px;
+            min-width: 80px;
           }
         </style>
       </head>
@@ -195,20 +157,63 @@ export const generatePartyReport = (
         <div class="container">
           ${generateHeader(party)}
           ${generateTableHeader()}
-          <div class="content">
-            ${sortedOrders
-              .map((order, index) => generateOrderRow(order, index))
-              .join("")}
-          </div>
           <div>
-            ${generateFooter(totalPieces)}
+            ${finalOrders
+              .map((order, index) => {
+                const nonEmptyShades = order.shades.filter(
+                  (shade) => shade[Object.keys(shade)[0]] !== ""
+                );
+
+                return `
+                <div class="order-row" style="border-bottom: 1px solid #000; display: flex; flex-direction: row; ${
+                  order.bhiwandi_date ? "background-color: #fef9c3;" : ""
+                }">
+                  <div style="width: 5%; border-right: 1px solid #000; text-align: center; font-size: small; padding: 4px;">
+                    ${index + 1}
+                  </div>
+                  <div style="width: 8%; border-right: 1px solid #000; text-align: center; font-size: small; padding: 4px;">
+                    ${order.order_no || "-"}
+                  </div>
+                  <div style="width: 12%; border-right: 1px solid #000; text-align: center; font-size: small; padding: 4px; font-weight: bold;">
+                    ${order.design}
+                  </div>
+                  <div style="width: 67%; border-right: 1px solid #000; font-size: small; padding: 4px;">
+                    <div class="shade-container">
+                      ${formatShades(order.shades)}
+                    </div>
+                    ${
+                      order.remark
+                        ? `<div style="color: red; margin-top: 4px;">Remark: ${order.remark}</div>`
+                        : ""
+                    }
+                  </div>
+                  <div style="width: 4%; border-right: 1px solid #000; text-align: center; font-size: small; padding: 4px;">
+                    ${nonEmptyShades.length}
+                  </div>
+                  <div style="width: 4%; text-align: center; font-size: small; padding: 4px;">
+                    ${order.price || "-"}
+                  </div>
+                </div>
+              `;
+              })
+              .join("")}
+            <div style="display: flex; flex-direction: row; border-top: 1px solid #000;">
+              <div style="width: 92%; border-right: 1px solid #000; text-align: right; padding: 4px; font-weight: bold;">
+                Total
+              </div>
+              <div style="width: 4%; border-right: 1px solid #000; text-align: center; font-weight: bold; padding: 4px;">
+                ${totalPieces}
+              </div>
+              <div style="width: 4%;"></div>
+            </div>
           </div>
         </div>
       </body>
     </html>
   `;
 
-  // Generate PDF with optimized settings
+  const today = new Date().toLocaleDateString("en-GB");
+
   html2pdf()
     .from(html)
     .set({
