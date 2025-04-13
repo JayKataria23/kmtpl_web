@@ -327,11 +327,11 @@ function OrderFile() {
       ],
       [
         "Shade Name",
-        ...orderIdentifiers.map((id, index) => {
+        ...orderIdentifiers.map((id) => {
           // Create more readable column headers for orders
-          const order = orderDetails[index];
-          return `${order.partyName.split(" ").slice(0, 2).join(" ")} (${
-            order.order_no
+          const order = orderDetails.find((o) => `Entry-${o.id}` === id);
+          return `${order?.partyName.split(" ").slice(0, 2).join(" ")} (${
+            order?.order_no
           })`;
         }),
         "Total",
@@ -519,7 +519,6 @@ function OrderFile() {
           <ToggleGroupItem value="Design No." aria-label="Show Design No.">
             Design No.
           </ToggleGroupItem>
-          
         </ToggleGroup>
       </div>
       <Accordion
