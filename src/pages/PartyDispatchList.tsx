@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import supabase from "@/utils/supabase";
@@ -10,6 +10,7 @@ import {
   AccordionContent,
 } from "@/components/ui/accordion";
 import { Toaster } from "@/components/ui";
+import { Printer } from "lucide-react";
 
 interface DispatchEntry {
   id: number;
@@ -56,6 +57,7 @@ const PartyDispatchList = () => {
   const [openDesignAccordion, setOpenDesignAccordion] = useState<string | null>(
     null
   );
+  const printFrameRef = useRef<HTMLIFrameElement>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -188,6 +190,163 @@ const PartyDispatchList = () => {
     }
   };
 
+  const handlePrintParty = (party: PartyGroup) => {
+    const printContent = generatePrintContentForParty(party);
+    
+    // Create a hidden iframe to trigger printing
+    const iframe = printFrameRef.current;
+    if (!iframe) return;
+
+    const iframeDoc = iframe.contentDocument;
+    if (!iframeDoc) return;
+
+    iframeDoc.open();
+    iframeDoc.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Dispatch List - ${party.party_name}</title>
+          <style>
+            body {
+              font-family: Arial, sans-serif;
+              margin: 20px;
+            }
+            h1, h2, h3 {
+              margin-bottom: 10px;
+            }
+            .design-section {
+              margin-bottom: 20px;
+              border-bottom: 1px solid #ddd;
+              padding-bottom: 15px;
+            }
+            .entry {
+              margin-bottom: 15px;
+              padding: 10px;
+              border: 1px solid #eee;
+              page-break-inside: avoid;
+            }
+            .entry-grid {
+              display: grid;
+              grid-template-columns: 1fr 1fr;
+              gap: 10px;
+            }
+            .header {
+              text-align: center;
+              margin-bottom: 20px;
+              border-bottom: 2px solid #000;
+              padding-bottom: 10px;
+            }
+            .footer {
+              margin-top: 30px;
+              border-top: 1px solid #ddd;
+              padding-top: 10px;
+            }
+            .shade-item {
+              margin-left: 15px;
+            }
+            .print-date {
+              text-align: right;
+              font-style: italic;
+              margin-top: 5px;
+              font-size: 0.8em;
+            }
+            @media print {
+              body {
+                margin: 0;
+                padding: 15px;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          ${printContent}
+          <div class="print-date">
+            Printed on: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}
+          </div>
+        </body>
+      </html>
+    `);
+    iframeDoc.close();
+    
+    setTimeout(() => {
+      iframe.contentWindow?.focus();
+      iframe.contentWindow?.print();
+    }, 500);
+  };
+
+  const generatePrintContentForParty = (party: PartyGroup) => {
+    let content = `
+      <div class="header">
+        <h1>Dispatch List</h1>
+        <h2>${party.party_name}</h2>
+      </div>
+    `;
+
+    let totalMeters = 0;
+    
+    party.designs.forEach(design => {
+      content += `
+        <div class="design-section">
+          <h3>${design.design} - Price: ${design.entries[0].price}</h3>
+      `;
+
+      design.entries.forEach(entry => {
+        let entryMeters = 0;
+        let shadesContent = '';
+        
+        entry.shades.forEach(shade => {
+          const shadeName = Object.keys(shade)[0];
+          const shadeValue = shade[shadeName];
+          if (!shadeValue) return;
+          
+          const meters = parseFloat(shadeValue);
+          entryMeters += meters;
+          shadesContent += `
+            <div class="shade-item">
+              ${shadeName}: ${shadeValue}m
+            </div>
+          `;
+        });
+        
+        totalMeters += entryMeters;
+        
+        content += `
+          <div class="entry">
+            <div class="entry-grid">
+              <div>
+                <p><strong>Order No:</strong> ${entry.order_no}</p>
+                <p><strong>Ship To:</strong> ${entry.ship_to_party}</p>
+                <p><strong>Broker:</strong> ${entry.broker_name}</p>
+                <p><strong>Transporter:</strong> ${entry.transporter_name}</p>
+                <p><strong>Dispatch Date:</strong> ${formatDate(entry.dispatch_date)}</p>
+              </div>
+              <div>
+                <p><strong>Price:</strong> ${entry.price}</p>
+                <p><strong>Remark:</strong> ${entry.remark || "N/A"}</p>
+                <div>
+                  <strong>Shades:</strong>
+                  ${shadesContent}
+                </div>
+                <p><strong>Total Meters:</strong> ${entryMeters.toFixed(2)}m</p>
+              </div>
+            </div>
+          </div>
+        `;
+      });
+      
+      content += `</div>`;
+    });
+    
+    content += `
+      <div class="footer">
+        <p><strong>Total Entries:</strong> ${party.total_entries}</p>
+        <p><strong>Total Meters:</strong> ${totalMeters.toFixed(2)}m</p>
+      </div>
+    `;
+    
+    return content;
+  };
+
   return (
     <div className="container mx-auto mt-10 text-center">
       <h1 className="text-2xl font-bold mb-6">Party Dispatch List</h1>
@@ -210,9 +369,23 @@ const PartyDispatchList = () => {
                   <span className="text-lg font-semibold">
                     {party.party_name}
                   </span>
-                  <span className="text-sm text-gray-500">
-                    Designs: {party.total_entries}
-                  </span>
+                  <div className="flex items-center gap-4">
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      className="flex items-center gap-1"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handlePrintParty(party);
+                      }}
+                    >
+                      <Printer size={16} />
+                      Print
+                    </Button>
+                    <span className="text-sm text-gray-500">
+                      Designs: {party.total_entries}
+                    </span>
+                  </div>
                 </div>
               </AccordionTrigger>
               <AccordionContent className="p-4">
@@ -309,6 +482,20 @@ const PartyDispatchList = () => {
           ))}
         </Accordion>
       </div>
+      
+      {/* Hidden iframe for printing */}
+      <iframe 
+        ref={printFrameRef}
+        style={{ 
+          position: "absolute", 
+          height: "0", 
+          width: "0", 
+          border: "none",
+          visibility: "hidden" 
+        }}
+        title="Print Frame"
+      />
+      
       <Toaster />
     </div>
   );
