@@ -1,5 +1,6 @@
 import html2pdf from "html2pdf.js";
 import type { DesignDetail } from "@/types/party-file";
+import { formatDate } from "@/utils/party-file/date-utils";
 
 /**
  * Format shade data into grouped HTML elements
@@ -92,7 +93,7 @@ const generateOrderRow = (order: DesignDetail, index: number): string => {
       }</div>
       <div style="width: 8%; border-right: 1px solid #000; text-align: center; font-size: small; padding: 2px;">${
         order.order_no || "-"
-      }</div>
+      } <br/> <p style="font-size: 11px">${formatDate(order.order_date) || "-"}</p></div>
       <div style="width: 12%; border-right: 1px solid #000; text-align: center; font-size: small; padding: 2px; font-weight: bold; word-break: break-word;">${
         order.design
       }</div>
