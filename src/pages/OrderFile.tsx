@@ -53,10 +53,14 @@ function OrderFile() {
   }>({});
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [drawerEntries, setDrawerEntries] = useState<DrawerEntry[]>([]);
+  const [programEntries, setProgramEntries] = useState<DrawerEntry[]>([]);
+  const [isProgramDrawerOpen, setIsProgramDrawerOpen] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
   const [filter, setFilter] = useState<string>("all"); // State for filter
   const [openAccordionItems, setOpenAccordionItems] = useState<string[]>([]);
+  const [colorCounts, setColorCounts] = useState<{ [key: string]: number }>({});
+  const [includeParty, setIncludeParty] = useState<boolean>(true); // Default to true
 
   useEffect(() => {
     fetchDesignCounts();
@@ -157,6 +161,21 @@ function OrderFile() {
     setDrawerEntries((prev) => prev.filter((entry) => entry.id !== id)); // Remove entry by id
   };
 
+  const handleAddToProgramList = (order: OrderDetail, design: string) => {
+    setProgramEntries((prev) => [
+      ...prev,
+      { ...order, design, inProgramList: true }, // Add a property to track if it's in the Program List
+    ]);
+    toast({
+      title: "Added to Program List",
+      description: `${order.partyName} added to Program List.`,
+    });
+  };
+
+  const handleRemoveFromProgramList = (id: number) => {
+    setProgramEntries((prev) => prev.filter((entry) => entry.id !== id)); // Remove entry by id
+  };
+
   // Sort the drawerEntries by design
 
   const handleSendBhiwandi = async () => {
@@ -243,6 +262,16 @@ function OrderFile() {
       return designCounts
         .filter(
           (item) => item.design.includes("D-") // Check if design ends with a 4-digit number
+        )
+        .sort((a, b) => {
+          const numA = Number(a.design.split("-").pop());
+          const numB = Number(b.design.split("-").pop());
+          return numA - numB; // Sort by the number after the hyphen
+        }); // Filter out designs starting with "P-"
+    } else if (filter === "digital-dobby") {
+      return designCounts
+        .filter(
+          (item) => item.design.includes("DDBY-") // Check if design ends with a 4-digit number
         )
         .sort((a, b) => {
           const numA = Number(a.design.split("-").pop());
@@ -381,12 +410,272 @@ function OrderFile() {
     XLSX.writeFile(workbook, `${design}_report.xlsx`);
   };
 
+  const groupProgramEntries = (entries: DrawerEntry[]) => {
+    const groupedEntries: {
+      [key: string]: { partyNames: string[]; totalMeters: number };
+    } = {};
+
+    entries.forEach((entry) => {
+      if (!groupedEntries[entry.design]) {
+        groupedEntries[entry.design] = { partyNames: [], totalMeters: 0 };
+        // Initialize color count for this design
+        if (!colorCounts[entry.design]) {
+          setColorCounts((prev) => ({ ...prev, [entry.design]: 2 })); // Default to 2
+        }
+      }
+
+      // Add party name if not already included
+      if (!groupedEntries[entry.design].partyNames.includes(entry.partyName)) {
+        groupedEntries[entry.design].partyNames.push(entry.partyName);
+      }
+
+      // Only add the highest meters for each design entry
+      let maxShadeValue = 0; // Initialize max shade value for this entry
+      entry.shades.forEach((shade) => {
+        const shadeName = Object.keys(shade)[0];
+        const shadeValue = parseFloat(shade[shadeName]);
+        if (!isNaN(shadeValue) && shadeValue > maxShadeValue) {
+          maxShadeValue = shadeValue; // Update max shade value if current is higher
+        }
+      });
+
+      // Add the highest shade value to total meters
+      if (maxShadeValue > 0) {
+        groupedEntries[entry.design].totalMeters += maxShadeValue; // Add to total meters
+      }
+    });
+
+    return groupedEntries;
+  };
+
+  const generateProgram = () => {
+    const programData = groupProgramEntries(programEntries);
+    let html = `
+      <html>
+        <head>
+          <title>Program Report</title>
+          <style>
+            table { width: 100%; border-collapse: collapse; }
+            th, td { border: 1px solid black; padding: 8px; text-align: left; }
+            th { background-color: #f2f2f2; }
+            .design-column { width: 100px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } /* Fixed width for design column */
+            .header { display: flex; justify-content: space-between; align-items: center; }
+            .header h1, .header h2 { margin: 0; font-size: 24px; }
+            .header h2 { flex-grow: 1; text-align: center; } /* Center the ॐ symbol */
+            .swastik { font-size: 24px; margin-left: 40px} /* Adjust size as needed */
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>श्री</h1>
+            <h2>ॐ</h2>
+            संतनाम सहाई
+            <div class="swastik">卐</div> <!-- Use a swastik symbol here -->
+          </div>
+          <h2 style="text-align: center;"></h2>
+          <table>
+            <tr>
+              <th>Taka</th>
+              <th>Design</th>
+              <th>Lump Set</th>
+              ${includeParty ? "<th>Party</th>" : ""}
+            </tr>
+    `;
+
+    let totalTaka = 0; // Initialize total Taka
+
+    Object.entries(programData).forEach(
+      ([design, { partyNames, totalMeters }]) => {
+        const colorCount = colorCounts[design] || 2; // Default to 2 if not set
+        const taka = Math.floor((totalMeters / 100) * colorCount); // Convert to integer
+        const lumpSet = Math.floor(totalMeters / 100); // Convert to integer
+        const parties = includeParty
+          ? partyNames
+              .map((name) =>
+                name
+                  .replace(/\s*\[.*?\]\s*/g, "")
+                  .replace(/\s*\(.*?\)\s*/g, "")
+                  .trim()
+              )
+              .join(" + ")
+          : "";
+
+        totalTaka += taka; // Accumulate total Taka
+
+        html += `
+        <tr>
+          <td>${taka}</td>
+          <td class="design-column">${design}</td>
+          <td>${lumpSet}</td>
+          ${includeParty ? `<td>${parties}</td>` : ""}
+        </tr>
+      `;
+      }
+    );
+
+    html += `
+          </table>
+          <strong>${totalTaka} Taka</strong>
+        </body>
+      </html>
+    `;
+
+    const printWindow = window.open("", "_blank");
+    if (printWindow) {
+      printWindow.document.write(html);
+      printWindow.document.close();
+      printWindow.print();
+    }
+  };
+
   return (
-    <div className="container mx-auto mt-10 p-4 relative">
+    <div className="container mx-auto  p-4 relative">
       <div className="sticky top-0 bg-white z-10">
+        <Button onClick={() => navigate("/")} className="m-1">
+          Back to Home
+        </Button>
+
+        <Drawer
+          open={isProgramDrawerOpen}
+          onOpenChange={setIsProgramDrawerOpen}
+        >
+          <DrawerTrigger asChild>
+            <Button className="m-1">Program List</Button>
+          </DrawerTrigger>
+          <DrawerContent>
+            <DrawerHeader>
+              <DrawerTitle className="text-xl font-bold">
+                Program List
+              </DrawerTitle>
+              <DrawerDescription className="text-sm text-gray-500">
+                All design entries saved in the Program List
+              </DrawerDescription>
+            </DrawerHeader>
+
+            <div className="p-4 overflow-y-auto max-h-[60vh]">
+              {Object.entries(groupProgramEntries(programEntries)).map(
+                ([design, { partyNames, totalMeters }], index) => (
+                  <div key={index} className="mb-4 border-b pb-4">
+                    <div className="flex justify-between items-center">
+                      <h3 className="text-lg font-semibold">{design}</h3>
+                      <div className="text-sm font-medium text-gray-900">
+                        Total Meters: {totalMeters}m
+                      </div>
+                    </div>
+                    <div className="flex justify-between">
+                      <div className="flex items-center mt-2">
+                        <button
+                          onClick={() => {
+                            setColorCounts((prev) => ({
+                              ...prev,
+                              [design]: Math.max(1, prev[design] - 1), // Prevent going below 1
+                            }));
+                          }}
+                          className="mr-2 rounded-full p-1"
+                        >
+                          &lt; {/* Use < for decrement */}
+                        </button>
+                        <span>{colorCounts[design]}</span>
+                        <button
+                          onClick={() => {
+                            setColorCounts((prev) => ({
+                              ...prev,
+                              [design]: prev[design] + 1,
+                            }));
+                          }}
+                          className="ml-2 rounded-full p-1"
+                        >
+                          &gt; {/* Use > for increment */}
+                        </button>
+                      </div>
+                      <Button
+                        onClick={() => {
+                          let extraMeters;
+                          if (totalMeters % 100 === 0) {
+                            extraMeters = 100; // Add 100 meters if total is a multiple of 100
+                          } else {
+                            extraMeters = 100 - (totalMeters % 100); // Calculate remaining meters to next multiple of 100
+                          }
+
+                          const extraEntry = {
+                            design,
+                            partyName: "Extra",
+                            id: Date.now(), // Unique ID for the extra entry
+                            shades: [{ Extra: extraMeters.toString() }], // Add the extra meters as a shade
+                            order_remark: "", // Add default values for missing properties
+                            price: 0, // Default price
+                            part: false, // Default part value
+                            entry_remark: "", // Default entry remark
+                            order_date: "", // Default order date
+                            order_no: 0, // Default order number
+                          };
+                          setProgramEntries((prev) => [...prev, extraEntry]); // Add extra entry to Program List
+                          toast({
+                            title: "Added Extra Entry",
+                            description: `Extra entry of ${extraMeters}m added to Program List.`,
+                          });
+                        }}
+                        className="mt-2 rounded-full w-32 h-10 bg-red-500 text-white"
+                      >
+                        + Extra
+                      </Button>
+                    </div>
+                    {partyNames.map((partyName, partyIndex) => (
+                      <div
+                        key={partyIndex}
+                        className="flex items-center justify-between mt-2"
+                      >
+                        <div className="text-sm font-medium text-gray-900">
+                          {partyName.replace(/\s*\[.*?\]\s*/g, "").trim()}
+                        </div>
+                        <Button
+                          onClick={() => {
+                            const entryToRemove = programEntries.find(
+                              (entry) =>
+                                entry.partyName === partyName &&
+                                entry.design === design
+                            );
+                            if (entryToRemove) {
+                              handleRemoveFromProgramList(entryToRemove.id); // Remove from Program List
+                            }
+                          }}
+                          className="ml-2 rounded-full w-8 h-8 bg-black text-white"
+                        >
+                          X
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )
+              )}
+            </div>
+            <DrawerFooter>
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  checked={includeParty}
+                  onChange={() => setIncludeParty((prev) => !prev)} // Toggle checkbox
+                  className="mr-2"
+                />
+                <label>Include Party Column</label>
+              </div>
+              <Button
+                onClick={generateProgram} // Call the function to generate the program
+                className=" text-white"
+              >
+                Generate Program
+              </Button>
+
+              <DrawerClose asChild>
+                <Button variant="outline">Close</Button>
+              </DrawerClose>
+            </DrawerFooter>
+          </DrawerContent>
+        </Drawer>
+
         <Drawer open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
           <DrawerTrigger asChild>
-            <Button className="absolute top-4 right-4">Bhiwandi</Button>
+            <Button className="m-1">Bhiwandi</Button>
           </DrawerTrigger>
           <DrawerContent>
             <DrawerHeader>
@@ -484,6 +773,7 @@ function OrderFile() {
               >
                 Send to Bhiwandi
               </Button>
+
               <DrawerClose asChild>
                 <Button variant="outline">Close</Button>
               </DrawerClose>
@@ -491,9 +781,6 @@ function OrderFile() {
           </DrawerContent>
         </Drawer>
 
-        <Button onClick={() => navigate("/")} className="mb-4">
-          Back to Home
-        </Button>
         <ToggleGroup
           variant="outline"
           type="single"
@@ -514,10 +801,16 @@ function OrderFile() {
             Print
           </ToggleGroupItem>{" "}
           <ToggleGroupItem value="digital" aria-label="Show digital">
-            Digital
+            D
+          </ToggleGroupItem>
+          <ToggleGroupItem
+            value="digital-dobby"
+            aria-label="Show digital-dobby"
+          >
+            DDBY
           </ToggleGroupItem>
           <ToggleGroupItem value="Design No." aria-label="Show Design No.">
-            Design No.
+            Design
           </ToggleGroupItem>
         </ToggleGroup>
       </div>
@@ -619,14 +912,40 @@ function OrderFile() {
                                     X
                                   </Button>
                                 ) : (
-                                  <Button
-                                    onClick={() =>
-                                      handleAddToDrawer(order, item.design)
-                                    }
-                                    className="ml-2 rounded-full w-10 h-10 bg-yellow-500 active:bg-yellow-500 visited:bg-yellow-500 hover:bg-yellow-500 text-lg"
-                                  >
-                                    B
-                                  </Button>
+                                  <>
+                                    <Button
+                                      onClick={() =>
+                                        handleAddToDrawer(order, item.design)
+                                      }
+                                      className="ml-2 rounded-full w-10 h-10 bg-yellow-500 active:bg-yellow-500 visited:bg-yellow-500 hover:bg-yellow-500 text-lg"
+                                    >
+                                      B
+                                    </Button>
+                                    {programEntries.some(
+                                      (entry) => entry.id === order.id
+                                    ) ? ( // Check if the order is in the Program List
+                                      <Button
+                                        onClick={() =>
+                                          handleRemoveFromProgramList(order.id)
+                                        } // Remove from Program List
+                                        className="ml-2 rounded-full w-10 h-10 bg-black text-white"
+                                      >
+                                        X
+                                      </Button>
+                                    ) : (
+                                      <Button
+                                        onClick={() =>
+                                          handleAddToProgramList(
+                                            order,
+                                            item.design
+                                          )
+                                        } // Add to Program List
+                                        className="ml-2 rounded-full w-10 h-10 bg-blue-500 active:bg-blue-500 visited:bg-blue-500 hover:bg-blue-500 text-lg"
+                                      >
+                                        P
+                                      </Button>
+                                    )}
+                                  </>
                                 )}
                               </td>
                             </tr>
