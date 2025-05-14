@@ -47,6 +47,21 @@ export function PartyAccordion({
   setSelectedOrder,
   setPartyCounts,
 }: PartyAccordionProps) {
+  const handleGenerateReport = (partyName: string) => {
+    const htmlReport = generatePartyReport(partyName, partyOrders[partyName]);
+
+    // Create a new window and write the HTML report to it
+    const printWindow = window.open("", "_blank");
+    if (printWindow) {
+      printWindow.document.write(htmlReport);
+      printWindow.document.close();
+      printWindow.print();
+      printWindow.close();
+    } else {
+      console.error("Failed to open print window.");
+    }
+  };
+
   return (
     <Accordion
       type="multiple"
@@ -69,10 +84,7 @@ export function PartyAccordion({
                 className="mx-2"
                 onClick={(e) => {
                   e.stopPropagation();
-                  generatePartyReport(
-                    item.party_name,
-                    partyOrders[item.party_name]
-                  );
+                  handleGenerateReport(item.party_name);
                 }}
               >
                 <FileText className="w-4 h-4 mr-1" />

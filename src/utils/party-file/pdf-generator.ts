@@ -139,8 +139,8 @@ const generateFooter = (totalPieces: number): string => `
 export const generatePartyReport = (
   party: string,
   orders: DesignDetail[]
-): void => {
-  if (!orders?.length) return;
+): string => {
+  if (!orders?.length) return "";
 
   // Sort orders by design name for better organization
   const sortedOrders = [...orders].sort((a, b) =>
@@ -197,13 +197,14 @@ export const generatePartyReport = (
   `;
 
   // Open a new window and print the content
-  const printWindow = window.open("", "_blank");
-  if (printWindow) {
-    printWindow.document.write(html);
-    printWindow.document.close();
-    printWindow.print();
-    printWindow.close();
-  } else {
-    console.error("Failed to open print window.");
-  }
+  // const printWindow = window.open("", "_blank");
+  // if (printWindow) {
+  //   printWindow.document.write(html);
+  //   printWindow.document.close();
+  //   printWindow.print();
+  //   printWindow.close();
+  // } else {
+  //   console.error("Failed to open print window.");
+  // }
+  return html; // Return the generated HTML instead
 };
