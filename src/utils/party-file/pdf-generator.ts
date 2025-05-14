@@ -81,7 +81,8 @@ const generateHeader = (party: string): string => `
 const generateTableHeader = (): string => `
   <div style="border-bottom: 1px solid #000; display: flex; flex-direction: row;">
     <div style="width: 5%; border-right: 1px solid #000; font-weight: bold; text-align: center; font-size: small; padding: 2px;">S/n.</div>
-    <div style="width: 8%; border-right: 1px solid #000; font-weight: bold; text-align: center; font-size: small; padding: 2px;">Order No.</div>
+    <div style="width: 7%; border-right: 1px solid #000; font-weight: bold; text-align: center; font-size: small; padding: 2px;">Order No.</div>
+    <div style="width: 9%; border-right: 1px solid #000; font-weight: bold; text-align: center; font-size: small; padding: 2px;">Order Date</div>
     <div style="width: 12%; border-right: 1px solid #000; font-weight: bold; text-align: center; font-size: small; padding: 2px;">Design</div>
     <div style="width: 66%; border-right: 1px solid #000; font-weight: bold; text-align: center; font-size: small; padding: 2px;">Shades</div>
     <div style="width: 4%; border-right: 1px solid #000; font-weight: bold; text-align: center; font-size: small; padding: 2px;">Pc</div>
@@ -104,9 +105,12 @@ const generateOrderRow = (order: DesignDetail, index: number): string => {
       <div style="width: 5%; border-right: 1px solid #000; text-align: center; font-size: small; padding: 2px;">${
         index + 1
       }</div>
-      <div style="width: 8%; border-right: 1px solid #000; text-align: center; font-size: small;">${
+      <div style="width: 7%; border-right: 1px solid #000; text-align: center; font-size: small; padding: 2px;">${
         order.order_no || "-"
-      } <br/>${order.order_date ? formatDate(order.order_date) : "-"}</div>
+      }</div>
+      <div style="width: 9%; border-right: 1px solid #000; text-align: center; font-size: small; padding: 2px;">${
+        order.order_date ? formatDate(order.order_date) : "-"
+      }</div>
       <div style="width: 12%; border-right: 1px solid #000; text-align: center; font-size: small; padding: 2px; font-weight: bold; word-break: break-word;">${
         order.design
       }</div>
