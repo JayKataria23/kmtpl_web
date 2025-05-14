@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import supabase from "@/utils/supabase";
@@ -28,6 +28,7 @@ function PartOrderFile() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isNewOrderDialogOpen, setIsNewOrderDialogOpen] = useState(false);
+  const printFrameRef = useRef<HTMLIFrameElement>(null);
 
   useEffect(() => {
     fetchPartDesignEntries();
@@ -168,9 +169,8 @@ function PartOrderFile() {
   };
 
   const handlePrint = () => {
-    // Create a print-friendly version of the content
-    const printWindow = window.open("", "_blank");
-    if (!printWindow) return;
+    // Create a hidden iframe for printing
+    if (!printFrameRef.current) return;
 
     // Flatten all entries and sort by design name
     const allEntries = Object.entries(designEntries)
@@ -179,25 +179,96 @@ function PartOrderFile() {
       )
       .sort((a, b) => a.design_title.localeCompare(b.design_title));
 
-    // Generate the print content
+    // Format date for the header
+    const currentDate = new Date();
+    const formattedDate = new Intl.DateTimeFormat("en-IN", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    }).format(currentDate);
+
+    // Generate the print content with improved styling and layout
     const printContent = `
-      <html>
+      <!DOCTYPE html>
+      <html lang="en">
         <head>
-          <title>Part Orders</title>
+          <meta charset="UTF-8">
+          <title>Part Orders Report</title>
           <style>
-            body { font-family: Arial, sans-serif; margin: 20px; }
-            h1 { text-align: center; margin-bottom: 20px; }
-            table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
-            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-            th { background-color: #f2f2f2; }
-            .shade-list { margin-left: 20px; }
+            @page {
+              size: A4;
+              margin: 1cm;
+            }
+            body {
+              font-family: Arial, sans-serif;
+              margin: 0;
+              padding: 15px;
+              font-size: 12px;
+            }
+            .header {
+              text-align: center;
+              margin-bottom: 20px;
+              padding-bottom: 10px;
+              border-bottom: 1px solid #333;
+            }
+            .report-title {
+              font-size: 18px;
+              font-weight: bold;
+              margin-bottom: 5px;
+            }
+            .report-date {
+              font-size: 12px;
+              color: #555;
+            }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              margin-bottom: 30px;
+            }
+            th, td {
+              border: 1px solid #ddd;
+              padding: 6px 8px;
+              text-align: left;
+              vertical-align: top;
+            }
+            th {
+              background-color: #f2f2f2;
+              font-weight: bold;
+            }
+            .shade-item {
+              margin: 3px 0;
+            }
+            .footer {
+              text-align: center;
+              margin-top: 20px;
+              font-size: 10px;
+              color: #777;
+              position: fixed;
+              bottom: 10px;
+              left: 0;
+              right: 0;
+            }
+            .has-bhiwandi {
+              background-color: #ffff99; /* Yellow background */
+            }
             @media print {
-              body { margin: 0; }
+              .no-print {
+                display: none;
+              }
+              .has-bhiwandi {
+                background-color: #ffff99 !important; /* Ensure yellow background prints */
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+              }
             }
           </style>
         </head>
         <body>
-          <h1>Part Orders</h1>
+          <div class="header">
+            <div class="report-title">Part Orders Report</div>
+            <div class="report-date">Generated on ${formattedDate}</div>
+          </div>
+          
           <table>
             <thead>
               <tr>
@@ -205,52 +276,87 @@ function PartOrderFile() {
                 <th style="width: 15%">Party</th>
                 <th style="width: 10%">Order No</th>
                 <th style="width: 10%">Price</th>
-                <th style="width: 50%">Shades</th>
+                <th style="width: 40%">Shades</th>
               </tr>
             </thead>
             <tbody>
               ${allEntries
-                .map(
-                  (entry) => `
-                <tr style="${
-                  entry.bhiwandi_date ? "background-color: #fffde7;" : ""
-                }">
-                  <td>${entry.design_title}</td>
-                  <td>${entry.bill_to_party}</td>
-                  <td>${entry.order_no}</td>
-                  <td>${entry.price}</td>
-                  <td>
-                    <div class="shade-list">
-                      ${entry.shades
-                        .map((shade) => {
-                          const shadeName = Object.keys(shade)[0];
-                          const shadeValue = shade[shadeName];
-                          return shadeValue
-                            ? `${shadeName}: ${shadeValue}m`
-                            : "";
-                        })
-                        .filter(Boolean)
-                        .join("<br>")}
-                    </div>
-                  </td>
-                </tr>
-              `
-                )
+                .map((entry) => {
+                  // Determine if the entry has a Bhiwandi date
+                  const hasBhiwandi = entry.bhiwandi_date !== null;
+                  const rowClass = hasBhiwandi ? "has-bhiwandi" : "";
+
+                  // Group shades by meter value
+                  const meterGroups = new Map<
+                    string,
+                    { shadeNames: string[] }
+                  >();
+
+                  entry.shades.forEach((shade) => {
+                    const shadeName = Object.keys(shade)[0];
+                    const shadeValue = shade[shadeName];
+
+                    if (shadeValue) {
+                      if (!meterGroups.has(shadeValue)) {
+                        meterGroups.set(shadeValue, { shadeNames: [] });
+                      }
+                      meterGroups.get(shadeValue)?.shadeNames.push(shadeName);
+                    }
+                  });
+
+                  // Format the grouped shades for HTML
+                  const shadesHtml =
+                    Array.from(meterGroups.entries())
+                      .map(
+                        ([meters, { shadeNames }]) => `
+                      <div style="display: inline-block; margin: 2px;">
+                        <div style="border-bottom: 1px solid #000; text-align: center;">${shadeNames.join(
+                          " - "
+                        )}</div>
+                        <div style="border-top: 1px solid #000; text-align: center;">${meters} mtr</div>
+                      </div>
+                    `
+                      )
+                      .join("") || "No shades specified";
+
+                  return `
+                    <tr class="${rowClass}">
+                      <td>${entry.design_title}</td>
+                      <td>${entry.bill_to_party}</td>
+                      <td>${entry.order_no}</td>
+                      <td>${entry.price}</td>
+                      <td>${shadesHtml}</td>
+                    </tr>
+                  `;
+                })
                 .join("")}
             </tbody>
           </table>
+          
+          <div class="footer">
+            Page 1 of 1 • Part Orders System • Printed from Management System
+          </div>
+          
+          <script>
+            // Print automatically when loaded
+            window.onload = function() {
+              setTimeout(function() {
+                window.print();
+              }, 500);
+            };
+          </script>
         </body>
       </html>
     `;
 
-    printWindow.document.write(printContent);
-    printWindow.document.close();
+    const iframe = printFrameRef.current;
+    const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
 
-    // Automatically trigger print after a short delay to ensure content is loaded
-    setTimeout(() => {
-      printWindow.print();
-      printWindow.close();
-    }, 250);
+    if (iframeDoc) {
+      iframeDoc.open();
+      iframeDoc.write(printContent);
+      iframeDoc.close();
+    }
   };
 
   return (
@@ -264,6 +370,13 @@ function PartOrderFile() {
           </Button>
         </div>
       </div>
+
+      {/* Hidden iframe for printing */}
+      <iframe
+        ref={printFrameRef}
+        style={{ display: "none", width: "0", height: "0" }}
+        title="Print Frame"
+      />
 
       <NewOrderDialog
         isOpen={isNewOrderDialogOpen}
