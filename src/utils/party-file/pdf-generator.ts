@@ -140,7 +140,7 @@ export const generatePartyReport = (
   party: string,
   orders: DesignDetail[]
 ): string => {
-  if (!orders?.length) return "";
+  if (!orders?.length) return "<p>No orders available for this party.</p>"; // Handle no orders case
 
   // Sort orders by design name for better organization
   const sortedOrders = [...orders].sort((a, b) =>
@@ -169,9 +169,11 @@ export const generatePartyReport = (
             margin: 0;
             padding: 0;
             font-family: Arial, sans-serif;
+            -webkit-print-color-adjust: exact; /* Ensure colors are printed correctly */
           }
           .container {
             border: 2px solid #000;
+            padding: 10px; /* Add padding for better print layout */
           }
           .header {
             max-height: 20%; /* Limit header height */
@@ -179,6 +181,11 @@ export const generatePartyReport = (
           .order-row {
             page-break-inside: avoid;
           }
+          /* Add any additional styles needed for printing */
+          .highlight {
+            background-color: #fef9c3; /* Example color */
+          }
+          
         </style>
       </head>
       <body>
@@ -196,15 +203,5 @@ export const generatePartyReport = (
     </html>
   `;
 
-  // Open a new window and print the content
-  // const printWindow = window.open("", "_blank");
-  // if (printWindow) {
-  //   printWindow.document.write(html);
-  //   printWindow.document.close();
-  //   printWindow.print();
-  //   printWindow.close();
-  // } else {
-  //   console.error("Failed to open print window.");
-  // }
-  return html; // Return the generated HTML instead
+  return html; // Return the generated HTML
 };

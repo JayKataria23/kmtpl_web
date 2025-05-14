@@ -1,5 +1,6 @@
+import { useState, useCallback, memo } from "react";
 import { Button } from "@/components/ui/button";
-import { FileText } from "lucide-react";
+import { FileText, Loader2 } from "lucide-react";
 import {
   Accordion,
   AccordionContent,
@@ -31,92 +32,144 @@ interface PartyAccordionProps {
   setPartyCounts: (counts: PartyCount[]) => void;
 }
 
-export function PartyAccordion({
-  partyCounts,
-  partyOrders,
-  openAccordionItems,
-  setOpenAccordionItems,
-  handleFetchOrderDetails,
-  handleAddToDrawer,
-  handleRemoveFromDrawer,
-  handleAddToDrawerBhiwandi,
-  handleRemoveFromDrawerBhiwandi,
-  selectedEntries,
-  selectedBhiwandiEntries,
-  setIsAddPartOrderOpen,
-  setSelectedOrder,
-  setPartyCounts,
-}: PartyAccordionProps) {
-  const handleGenerateReport = (partyName: string) => {
-    const htmlReport = generatePartyReport(partyName, partyOrders[partyName]);
+export const PartyAccordion = memo(
+  ({
+    partyCounts,
+    partyOrders,
+    openAccordionItems,
+    setOpenAccordionItems,
+    handleFetchOrderDetails,
+    handleAddToDrawer,
+    handleRemoveFromDrawer,
+    handleAddToDrawerBhiwandi,
+    handleRemoveFromDrawerBhiwandi,
+    selectedEntries,
+    selectedBhiwandiEntries,
+    setIsAddPartOrderOpen,
+    setSelectedOrder,
+    setPartyCounts,
+  }: PartyAccordionProps) => {
+    const [generatingReport, setGeneratingReport] = useState<string | null>(
+      null
+    );
 
-    // Create a new window and write the HTML report to it
-    const printWindow = window.open("", "_blank");
-    if (printWindow) {
-      printWindow.document.write(htmlReport);
-      printWindow.document.close();
-      printWindow.print();
-      printWindow.close();
-    } else {
-      console.error("Failed to open print window.");
-    }
-  };
+    const handleGenerateReport = useCallback(
+      async (partyName: string) => {
+        try {
+          setGeneratingReport(partyName);
+          const htmlReport = generatePartyReport(
+            partyName,
+            partyOrders[partyName]
+          );
 
-  return (
-    <Accordion
-      type="multiple"
-      value={openAccordionItems}
-      onValueChange={setOpenAccordionItems}
-      className="w-full"
-    >
-      {partyCounts
-        .sort((a, b) => a.party_name.localeCompare(b.party_name))
-        .map((item, index) => (
-          <AccordionItem key={index} value={`item-${index}`}>
-            <AccordionTrigger
-              className="text-md flex justify-between items-center w-full"
-              onClick={() => handleFetchOrderDetails(item.party_name)}
-            >
-              <span className="text-left flex-grow">{item.party_name}</span>
-              <Button
-                variant="outline"
-                size="sm"
-                className="mx-2"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleGenerateReport(item.party_name);
-                }}
+          const printWindow = window.open("", "_blank");
+          if (!printWindow) {
+            throw new Error(
+              "Could not open print window. Please check your popup settings."
+            );
+          }
+
+          printWindow.document.write(htmlReport);
+          printWindow.document.close();
+
+          // Wait for resources to load before printing
+          printWindow.onload = () => {
+            printWindow.print();
+            printWindow.focus();
+          };
+        } catch (error) {
+          console.error("Error generating report:", error);
+        } finally {
+          setGeneratingReport(null);
+        }
+      },
+      [partyOrders]
+    );
+
+    const handleAccordionClick = useCallback(
+      (partyName: string) => {
+        if (!partyOrders[partyName]) {
+          handleFetchOrderDetails(partyName);
+        }
+      },
+      [partyOrders, handleFetchOrderDetails]
+    );
+
+    return (
+      <Accordion
+        type="multiple"
+        value={openAccordionItems}
+        onValueChange={setOpenAccordionItems}
+        className="w-full"
+      >
+        {partyCounts
+          .sort((a, b) => a.party_name.localeCompare(b.party_name))
+          .map((item, index) => (
+            <AccordionItem key={item.party_name} value={`item-${index}`}>
+              <AccordionTrigger
+                className="text-md flex justify-between items-center w-full px-4"
+                onClick={() => handleAccordionClick(item.party_name)}
               >
-                <FileText className="w-4 h-4 mr-1" />
-                Report
-              </Button>
-              <span className="text-sm min-w-20 text-gray-500 ml-2">
-                count: {item.design_entry_count}
-              </span>
-            </AccordionTrigger>
-            <AccordionContent>
-              {partyOrders[item.party_name] ? (
-                <PartyOrderTable
-                  orders={partyOrders[item.party_name]}
-                  partyName={item.party_name}
-                  handleAddToDrawer={handleAddToDrawer}
-                  handleRemoveFromDrawer={handleRemoveFromDrawer}
-                  handleAddToDrawerBhiwandi={handleAddToDrawerBhiwandi}
-                  handleRemoveFromDrawerBhiwandi={
-                    handleRemoveFromDrawerBhiwandi
-                  }
-                  selectedEntries={selectedEntries}
-                  selectedBhiwandiEntries={selectedBhiwandiEntries}
-                  setIsAddPartOrderOpen={setIsAddPartOrderOpen}
-                  setSelectedOrder={setSelectedOrder}
-                  setPartyCounts={setPartyCounts}
-                />
-              ) : (
-                <p>Loading order details...</p>
-              )}
-            </AccordionContent>
-          </AccordionItem>
-        ))}
-    </Accordion>
-  );
-}
+                <span className="text-left flex-grow font-medium">
+                  {item.party_name}
+                </span>
+                <div className="flex items-center space-x-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="ml-2"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleGenerateReport(item.party_name);
+                    }}
+                    disabled={generatingReport === item.party_name}
+                  >
+                    {generatingReport === item.party_name ? (
+                      <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                    ) : (
+                      <FileText className="w-4 h-4 mr-1" />
+                    )}
+                    Report
+                  </Button>
+                  <span className="text-sm text-gray-500 min-w-20 text-right">
+                    count: {item.design_entry_count}
+                  </span>
+                </div>
+              </AccordionTrigger>
+              <AccordionContent>
+                {partyOrders[item.party_name] ? (
+                  <PartyOrderTable
+                    orders={partyOrders[item.party_name]}
+                    partyName={item.party_name}
+                    handleAddToDrawer={handleAddToDrawer}
+                    handleRemoveFromDrawer={handleRemoveFromDrawer}
+                    handleAddToDrawerBhiwandi={handleAddToDrawerBhiwandi}
+                    handleRemoveFromDrawerBhiwandi={
+                      handleRemoveFromDrawerBhiwandi
+                    }
+                    selectedEntries={selectedEntries}
+                    selectedBhiwandiEntries={selectedBhiwandiEntries}
+                    setIsAddPartOrderOpen={setIsAddPartOrderOpen}
+                    setSelectedOrder={setSelectedOrder}
+                    setPartyCounts={setPartyCounts}
+                  />
+                ) : (
+                  <div className="flex items-center justify-center p-4">
+                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                    <p>Loading order details...</p>
+                  </div>
+                )}
+              </AccordionContent>
+            </AccordionItem>
+          ))}
+        {partyCounts.length === 0 && (
+          <div className="text-center p-6 text-gray-500">
+            No party records found
+          </div>
+        )}
+      </Accordion>
+    );
+  }
+);
+
+PartyAccordion.displayName = "PartyAccordion";
