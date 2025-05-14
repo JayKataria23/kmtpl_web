@@ -1,5 +1,4 @@
 import type { DesignDetail } from "@/types/party-file";
-import { formatDate } from "@/utils/party-file/date-utils";
 
 /**
  * Format shade data into grouped HTML elements
@@ -41,6 +40,21 @@ const formatShades = (shades: Record<string, string>[]): string => {
     `
     )
     .join("");
+};
+
+/**
+ * Format a date string to 'DD-MMM-YY' format
+ * @param dateStr - The date string to format
+ * @returns Formatted date string
+ */
+const formatDate = (dateStr: string): string => {
+  const date = new Date(dateStr);
+  const options: Intl.DateTimeFormatOptions = {
+    day: "2-digit",
+    month: "2-digit",
+    year: "2-digit",
+  };
+  return date.toLocaleDateString("en-GB", options).replace(/ /g, "-");
 };
 
 /**
@@ -90,11 +104,9 @@ const generateOrderRow = (order: DesignDetail, index: number): string => {
       <div style="width: 5%; border-right: 1px solid #000; text-align: center; font-size: small; padding: 2px;">${
         index + 1
       }</div>
-      <div style="width: 8%; border-right: 1px solid #000; text-align: center; font-size: small; padding: 2px;">${
+      <div style="width: 8%; border-right: 1px solid #000; text-align: center; font-size: small;">${
         order.order_no || "-"
-      } <br/> <p style="font-size: 11px">${
-    formatDate(order.order_date) || "-"
-  }</p></div>
+      } <br/>${order.order_date ? formatDate(order.order_date) : "-"}</div>
       <div style="width: 12%; border-right: 1px solid #000; text-align: center; font-size: small; padding: 2px; font-weight: bold; word-break: break-word;">${
         order.design
       }</div>
