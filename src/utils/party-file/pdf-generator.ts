@@ -1,4 +1,3 @@
-import html2pdf from "html2pdf.js";
 import type { DesignDetail } from "@/types/party-file";
 import { formatDate } from "@/utils/party-file/date-utils";
 
@@ -93,7 +92,9 @@ const generateOrderRow = (order: DesignDetail, index: number): string => {
       }</div>
       <div style="width: 8%; border-right: 1px solid #000; text-align: center; font-size: small; padding: 2px;">${
         order.order_no || "-"
-      } <br/> <p style="font-size: 11px">${formatDate(order.order_date) || "-"}</p></div>
+      } <br/> <p style="font-size: 11px">${
+    formatDate(order.order_date) || "-"
+  }</p></div>
       <div style="width: 12%; border-right: 1px solid #000; text-align: center; font-size: small; padding: 2px; font-weight: bold; word-break: break-word;">${
         order.design
       }</div>
@@ -145,7 +146,6 @@ export const generatePartyReport = (
   const sortedOrders = [...orders].sort((a, b) =>
     a.design.localeCompare(b.design)
   );
-  const today = new Date().toLocaleDateString("en-GB");
 
   // Calculate total pieces once instead of in template
   const totalPieces = sortedOrders.reduce(
@@ -196,27 +196,14 @@ export const generatePartyReport = (
     </html>
   `;
 
-  // Generate PDF with optimized settings
-  html2pdf()
-    .from(html)
-    .set({
-      margin: 5,
-      filename: `${party}_report_${today}.pdf`,
-      image: { type: "jpeg", quality: 0.98 },
-      html2canvas: {
-        scale: 2,
-        useCORS: true,
-        logging: false, // Disable logging
-        letterRendering: true, // Improve text rendering
-      },
-      jsPDF: {
-        unit: "mm",
-        format: "a4",
-        orientation: "portrait",
-        compress: true, // Compress the PDF
-        hotfixes: ["px_scaling"], // Fix scaling issues
-      },
-      pagebreak: { mode: ["avoid-all"] },
-    })
-    .save();
+  // Open a new window and print the content
+  const printWindow = window.open("", "_blank");
+  if (printWindow) {
+    printWindow.document.write(html);
+    printWindow.document.close();
+    printWindow.print();
+    printWindow.close();
+  } else {
+    console.error("Failed to open print window.");
+  }
 };
