@@ -61,6 +61,8 @@ function OrderFile() {
   const [openAccordionItems, setOpenAccordionItems] = useState<string[]>([]);
   const [colorCounts, setColorCounts] = useState<{ [key: string]: number }>({});
   const [includeParty, setIncludeParty] = useState<boolean>(true); // Default to true
+  const [tableTitle, setTableTitle] = useState<string>(""); // State for table title
+  const [entryLotNo, setEntryLotNo] = useState<string>(""); // State for table title
 
   useEffect(() => {
     fetchDesignCounts();
@@ -459,10 +461,11 @@ function OrderFile() {
             th, td { border: 1px solid black; padding: 8px; text-align: left; }
             th { background-color: #f2f2f2; }
             .design-column { width: 100px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } /* Fixed width for design column */
+            .lumpset-column { width: 100px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } /* Fixed width for design column */
             .header { display: flex; justify-content: space-between; align-items: center; }
             .header h1, .header h2 { margin: 0; font-size: 24px; }
             .header h2 { flex-grow: 1; text-align: center; } /* Center the ॐ symbol */
-            .swastik { font-size: 24px; margin-left: 40px} /* Adjust size as needed */
+            .swastik {margin-left: 40px} /* Adjust size as needed */
           </style>
         </head>
         <body>
@@ -470,9 +473,9 @@ function OrderFile() {
             <h1>श्री</h1>
             <h2>ॐ</h2>
             संतनाम सहाई
-            <div class="swastik">卐</div> <!-- Use a swastik symbol here -->
+            <div class="swastik"><h1>卐</h1></div> <!-- Use a swastik symbol here -->
           </div>
-          <h2 style="text-align: center;"></h2>
+          <h2 style="text-align: center;">${tableTitle}</h2>
           <table>
             <tr>
               <th>Taka</th>
@@ -506,7 +509,7 @@ function OrderFile() {
         <tr>
           <td>${taka}</td>
           <td class="design-column">${design}</td>
-          <td>${lumpSet}</td>
+          <td class="lumpset-column">${lumpSet} lumps X ${colorCount} colours</td>
           ${includeParty ? `<td>${parties}</td>` : ""}
         </tr>
       `;
@@ -516,6 +519,8 @@ function OrderFile() {
     html += `
           </table>
           <strong>${totalTaka} Taka</strong>
+          <br/>
+          <strong>Entry/Lot number = ${entryLotNo}</strong>
         </body>
       </html>
     `;
@@ -650,19 +655,30 @@ function OrderFile() {
               )}
             </div>
             <DrawerFooter>
-              <div className="flex items-center">
+              <input
+                type="text"
+                value={tableTitle}
+                onChange={(e) => setTableTitle(e.target.value)}
+                placeholder="Enter table title"
+                className="mr-2 border rounded p-1"
+              />
+              <div className="flex items-center justify-around">
                 <input
                   type="checkbox"
                   checked={includeParty}
-                  onChange={() => setIncludeParty((prev) => !prev)} // Toggle checkbox
+                  onChange={() => setIncludeParty((prev) => !prev)}
                   className="mr-2"
                 />
-                <label>Include Party Column</label>
+                <label>Party Column</label>
+                <input
+                  type="text"
+                  value={entryLotNo}
+                  onChange={(e) => setEntryLotNo(e.target.value)}
+                  placeholder="Enter Entry/Lot number"
+                  className="mr-2 border rounded p-1"
+                />
               </div>
-              <Button
-                onClick={generateProgram} // Call the function to generate the program
-                className=" text-white"
-              >
+              <Button onClick={generateProgram} className="text-white">
                 Generate Program
               </Button>
 
