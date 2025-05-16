@@ -88,11 +88,9 @@ export const PartyAccordion = memo(
 
     const handleAccordionClick = useCallback(
       (partyName: string) => {
-        if (!partyOrders[partyName]) {
-          handleFetchOrderDetails(partyName);
-        }
+        handleFetchOrderDetails(partyName);
       },
-      [partyOrders, handleFetchOrderDetails]
+      [handleFetchOrderDetails]
     );
 
     return (
