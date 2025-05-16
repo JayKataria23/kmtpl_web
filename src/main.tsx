@@ -29,6 +29,7 @@ import PartyDispatchList from "./pages/PartyDispatchList";
 import PartOrderFile from "./pages/PartOrderFile";
 import DyeingBook from "./pages/DyeingBook";
 import SalesRegister from "./pages/SalesRegister";
+import PrintProgram from "./pages/PrintProgram";
 
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
@@ -70,6 +71,14 @@ createRoot(document.getElementById("root")!).render(
             element={
               <ProtectedRoute>
                 <OrderFile />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/print-program"
+            element={
+              <ProtectedRoute>
+                <PrintProgram />
               </ProtectedRoute>
             }
           />

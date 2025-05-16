@@ -10,6 +10,7 @@ export default function HomePage() {
     { path: "/fast-order-form", label: "Fast Order Form" },
     { path: "/order-list", label: "Order List" },
     { path: "/order-file", label: "Design Wise Order" },
+    { path: "/print-program", label: "Print Program" },
     { path: "/party-file", label: "Party Wise Order" },
     { path: "/part-order-file", label: "Part Orders" },
     { path: "/dyeing-book", label: "Dyeing Book" },
