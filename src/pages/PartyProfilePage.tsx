@@ -236,12 +236,12 @@ export default function PartyProfilePage() {
       );
 
     if (isMobile) {
-      // Create envelope HTML content
+      // Create envelope HTML content for mobile - 11x5 inch envelope, top left positioning
       const envelopeHTML = `
         <div style="
-          width: 220mm;
-          height: 110mm;
-          padding: 10mm 0 0 50%;
+          width: 279mm;
+          height: 127mm;
+          padding: 20mm 0 0 20mm;
           box-sizing: border-box;
           font-family: Arial, sans-serif;
         ">
@@ -269,7 +269,7 @@ export default function PartyProfilePage() {
         </div>
       `;
 
-      // Configure html2pdf options
+      // Configure html2pdf options for 11x5 inch envelope
       const opt = {
         margin: 0,
         filename: `${party.name}-envelope.pdf`,
@@ -280,7 +280,7 @@ export default function PartyProfilePage() {
         },
         jsPDF: {
           unit: "mm",
-          format: [220, 110],
+          format: [279, 127], // 11x5 inches in mm
           orientation: "landscape",
         },
       };
@@ -288,24 +288,27 @@ export default function PartyProfilePage() {
       // Generate PDF
       html2pdf().set(opt).from(envelopeHTML).save();
     } else {
-      // Desktop printing - use existing functionality
+      // Desktop printing - use existing functionality but position top left
       const printContent = `
         <style>
           @media print {
             @page {
-              size: 220mm 110mm; 
+              size: 11in 5in; 
+              margin: 0;
             }
             body {
+              margin: 0;
+              padding: 0.5in 0 0 0.5in;
               overflow: visible;
-              padding-left:50%;
             }
           }
         </style>
-        <div style="text-align: left;padding-top: 10mm; box-sizing: border-box;">
-          <p style="line-height:100%; font-size: 22px; font-weight:bold">${
+        <div style="text-align: left; box-sizing: border-box;">
+        To,
+          <p style="line-height:100%; font-size: 22px; font-weight:bold; margin: 0 0 6px 0;">${
             party.name
           }</p>
-          <p style="line-height:100%; font-size: 18px;">
+          <p style="line-height:120%; font-size: 18px; margin: 0;">
             ${[
               party.address_line_1,
               party.address_line_2,
@@ -318,7 +321,7 @@ export default function PartyProfilePage() {
           </p>
           ${
             party.contact_number
-              ? `<p style="line-height:120%; font-size: 18px;">Contact: ${party.contact_number}</p>`
+              ? `<p style="line-height:120%; font-size: 18px; margin: 6px 0 0 0;">Contact: ${party.contact_number}</p>`
               : ""
           }
         </div>
