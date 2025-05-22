@@ -293,7 +293,7 @@ export default function PartyProfilePage() {
         <style>
           @media print {
             @page {
-              size: 11in 5in; 
+              size: 13in 5in; 
               margin: 0;
             }
             body {
@@ -305,10 +305,10 @@ export default function PartyProfilePage() {
         </style>
         <div style="text-align: left; box-sizing: border-box;">
         To,
-          <p style="line-height:100%; font-size: 22px; font-weight:bold; margin: 0 0 6px 0;">${
+          <p style="line-height:100%; font-size: 32px; font-weight:bold; margin: 0 0 6px 0;">${
             party.name
           }</p>
-          <p style="line-height:120%; font-size: 18px; margin: 0;">
+          <p style="line-height:120%; font-size: 22px; margin: 0;">
             ${[
               party.address_line_1,
               party.address_line_2,
@@ -321,7 +321,7 @@ export default function PartyProfilePage() {
           </p>
           ${
             party.contact_number
-              ? `<p style="line-height:120%; font-size: 18px; margin: 6px 0 0 0;">Contact: ${party.contact_number}</p>`
+              ? `<p style="line-height:120%; font-size: 22px; margin: 6px 0 0 0;">Contact: ${party.contact_number}</p>`
               : ""
           }
         </div>
