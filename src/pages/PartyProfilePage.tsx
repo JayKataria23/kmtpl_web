@@ -303,8 +303,8 @@ export default function PartyProfilePage() {
       }
       .rotated-address {
         position: absolute;
-        bottom: 0.5in;
-        right: 0.5in;
+        bottom: 0in;
+        right: 1.5in;
         transform: rotate(180deg);
         text-align: left;
         box-sizing: border-box;
@@ -313,10 +313,10 @@ export default function PartyProfilePage() {
   </style>
   <div class="rotated-address">
     To,
-    <p style="line-height:100%; font-size: 32px; font-weight:bold; margin: 0 0 6px 0;">
+    <p style="line-height:100%; font-size: 36px; font-weight:bold; margin: 0 0 6px 0;">
       ${party.name}
     </p>
-    <p style="line-height:120%; font-size: 22px; margin: 0;">
+    <p style="line-height:120%; font-size: 24px; margin: 0;">
       ${[
         party.address_line_1,
         party.address_line_2,
@@ -329,7 +329,7 @@ export default function PartyProfilePage() {
     </p>
     ${
       party.contact_number
-        ? `<p style="line-height:120%; font-size: 22px; margin: 6px 0 0 0;">Contact: ${party.contact_number}</p>`
+        ? `<p style="line-height:120%; font-size: 24px; margin: 6px 0 0 0;">Contact: ${party.contact_number}</p>`
         : ""
     }
   </div>
