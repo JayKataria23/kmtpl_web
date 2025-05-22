@@ -306,7 +306,7 @@ export default function PartyProfilePage() {
         bottom: 0.5in;
         right: 0.5in;
         transform: rotate(180deg);
-        text-align: right;
+        text-align: left;
         box-sizing: border-box;
       }
     }
