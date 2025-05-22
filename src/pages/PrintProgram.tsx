@@ -58,7 +58,8 @@ function PrintProgram() {
   const [colorCounts, setColorCounts] = useState<{ [key: string]: number }>({});
   const [includeParty, setIncludeParty] = useState<boolean>(true); // Default to true
   const [tableTitle, setTableTitle] = useState<string>(""); // State for table title
-  const [entryLotNo, setEntryLotNo] = useState<string>(""); // State for table title
+  const [entryNo, setEntryNo] = useState<string>(""); // State for table title
+  const [lotNo, setLotNo] = useState<string>(""); // State for table title
 
   useEffect(() => {
     fetchDesignCounts();
@@ -371,8 +372,9 @@ function PrintProgram() {
     html += `
           </table>
           <strong>${totalTaka} Taka</strong>
-          <br/>
-          <strong>Entry/Lot number = ${entryLotNo}</strong>
+                    <br/>
+          ${entryNo ? `<strong>Entry number = ${entryNo}</strong>` : ""}<br/>
+          ${lotNo ? `<strong>Lot number = ${lotNo}</strong>` : ""}
         </body>
       </html>
     `;
@@ -524,12 +526,19 @@ function PrintProgram() {
                 <label>Party Column</label>
                 <input
                   type="text"
-                  value={entryLotNo}
-                  onChange={(e) => setEntryLotNo(e.target.value)}
-                  placeholder="Enter Entry/Lot number"
+                  value={entryNo}
+                  onChange={(e) => setEntryNo(e.target.value)}
+                  placeholder="Enter Entry"
                   className="mr-2 border rounded p-1"
                 />
               </div>
+              <input
+                type="text"
+                value={lotNo}
+                onChange={(e) => setLotNo(e.target.value)}
+                placeholder="Lot Number"
+                className="border rounded p-1"
+              />
               <Button onClick={generateProgram} className="text-white">
                 Generate Program
               </Button>
@@ -551,7 +560,6 @@ function PrintProgram() {
           }}
           className="mb-4" // Added border class
         >
-          
           <ToggleGroupItem value="print" aria-label="Show print">
             Print
           </ToggleGroupItem>{" "}
