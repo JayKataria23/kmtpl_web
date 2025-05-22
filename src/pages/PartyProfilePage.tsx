@@ -290,42 +290,51 @@ export default function PartyProfilePage() {
     } else {
       // Desktop printing - use existing functionality but position top left
       const printContent = `
-        <style>
-          @media print {
-            @page {
-              size: 13in 5in; 
-              margin: 0;
-            }
-            body {
-              margin: 0;
-              padding: 0.5in 0 0 0.5in;
-              overflow: visible;
-            }
-          }
-        </style>
-        <div style="text-align: left; box-sizing: border-box;">
-        To,
-          <p style="line-height:100%; font-size: 32px; font-weight:bold; margin: 0 0 6px 0;">${
-            party.name
-          }</p>
-          <p style="line-height:120%; font-size: 22px; margin: 0;">
-            ${[
-              party.address_line_1,
-              party.address_line_2,
-              party.address_line_3,
-              party.address_line_4,
-              party.address_line_5,
-            ]
-              .filter(Boolean)
-              .join("<br>")}
-          </p>
-          ${
-            party.contact_number
-              ? `<p style="line-height:120%; font-size: 22px; margin: 6px 0 0 0;">Contact: ${party.contact_number}</p>`
-              : ""
-          }
-        </div>
-      `;
+  <style>
+    @media print {
+      @page {
+        size: 13in 5in;
+        margin: 0;
+      }
+      body {
+        margin: 0;
+        padding: 0;
+        overflow: visible;
+      }
+      .rotated-address {
+        position: absolute;
+        bottom: 0.5in;
+        right: 0.5in;
+        transform: rotate(180deg);
+        text-align: right;
+        box-sizing: border-box;
+      }
+    }
+  </style>
+  <div class="rotated-address">
+    To,
+    <p style="line-height:100%; font-size: 32px; font-weight:bold; margin: 0 0 6px 0;">
+      ${party.name}
+    </p>
+    <p style="line-height:120%; font-size: 22px; margin: 0;">
+      ${[
+        party.address_line_1,
+        party.address_line_2,
+        party.address_line_3,
+        party.address_line_4,
+        party.address_line_5,
+      ]
+        .filter(Boolean)
+        .join("<br>")}
+    </p>
+    ${
+      party.contact_number
+        ? `<p style="line-height:120%; font-size: 22px; margin: 6px 0 0 0;">Contact: ${party.contact_number}</p>`
+        : ""
+    }
+  </div>
+`;
+
 
       const printWindow = window.open("", "");
       printWindow?.document.write(printContent);
