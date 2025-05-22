@@ -198,6 +198,46 @@ function PrintProgram() {
           const numB = Number(b.design.split("-").pop());
           return numA - numB; // Sort by the number after the hyphen
         }); // Filter out designs starting with "P-"
+    } else if (filter === "wcw") {
+      return designCounts
+        .filter(
+          (item) => item.design.includes("WCW-") // Check if design ends with a 4-digit number
+        )
+        .sort((a, b) => {
+          const numA = Number(a.design.split("-").pop());
+          const numB = Number(b.design.split("-").pop());
+          return numA - numB; // Sort by the number after the hyphen
+        }); // Filter out designs starting with "P-"
+    } else if (filter === "bns") {
+      return designCounts
+        .filter(
+          (item) => item.design.includes("BNS-") // Check if design ends with a 4-digit number
+        )
+        .sort((a, b) => {
+          const numA = Number(a.design.split("-").pop());
+          const numB = Number(b.design.split("-").pop());
+          return numA - numB; // Sort by the number after the hyphen
+        }); // Filter out designs starting with "P-"
+    } else if (filter === "kk") {
+      return designCounts
+        .filter(
+          (item) => item.design.includes("KK-") // Check if design ends with a 4-digit number
+        )
+        .sort((a, b) => {
+          const numA = Number(a.design.split("-").pop());
+          const numB = Number(b.design.split("-").pop());
+          return numA - numB; // Sort by the number after the hyphen
+        }); // Filter out designs starting with "P-"
+    } else if (filter === "rlt") {
+      return designCounts
+        .filter(
+          (item) => item.design.includes("RLT-") // Check if design ends with a 4-digit number
+        )
+        .sort((a, b) => {
+          const numA = Number(a.design.split("-").pop());
+          const numB = Number(b.design.split("-").pop());
+          return numA - numB; // Sort by the number after the hyphen
+        }); // Filter out designs starting with "P-"
     } else if (filter === "digital-dobby") {
       return designCounts
         .filter(
@@ -511,13 +551,19 @@ function PrintProgram() {
           }}
           className="mb-4" // Added border class
         >
-          <ToggleGroupItem value="all" aria-label="Show all">
-            ALL
-          </ToggleGroupItem>
           
           <ToggleGroupItem value="print" aria-label="Show print">
             Print
           </ToggleGroupItem>{" "}
+          <ToggleGroupItem value="wcw" aria-label="Show wcw">
+            WCW
+          </ToggleGroupItem>
+          <ToggleGroupItem value="bns" aria-label="Show bns">
+            BNS
+          </ToggleGroupItem>
+          <ToggleGroupItem value="kk" aria-label="Show kk">
+            KK
+          </ToggleGroupItem>
           <ToggleGroupItem value="digital" aria-label="Show digital">
             D
           </ToggleGroupItem>
@@ -527,7 +573,9 @@ function PrintProgram() {
           >
             DDBY
           </ToggleGroupItem>
-          
+          <ToggleGroupItem value="rlt" aria-label="Show rlt">
+            RLT
+          </ToggleGroupItem>
         </ToggleGroup>
       </div>
       <Accordion
