@@ -1,6 +1,15 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Button, Input, Label, Toaster } from "@/components/ui";
+import {
+  Button,
+  Input,
+  Label,
+  Toaster,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui";
 import { useToast } from "@/hooks/use-toast";
 import supabase from "@/utils/supabase";
 import {
@@ -62,6 +71,10 @@ export default function BrokerTransportPage() {
   const [editSupplierNameValues, setEditSupplierNameValues] = useState<{
     [key: number]: string;
   }>({});
+  const [selectedDesigns, setSelectedDesigns] = useState<Design[]>([]);
+  const [isPinDialogOpen, setIsPinDialogOpen] = useState(false);
+  const [pin, setPin] = useState("");
+  const CORRECT_PIN = "1234"; // You can change this to any 4-digit PIN
 
   useEffect(() => {
     fetchBrokers();
@@ -434,6 +447,62 @@ export default function BrokerTransportPage() {
     }
   };
 
+  const handleDesignSelect = (design: Design) => {
+    if (selectedDesigns.find((d) => d.id === design.id)) {
+      setSelectedDesigns(selectedDesigns.filter((d) => d.id !== design.id));
+    } else if (selectedDesigns.length < 2) {
+      setSelectedDesigns([...selectedDesigns, design]);
+    }
+  };
+
+  const handlePinSubmit = () => {
+    if (pin === CORRECT_PIN) {
+      setIsPinDialogOpen(false);
+      setPin("");
+      replaceDesigns();
+    } else {
+      toast({
+        title: "Error",
+        description: "Incorrect PIN",
+        variant: "destructive",
+      });
+      setPin("");
+    }
+  };
+
+  const replaceDesigns = async () => {
+    if (selectedDesigns.length !== 2) {
+      toast({
+        title: "Error",
+        description: "Please select exactly two designs",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const [oldDesign, newDesign] = selectedDesigns;
+
+    const { error } = await supabase.rpc("replace_and_delete_design", {
+      old_design_name: oldDesign.title,
+      new_design_name: newDesign.title,
+    });
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to replace design",
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Success",
+        description: `Design "${oldDesign.title}" replaced with "${newDesign.title}" successfully`,
+      });
+      setSelectedDesigns([]);
+      fetchDesigns();
+    }
+  };
+
   return (
     <div className="container mx-auto mt-10 p-4">
       <Button onClick={() => navigate("/")} className="mb-4">
@@ -527,50 +596,81 @@ export default function BrokerTransportPage() {
                 Add Design
               </Button>
             </div>
+            <div className="flex justify-between items-center">
+              <div className="text-sm text-gray-500">
+                {selectedDesigns.length === 0
+                  ? "Select two designs to replace"
+                  : `Selected ${selectedDesigns.length}/2 designs`}
+              </div>
+              {selectedDesigns.length === 2 && (
+                <Button
+                  onClick={() => setIsPinDialogOpen(true)}
+                  variant="default"
+                  size="sm"
+                >
+                  Replace Designs
+                </Button>
+              )}
+            </div>
           </div>
           <Accordion type="single" collapsible className="w-full">
             <AccordionItem value="designs">
               <AccordionTrigger>Existing Designs</AccordionTrigger>
               <AccordionContent>
-                <ul className="space-y-2">
-                  {designs.map((design) => (
-                    <li
-                      key={design.id}
-                      className="flex justify-between items-center bg-gray-100 p-2 rounded"
-                    >
-                      {editingStates[design.id] ? (
-                        <>
-                          <Input
-                            value={editTitles[design.id] || design.title}
-                            onChange={(e) =>
-                              setEditTitles({
-                                ...editTitles,
-                                [design.id]: e.target.value,
-                              })
-                            }
-                            placeholder="Edit design title"
+                <div className="space-y-4">
+                  <ul className="space-y-2">
+                    {designs.map((design) => (
+                      <li
+                        key={design.id}
+                        className={`flex justify-between items-center p-2 rounded ${
+                          selectedDesigns.find((d) => d.id === design.id)
+                            ? "bg-blue-100 border-2 border-blue-500"
+                            : "bg-gray-100"
+                        }`}
+                      >
+                        <div className="flex items-center space-x-2">
+                          <input
+                            type="checkbox"
+                            checked={selectedDesigns.some(
+                              (d) => d.id === design.id
+                            )}
+                            onChange={() => handleDesignSelect(design)}
+                            className="h-4 w-4"
                           />
-                          <Button
-                            onClick={() => {
-                              editDesign(
-                                design.id,
-                                editTitles[design.id] || design.title
-                              );
-                              setEditingStates({
-                                ...editingStates,
-                                [design.id]: false,
-                              });
-                            }}
-                            variant="outline"
-                            size="sm"
-                          >
-                            Save
-                          </Button>
-                        </>
-                      ) : (
-                        <>
-                          <span>{design.title}</span>
-                          <div className="flex space-x-2">
+                          {editingStates[design.id] ? (
+                            <Input
+                              value={editTitles[design.id] || design.title}
+                              onChange={(e) =>
+                                setEditTitles({
+                                  ...editTitles,
+                                  [design.id]: e.target.value,
+                                })
+                              }
+                              placeholder="Edit design title"
+                            />
+                          ) : (
+                            <span>{design.title}</span>
+                          )}
+                        </div>
+                        <div className="flex space-x-2">
+                          {editingStates[design.id] ? (
+                            <Button
+                              onClick={() => {
+                                editDesign(
+                                  design.id,
+                                  editTitles[design.id] || design.title
+                                );
+                                setEditingStates({
+                                  ...editingStates,
+                                  [design.id]: false,
+                                });
+                              }}
+                              variant="outline"
+                              size="sm"
+                            >
+                              Save
+                            </Button>
+                          ) : (
                             <Button
                               onClick={() =>
                                 setEditingStates({
@@ -583,19 +683,19 @@ export default function BrokerTransportPage() {
                             >
                               Edit
                             </Button>
-                            <Button
-                              onClick={() => deleteDesign(design.id)}
-                              variant="destructive"
-                              size="sm"
-                            >
-                              Delete
-                            </Button>
-                          </div>
-                        </>
-                      )}
-                    </li>
-                  ))}
-                </ul>
+                          )}
+                          <Button
+                            onClick={() => deleteDesign(design.id)}
+                            variant="destructive"
+                            size="sm"
+                          >
+                            Delete
+                          </Button>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               </AccordionContent>
             </AccordionItem>
           </Accordion>
@@ -825,6 +925,41 @@ export default function BrokerTransportPage() {
         onSuccess={fetchDesigns}
         designs={designs.map((d) => d.title)}
       />
+      <Dialog open={isPinDialogOpen} onOpenChange={setIsPinDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Enter PIN</DialogTitle>
+            Please enter the 4-digit PIN to confirm design replacement
+          </DialogHeader>
+          <div className="space-y-4">
+            <Input
+              type="password"
+              maxLength={4}
+              value={pin}
+              onChange={(e) => {
+                const value = e.target.value.replace(/[^0-9]/g, "");
+                setPin(value);
+              }}
+              placeholder="Enter 4-digit PIN"
+              className="text-center text-2xl tracking-widest"
+            />
+            <div className="flex justify-end space-x-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsPinDialogOpen(false);
+                  setPin("");
+                }}
+              >
+                Cancel
+              </Button>
+              <Button onClick={handlePinSubmit} disabled={pin.length !== 4}>
+                Verify
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
       <Toaster />
     </div>
   );
