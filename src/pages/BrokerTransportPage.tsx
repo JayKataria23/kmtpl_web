@@ -40,6 +40,8 @@ interface SupplierName {
   supplier_name: string;
 }
 
+const scrollableContentClass = "max-h-[300px] overflow-y-auto pr-2";
+
 export default function BrokerTransportPage() {
   const [brokers, setBrokers] = useState<Profile[]>([]);
   const [transports, setTransports] = useState<Profile[]>([]);
@@ -527,23 +529,25 @@ export default function BrokerTransportPage() {
             <AccordionItem value="brokers">
               <AccordionTrigger>Existing Brokers</AccordionTrigger>
               <AccordionContent>
-                <ul className="space-y-2">
-                  {brokers.map((broker) => (
-                    <li
-                      key={broker.id}
-                      className="flex justify-between items-center bg-gray-100 p-2 rounded"
-                    >
-                      <span>{broker.name}</span>
-                      <Button
-                        onClick={() => deleteBroker(broker.id)}
-                        variant="destructive"
-                        size="sm"
+                <div className={scrollableContentClass}>
+                  <ul className="space-y-2">
+                    {brokers.map((broker) => (
+                      <li
+                        key={broker.id}
+                        className="flex justify-between items-center bg-gray-100 p-2 rounded"
                       >
-                        Delete
-                      </Button>
-                    </li>
-                  ))}
-                </ul>
+                        <span>{broker.name}</span>
+                        <Button
+                          onClick={() => deleteBroker(broker.id)}
+                          variant="destructive"
+                          size="sm"
+                        >
+                          Delete
+                        </Button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               </AccordionContent>
             </AccordionItem>
           </Accordion>
@@ -566,23 +570,25 @@ export default function BrokerTransportPage() {
             <AccordionItem value="transports">
               <AccordionTrigger>Existing Transport Profiles</AccordionTrigger>
               <AccordionContent>
-                <ul className="space-y-2">
-                  {transports.map((transport) => (
-                    <li
-                      key={transport.id}
-                      className="flex justify-between items-center bg-gray-100 p-2 rounded"
-                    >
-                      <span>{transport.name}</span>
-                      <Button
-                        onClick={() => deleteTransport(transport.id)}
-                        variant="destructive"
-                        size="sm"
+                <div className={scrollableContentClass}>
+                  <ul className="space-y-2">
+                    {transports.map((transport) => (
+                      <li
+                        key={transport.id}
+                        className="flex justify-between items-center bg-gray-100 p-2 rounded"
                       >
-                        Delete
-                      </Button>
-                    </li>
-                  ))}
-                </ul>
+                        <span>{transport.name}</span>
+                        <Button
+                          onClick={() => deleteTransport(transport.id)}
+                          variant="destructive"
+                          size="sm"
+                        >
+                          Delete
+                        </Button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               </AccordionContent>
             </AccordionItem>
           </Accordion>
@@ -617,84 +623,86 @@ export default function BrokerTransportPage() {
             <AccordionItem value="designs">
               <AccordionTrigger>Existing Designs</AccordionTrigger>
               <AccordionContent>
-                <div className="space-y-4">
-                  <ul className="space-y-2">
-                    {designs.map((design) => (
-                      <li
-                        key={design.id}
-                        className={`flex justify-between items-center p-2 rounded ${
-                          selectedDesigns.find((d) => d.id === design.id)
-                            ? "bg-blue-100 border-2 border-blue-500"
-                            : "bg-gray-100"
-                        }`}
-                      >
-                        <div className="flex items-center space-x-2">
-                          <input
-                            type="checkbox"
-                            checked={selectedDesigns.some(
-                              (d) => d.id === design.id
-                            )}
-                            onChange={() => handleDesignSelect(design)}
-                            className="h-4 w-4"
-                          />
-                          {editingStates[design.id] ? (
-                            <Input
-                              value={editTitles[design.id] || design.title}
-                              onChange={(e) =>
-                                setEditTitles({
-                                  ...editTitles,
-                                  [design.id]: e.target.value,
-                                })
-                              }
-                              placeholder="Edit design title"
+                <div className={scrollableContentClass}>
+                  <div className="space-y-4">
+                    <ul className="space-y-2">
+                      {designs.map((design) => (
+                        <li
+                          key={design.id}
+                          className={`flex justify-between items-center p-2 rounded ${
+                            selectedDesigns.find((d) => d.id === design.id)
+                              ? "bg-blue-100 border-2 border-blue-500"
+                              : "bg-gray-100"
+                          }`}
+                        >
+                          <div className="flex items-center space-x-2">
+                            <input
+                              type="checkbox"
+                              checked={selectedDesigns.some(
+                                (d) => d.id === design.id
+                              )}
+                              onChange={() => handleDesignSelect(design)}
+                              className="h-4 w-4"
                             />
-                          ) : (
-                            <span>{design.title}</span>
-                          )}
-                        </div>
-                        <div className="flex space-x-2">
-                          {editingStates[design.id] ? (
+                            {editingStates[design.id] ? (
+                              <Input
+                                value={editTitles[design.id] || design.title}
+                                onChange={(e) =>
+                                  setEditTitles({
+                                    ...editTitles,
+                                    [design.id]: e.target.value,
+                                  })
+                                }
+                                placeholder="Edit design title"
+                              />
+                            ) : (
+                              <span>{design.title}</span>
+                            )}
+                          </div>
+                          <div className="flex space-x-2">
+                            {editingStates[design.id] ? (
+                              <Button
+                                onClick={() => {
+                                  editDesign(
+                                    design.id,
+                                    editTitles[design.id] || design.title
+                                  );
+                                  setEditingStates({
+                                    ...editingStates,
+                                    [design.id]: false,
+                                  });
+                                }}
+                                variant="outline"
+                                size="sm"
+                              >
+                                Save
+                              </Button>
+                            ) : (
+                              <Button
+                                onClick={() =>
+                                  setEditingStates({
+                                    ...editingStates,
+                                    [design.id]: true,
+                                  })
+                                }
+                                variant="outline"
+                                size="sm"
+                              >
+                                Edit
+                              </Button>
+                            )}
                             <Button
-                              onClick={() => {
-                                editDesign(
-                                  design.id,
-                                  editTitles[design.id] || design.title
-                                );
-                                setEditingStates({
-                                  ...editingStates,
-                                  [design.id]: false,
-                                });
-                              }}
-                              variant="outline"
+                              onClick={() => deleteDesign(design.id)}
+                              variant="destructive"
                               size="sm"
                             >
-                              Save
+                              Delete
                             </Button>
-                          ) : (
-                            <Button
-                              onClick={() =>
-                                setEditingStates({
-                                  ...editingStates,
-                                  [design.id]: true,
-                                })
-                              }
-                              variant="outline"
-                              size="sm"
-                            >
-                              Edit
-                            </Button>
-                          )}
-                          <Button
-                            onClick={() => deleteDesign(design.id)}
-                            variant="destructive"
-                            size="sm"
-                          >
-                            Delete
-                          </Button>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 </div>
               </AccordionContent>
             </AccordionItem>
@@ -718,23 +726,25 @@ export default function BrokerTransportPage() {
             <AccordionItem value="designs">
               <AccordionTrigger>Existing Designs</AccordionTrigger>
               <AccordionContent>
-                <ul className="space-y-2">
-                  {remarkOptions.map((remark) => (
-                    <li
-                      key={remark}
-                      className="flex justify-between items-center bg-gray-100 p-2 rounded"
-                    >
-                      <span>{remark}</span>
-                      <Button
-                        onClick={() => deleteRemark(remark)}
-                        variant="destructive"
-                        size="sm"
+                <div className={scrollableContentClass}>
+                  <ul className="space-y-2">
+                    {remarkOptions.map((remark) => (
+                      <li
+                        key={remark}
+                        className="flex justify-between items-center bg-gray-100 p-2 rounded"
                       >
-                        Delete
-                      </Button>
-                    </li>
-                  ))}
-                </ul>
+                        <span>{remark}</span>
+                        <Button
+                          onClick={() => deleteRemark(remark)}
+                          variant="destructive"
+                          size="sm"
+                        >
+                          Delete
+                        </Button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               </AccordionContent>
             </AccordionItem>
           </Accordion>
@@ -757,73 +767,75 @@ export default function BrokerTransportPage() {
             <AccordionItem value="dyeingUnits">
               <AccordionTrigger>Existing Dyeing Units</AccordionTrigger>
               <AccordionContent>
-                <ul className="space-y-2">
-                  {dyeingUnits.map((unit) => (
-                    <li
-                      key={unit.id}
-                      className="flex justify-between items-center bg-gray-100 p-2 rounded"
-                    >
-                      {editingDyeingUnit[unit.id] ? (
-                        <>
-                          <Input
-                            value={
-                              editDyeingUnitValues[unit.id] || unit.dyeing_unit
-                            }
-                            onChange={(e) =>
-                              setEditDyeingUnitValues({
-                                ...editDyeingUnitValues,
-                                [unit.id]: e.target.value,
-                              })
-                            }
-                            placeholder="Edit dyeing unit"
-                          />
-                          <Button
-                            onClick={() => {
-                              editDyeingUnit(
-                                unit.id,
-                                editDyeingUnitValues[unit.id] ||
-                                  unit.dyeing_unit
-                              );
-                              setEditingDyeingUnit({
-                                ...editingDyeingUnit,
-                                [unit.id]: false,
-                              });
-                            }}
-                            variant="outline"
-                            size="sm"
-                          >
-                            Save
-                          </Button>
-                        </>
-                      ) : (
-                        <>
-                          <span>{unit.dyeing_unit}</span>
-                          <div className="flex space-x-2">
-                            <Button
-                              onClick={() =>
-                                setEditingDyeingUnit({
-                                  ...editingDyeingUnit,
-                                  [unit.id]: true,
+                <div className={scrollableContentClass}>
+                  <ul className="space-y-2">
+                    {dyeingUnits.map((unit) => (
+                      <li
+                        key={unit.id}
+                        className="flex justify-between items-center bg-gray-100 p-2 rounded"
+                      >
+                        {editingDyeingUnit[unit.id] ? (
+                          <>
+                            <Input
+                              value={
+                                editDyeingUnitValues[unit.id] || unit.dyeing_unit
+                              }
+                              onChange={(e) =>
+                                setEditDyeingUnitValues({
+                                  ...editDyeingUnitValues,
+                                  [unit.id]: e.target.value,
                                 })
                               }
+                              placeholder="Edit dyeing unit"
+                            />
+                            <Button
+                              onClick={() => {
+                                editDyeingUnit(
+                                  unit.id,
+                                  editDyeingUnitValues[unit.id] ||
+                                    unit.dyeing_unit
+                                );
+                                setEditingDyeingUnit({
+                                  ...editingDyeingUnit,
+                                  [unit.id]: false,
+                                });
+                              }}
                               variant="outline"
                               size="sm"
                             >
-                              Edit
+                              Save
                             </Button>
-                            <Button
-                              onClick={() => deleteDyeingUnit(unit.id)}
-                              variant="destructive"
-                              size="sm"
-                            >
-                              Delete
-                            </Button>
-                          </div>
-                        </>
-                      )}
-                    </li>
-                  ))}
-                </ul>
+                          </>
+                        ) : (
+                          <>
+                            <span>{unit.dyeing_unit}</span>
+                            <div className="flex space-x-2">
+                              <Button
+                                onClick={() =>
+                                  setEditingDyeingUnit({
+                                    ...editingDyeingUnit,
+                                    [unit.id]: true,
+                                  })
+                                }
+                                variant="outline"
+                                size="sm"
+                              >
+                                Edit
+                              </Button>
+                              <Button
+                                onClick={() => deleteDyeingUnit(unit.id)}
+                                variant="destructive"
+                                size="sm"
+                              >
+                                Delete
+                              </Button>
+                            </div>
+                          </>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               </AccordionContent>
             </AccordionItem>
           </Accordion>
@@ -846,74 +858,76 @@ export default function BrokerTransportPage() {
             <AccordionItem value="supplierNames">
               <AccordionTrigger>Existing Supplier Names</AccordionTrigger>
               <AccordionContent>
-                <ul className="space-y-2">
-                  {supplierNames.map((supplier) => (
-                    <li
-                      key={supplier.id}
-                      className="flex justify-between items-center bg-gray-100 p-2 rounded"
-                    >
-                      {editingSupplierName[supplier.id] ? (
-                        <>
-                          <Input
-                            value={
-                              editSupplierNameValues[supplier.id] ||
-                              supplier.supplier_name
-                            }
-                            onChange={(e) =>
-                              setEditSupplierNameValues({
-                                ...editSupplierNameValues,
-                                [supplier.id]: e.target.value,
-                              })
-                            }
-                            placeholder="Edit supplier name"
-                          />
-                          <Button
-                            onClick={() => {
-                              editSupplierName(
-                                supplier.id,
+                <div className={scrollableContentClass}>
+                  <ul className="space-y-2">
+                    {supplierNames.map((supplier) => (
+                      <li
+                        key={supplier.id}
+                        className="flex justify-between items-center bg-gray-100 p-2 rounded"
+                      >
+                        {editingSupplierName[supplier.id] ? (
+                          <>
+                            <Input
+                              value={
                                 editSupplierNameValues[supplier.id] ||
-                                  supplier.supplier_name
-                              );
-                              setEditingSupplierName({
-                                ...editingSupplierName,
-                                [supplier.id]: false,
-                              });
-                            }}
-                            variant="outline"
-                            size="sm"
-                          >
-                            Save
-                          </Button>
-                        </>
-                      ) : (
-                        <>
-                          <span>{supplier.supplier_name}</span>
-                          <div className="flex space-x-2">
-                            <Button
-                              onClick={() =>
-                                setEditingSupplierName({
-                                  ...editingSupplierName,
-                                  [supplier.id]: true,
+                                supplier.supplier_name
+                              }
+                              onChange={(e) =>
+                                setEditSupplierNameValues({
+                                  ...editSupplierNameValues,
+                                  [supplier.id]: e.target.value,
                                 })
                               }
+                              placeholder="Edit supplier name"
+                            />
+                            <Button
+                              onClick={() => {
+                                editSupplierName(
+                                  supplier.id,
+                                  editSupplierNameValues[supplier.id] ||
+                                    supplier.supplier_name
+                                );
+                                setEditingSupplierName({
+                                  ...editingSupplierName,
+                                  [supplier.id]: false,
+                                });
+                              }}
                               variant="outline"
                               size="sm"
                             >
-                              Edit
+                              Save
                             </Button>
-                            <Button
-                              onClick={() => deleteSupplierName(supplier.id)}
-                              variant="destructive"
-                              size="sm"
-                            >
-                              Delete
-                            </Button>
-                          </div>
-                        </>
-                      )}
-                    </li>
-                  ))}
-                </ul>
+                          </>
+                        ) : (
+                          <>
+                            <span>{supplier.supplier_name}</span>
+                            <div className="flex space-x-2">
+                              <Button
+                                onClick={() =>
+                                  setEditingSupplierName({
+                                    ...editingSupplierName,
+                                    [supplier.id]: true,
+                                  })
+                                }
+                                variant="outline"
+                                size="sm"
+                              >
+                                Edit
+                              </Button>
+                              <Button
+                                onClick={() => deleteSupplierName(supplier.id)}
+                                variant="destructive"
+                                size="sm"
+                              >
+                                Delete
+                              </Button>
+                            </div>
+                          </>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               </AccordionContent>
             </AccordionItem>
           </Accordion>
