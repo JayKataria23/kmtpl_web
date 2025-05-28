@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -6,11 +6,27 @@ import { useToast } from "@/hooks/use-toast";
 import supabase from "@/utils/supabase";
 import { ShadesSelector } from "./ShadesSelector";
 import { DyeingProgram } from "@/pages/DyeingBook";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface Props {
   initialData?: DyeingProgram | null;
   onClose: () => void;
   onSuccess: () => void;
+}
+
+interface SupplierName {
+  id: number;
+  supplier_name: string;
+}
+interface DyeingUnit {
+  id: number;
+  dyeing_unit: string;
 }
 
 export function AddDyeingProgramForm({
@@ -19,6 +35,8 @@ export function AddDyeingProgramForm({
   onSuccess,
 }: Props) {
   const { toast } = useToast();
+  const [supplierNames, setSupplierNames] = useState<SupplierName[]>([]);
+  const [dyeingUnits, setDyeingUnits] = useState<DyeingUnit[]>([]);
   const [formData, setFormData] = useState({
     supplier_name: initialData?.supplier_name || "",
     slip_number: initialData?.slip_number || "",
@@ -28,6 +46,51 @@ export function AddDyeingProgramForm({
     shades_details: initialData?.shades_details || [],
     dyeing_unit: initialData?.dyeing_unit || "",
   });
+
+  // Fetch supplier names when component mounts
+  useEffect(() => {
+
+    const fetchSupplierNames = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("supplier_names")
+          .select("*")
+          .order("supplier_name");
+
+        if (error) throw error;
+        setSupplierNames(data || []);
+      } catch (error) {
+        console.error("Error fetching supplier names:", error);
+        toast({
+          title: "Error",
+          description: "Failed to fetch supplier names",
+          variant: "destructive",
+        });
+      }
+    };
+
+    const fetchDyeingUnits = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("dyeing_units")
+          .select("*")
+          .order("dyeing_unit");
+
+        if (error) throw error;
+        setDyeingUnits(data || []);
+      } catch (error) {
+        console.error("Error fetching dyeing units:", error);
+        toast({
+          title: "Error",
+          description: "Failed to fetch dyeing units",
+          variant: "destructive",
+        });
+      }
+    };
+
+    fetchSupplierNames();
+    fetchDyeingUnits();
+  }, [toast]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -85,14 +148,24 @@ export function AddDyeingProgramForm({
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="supplier_name">Supplier Name</Label>
-          <Input
-            id="supplier_name"
+          <Select
             value={formData.supplier_name}
-            onChange={(e) =>
-              setFormData({ ...formData, supplier_name: e.target.value })
+            onValueChange={(value) =>
+              setFormData({ ...formData, supplier_name: value })
             }
             required
-          />
+          >
+            <SelectTrigger id="supplier_name">
+              <SelectValue placeholder="Select a supplier" />
+            </SelectTrigger>
+            <SelectContent>
+              {supplierNames.map((supplier) => (
+                <SelectItem key={supplier.id} value={supplier.supplier_name}>
+                  {supplier.supplier_name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <div className="space-y-2">
           <Label htmlFor="slip_number">Slip Number</Label>
@@ -149,14 +222,24 @@ export function AddDyeingProgramForm({
         </div>
         <div className="space-y-2">
           <Label htmlFor="dyeing_unit">Dyeing Unit</Label>
-          <Input
-            id="dyeing_unit"
+          <Select
             value={formData.dyeing_unit}
-            onChange={(e) =>
-              setFormData({ ...formData, dyeing_unit: e.target.value })
+            onValueChange={(value) =>
+              setFormData({ ...formData, dyeing_unit: value })
             }
             required
-          />
+          >
+            <SelectTrigger id="dyeing_unit">
+              <SelectValue placeholder="Select a dyeing unit" />
+            </SelectTrigger>
+            <SelectContent>
+              {dyeingUnits.map((unit) => (
+                <SelectItem key={unit.id} value={unit.dyeing_unit}>
+                  {unit.dyeing_unit}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 

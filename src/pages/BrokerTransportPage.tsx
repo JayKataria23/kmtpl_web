@@ -21,12 +21,26 @@ interface Design {
   title: string;
 }
 
+interface DyeingUnit {
+  id: number;
+  dyeing_unit: string;
+}
+
+interface SupplierName {
+  id: number;
+  supplier_name: string;
+}
+
 export default function BrokerTransportPage() {
   const [brokers, setBrokers] = useState<Profile[]>([]);
   const [transports, setTransports] = useState<Profile[]>([]);
   const [designs, setDesigns] = useState<Design[]>([]);
+  const [dyeingUnits, setDyeingUnits] = useState<DyeingUnit[]>([]);
+  const [supplierNames, setSupplierNames] = useState<SupplierName[]>([]);
   const [newBroker, setNewBroker] = useState("");
   const [newTransport, setNewTransport] = useState("");
+  const [newDyeingUnit, setNewDyeingUnit] = useState("");
+  const [newSupplierName, setNewSupplierName] = useState("");
   const [isAddDesignOpen, setIsAddDesignOpen] = useState(false);
   const [remarkOptions, setRemarkOptions] = useState<string[]>([]);
   const [newRemark, setNewRemark] = useState("");
@@ -36,12 +50,26 @@ export default function BrokerTransportPage() {
     [key: number]: boolean;
   }>({});
   const [editTitles, setEditTitles] = useState<{ [key: number]: string }>({});
+  const [editingDyeingUnit, setEditingDyeingUnit] = useState<{
+    [key: number]: boolean;
+  }>({});
+  const [editingSupplierName, setEditingSupplierName] = useState<{
+    [key: number]: boolean;
+  }>({});
+  const [editDyeingUnitValues, setEditDyeingUnitValues] = useState<{
+    [key: number]: string;
+  }>({});
+  const [editSupplierNameValues, setEditSupplierNameValues] = useState<{
+    [key: number]: string;
+  }>({});
 
   useEffect(() => {
     fetchBrokers();
     fetchTransports();
     fetchDesigns();
     fetchRemarkOptions();
+    fetchDyeingUnits();
+    fetchSupplierNames();
   }, []);
 
   const fetchBrokers = async () => {
@@ -89,6 +117,30 @@ export default function BrokerTransportPage() {
       setRemarkOptions(data.map((remark) => remark.content));
     } catch (error) {
       console.error("Error fetching remark options:", error);
+    }
+  };
+
+  const fetchDyeingUnits = async () => {
+    const { data, error } = await supabase
+      .from("dyeing_units")
+      .select("*")
+      .order("dyeing_unit");
+    if (error) {
+      console.error("Error fetching dyeing units:", error);
+    } else {
+      setDyeingUnits(data);
+    }
+  };
+
+  const fetchSupplierNames = async () => {
+    const { data, error } = await supabase
+      .from("supplier_names")
+      .select("*")
+      .order("supplier_name");
+    if (error) {
+      console.error("Error fetching supplier names:", error);
+    } else {
+      setSupplierNames(data);
     }
   };
 
@@ -155,6 +207,52 @@ export default function BrokerTransportPage() {
           title: "Success",
           description: `Remark "${newRemark.trim()}" added successfully`,
         });
+      }
+    }
+  };
+
+  const addDyeingUnit = async () => {
+    if (newDyeingUnit.trim()) {
+      const { data, error } = await supabase
+        .from("dyeing_units")
+        .insert({ dyeing_unit: newDyeingUnit.trim().toUpperCase() })
+        .select();
+      if (error) {
+        toast({
+          title: "Error",
+          description: "Failed to add dyeing unit",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Success",
+          description: `Dyeing unit "${data[0].dyeing_unit}" added successfully`,
+        });
+        setNewDyeingUnit("");
+        fetchDyeingUnits();
+      }
+    }
+  };
+
+  const addSupplierName = async () => {
+    if (newSupplierName.trim()) {
+      const { data, error } = await supabase
+        .from("supplier_names")
+        .insert({ supplier_name: newSupplierName.trim().toUpperCase() })
+        .select();
+      if (error) {
+        toast({
+          title: "Error",
+          description: "Failed to add supplier name",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Success",
+          description: `Supplier name "${data[0].supplier_name}" added successfully`,
+        });
+        setNewSupplierName("");
+        fetchSupplierNames();
       }
     }
   };
@@ -233,6 +331,43 @@ export default function BrokerTransportPage() {
     }
   };
 
+  const deleteDyeingUnit = async (id: number) => {
+    const { error } = await supabase.from("dyeing_units").delete().eq("id", id);
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete dyeing unit",
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Success",
+        description: "Dyeing unit deleted successfully",
+      });
+      fetchDyeingUnits();
+    }
+  };
+
+  const deleteSupplierName = async (id: number) => {
+    const { error } = await supabase
+      .from("supplier_names")
+      .delete()
+      .eq("id", id);
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete supplier name",
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Success",
+        description: "Supplier name deleted successfully",
+      });
+      fetchSupplierNames();
+    }
+  };
+
   const editDesign = async (id: number, title: string) => {
     if (title.trim()) {
       const { error } = await supabase
@@ -251,6 +386,50 @@ export default function BrokerTransportPage() {
           description: `Design updated successfully`,
         });
         fetchDesigns();
+      }
+    }
+  };
+
+  const editDyeingUnit = async (id: number, value: string) => {
+    if (value.trim()) {
+      const { error } = await supabase
+        .from("dyeing_units")
+        .update({ dyeing_unit: value.trim().toUpperCase() })
+        .eq("id", id);
+      if (error) {
+        toast({
+          title: "Error",
+          description: "Failed to edit dyeing unit",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Success",
+          description: "Dyeing unit updated successfully",
+        });
+        fetchDyeingUnits();
+      }
+    }
+  };
+
+  const editSupplierName = async (id: number, value: string) => {
+    if (value.trim()) {
+      const { error } = await supabase
+        .from("supplier_names")
+        .update({ supplier_name: value.trim().toUpperCase() })
+        .eq("id", id);
+      if (error) {
+        toast({
+          title: "Error",
+          description: "Failed to edit supplier name",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Success",
+          description: "Supplier name updated successfully",
+        });
+        fetchSupplierNames();
       }
     }
   };
@@ -453,6 +632,185 @@ export default function BrokerTransportPage() {
                       >
                         Delete
                       </Button>
+                    </li>
+                  ))}
+                </ul>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+        </div>
+        <div>
+          <h2 className="text-2xl font-bold mb-4">Dyeing Units</h2>
+          <div className="space-y-2 mb-4">
+            <Label htmlFor="newDyeingUnit">Add New Dyeing Unit</Label>
+            <div className="flex space-x-2">
+              <Input
+                id="newDyeingUnit"
+                value={newDyeingUnit}
+                onChange={(e) => setNewDyeingUnit(e.target.value)}
+                placeholder="Enter dyeing unit name"
+              />
+              <Button onClick={addDyeingUnit}>Add</Button>
+            </div>
+          </div>
+          <Accordion type="single" collapsible className="w-full">
+            <AccordionItem value="dyeingUnits">
+              <AccordionTrigger>Existing Dyeing Units</AccordionTrigger>
+              <AccordionContent>
+                <ul className="space-y-2">
+                  {dyeingUnits.map((unit) => (
+                    <li
+                      key={unit.id}
+                      className="flex justify-between items-center bg-gray-100 p-2 rounded"
+                    >
+                      {editingDyeingUnit[unit.id] ? (
+                        <>
+                          <Input
+                            value={
+                              editDyeingUnitValues[unit.id] || unit.dyeing_unit
+                            }
+                            onChange={(e) =>
+                              setEditDyeingUnitValues({
+                                ...editDyeingUnitValues,
+                                [unit.id]: e.target.value,
+                              })
+                            }
+                            placeholder="Edit dyeing unit"
+                          />
+                          <Button
+                            onClick={() => {
+                              editDyeingUnit(
+                                unit.id,
+                                editDyeingUnitValues[unit.id] ||
+                                  unit.dyeing_unit
+                              );
+                              setEditingDyeingUnit({
+                                ...editingDyeingUnit,
+                                [unit.id]: false,
+                              });
+                            }}
+                            variant="outline"
+                            size="sm"
+                          >
+                            Save
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          <span>{unit.dyeing_unit}</span>
+                          <div className="flex space-x-2">
+                            <Button
+                              onClick={() =>
+                                setEditingDyeingUnit({
+                                  ...editingDyeingUnit,
+                                  [unit.id]: true,
+                                })
+                              }
+                              variant="outline"
+                              size="sm"
+                            >
+                              Edit
+                            </Button>
+                            <Button
+                              onClick={() => deleteDyeingUnit(unit.id)}
+                              variant="destructive"
+                              size="sm"
+                            >
+                              Delete
+                            </Button>
+                          </div>
+                        </>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+        </div>
+        <div>
+          <h2 className="text-2xl font-bold mb-4">Supplier Names</h2>
+          <div className="space-y-2 mb-4">
+            <Label htmlFor="newSupplierName">Add New Supplier Name</Label>
+            <div className="flex space-x-2">
+              <Input
+                id="newSupplierName"
+                value={newSupplierName}
+                onChange={(e) => setNewSupplierName(e.target.value)}
+                placeholder="Enter supplier name"
+              />
+              <Button onClick={addSupplierName}>Add</Button>
+            </div>
+          </div>
+          <Accordion type="single" collapsible className="w-full">
+            <AccordionItem value="supplierNames">
+              <AccordionTrigger>Existing Supplier Names</AccordionTrigger>
+              <AccordionContent>
+                <ul className="space-y-2">
+                  {supplierNames.map((supplier) => (
+                    <li
+                      key={supplier.id}
+                      className="flex justify-between items-center bg-gray-100 p-2 rounded"
+                    >
+                      {editingSupplierName[supplier.id] ? (
+                        <>
+                          <Input
+                            value={
+                              editSupplierNameValues[supplier.id] ||
+                              supplier.supplier_name
+                            }
+                            onChange={(e) =>
+                              setEditSupplierNameValues({
+                                ...editSupplierNameValues,
+                                [supplier.id]: e.target.value,
+                              })
+                            }
+                            placeholder="Edit supplier name"
+                          />
+                          <Button
+                            onClick={() => {
+                              editSupplierName(
+                                supplier.id,
+                                editSupplierNameValues[supplier.id] ||
+                                  supplier.supplier_name
+                              );
+                              setEditingSupplierName({
+                                ...editingSupplierName,
+                                [supplier.id]: false,
+                              });
+                            }}
+                            variant="outline"
+                            size="sm"
+                          >
+                            Save
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          <span>{supplier.supplier_name}</span>
+                          <div className="flex space-x-2">
+                            <Button
+                              onClick={() =>
+                                setEditingSupplierName({
+                                  ...editingSupplierName,
+                                  [supplier.id]: true,
+                                })
+                              }
+                              variant="outline"
+                              size="sm"
+                            >
+                              Edit
+                            </Button>
+                            <Button
+                              onClick={() => deleteSupplierName(supplier.id)}
+                              variant="destructive"
+                              size="sm"
+                            >
+                              Delete
+                            </Button>
+                          </div>
+                        </>
+                      )}
                     </li>
                   ))}
                 </ul>

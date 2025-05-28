@@ -1280,6 +1280,7 @@ function DyeingBook() {
             onClose={() => setIsAddProgramOpen(false)}
             onSuccess={() => {
               fetchPrograms();
+
               setIsAddProgramOpen(false);
             }}
           />
