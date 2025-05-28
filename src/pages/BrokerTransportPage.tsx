@@ -778,7 +778,8 @@ export default function BrokerTransportPage() {
                           <>
                             <Input
                               value={
-                                editDyeingUnitValues[unit.id] || unit.dyeing_unit
+                                editDyeingUnitValues[unit.id] ||
+                                unit.dyeing_unit
                               }
                               onChange={(e) =>
                                 setEditDyeingUnitValues({
