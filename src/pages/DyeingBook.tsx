@@ -109,7 +109,7 @@ function DyeingBook() {
           goods_receipts (*)
         `
         )
-        .order("created_at", { ascending: false });
+        .order("created_id", { ascending: false });
 
       if (error) throw error;
 
