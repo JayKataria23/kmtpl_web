@@ -44,6 +44,7 @@ function BhiwandiListPrint() {
   const { date } = useParams<{ date: string }>();
   const [designEntries, setDesignEntries] = useState<GroupedOrder[]>([]);
   const [generatedHtml, setGeneratedHtml] = useState<string | null>(null);
+  const [hideDetails, setHideDetails] = useState<boolean>(false);
 
   const formatDate = (dateString: string): string => {
     const date = new Date(dateString.substring(1));
@@ -103,12 +104,8 @@ function BhiwandiListPrint() {
           entryIndex % 2 === 0 ? "#f9f9f9" : "#ffffff"
         }; padding: 10px; border: 1px solid #ccc; border-radius: 5px;">
           <div style="page-break-inside:avoid;page-break-after:auto">
-            <p style="font-size: 18px; line-height: 0.5;"><strong>Bill To:</strong> ${
-              entry.bill_to_party
-            }</p>
-            <p style="font-size: 18px; line-height: 0.5;"><strong>Ship To:</strong> ${
-              entry.ship_to_party
-            }</p>
+            ${!hideDetails ? `<p style="font-size: 18px; line-height: 0.5;"><strong>Bill To:</strong> ${entry.bill_to_party}</p>` : ''}
+            ${!hideDetails ? `<p style="font-size: 18px; line-height: 0.5;"><strong>Ship To:</strong> ${entry.ship_to_party}</p>` : ''}
             <p style="font-size: 18px; line-height: 0.5;">
             <span><strong>Order No.:</strong> ${entry.order_no}
             </span>
@@ -118,17 +115,15 @@ function BhiwandiListPrint() {
                 : ""
             }</strong></span>
             <span></p>
-            <p style="font-size: 18px; line-height: 0.5"><strong>Transport:</strong> ${
-              entry.transporter_name
-            }</p>
+            ${!hideDetails ? `<p style="font-size: 18px; line-height: 0.5"><strong>Transport:</strong> ${entry.transporter_name}</p>` : ''}
           </div>
 
           <table style="width: 100%; border-collapse: collapse; margin-top: 10px; page-break-inside:avoid;">
             <thead style="break-inside:avoid;">
               <tr style="background-color: #f0f0f0;">
-                <th style="border: 1px solid #ccc; padding-left: 8px; text-align: left; width: 22%;">Design</th>
-                <th style="border: 1px solid #ccc; padding-left: 8px; text-align: left; width: 10%;">Price</th>\
-                <th style="border: 1px solid #ccc; padding-left: 8px; text-align: left; width: 55%;">Shades</th>
+                <th style="border: 1px solid #ccc; padding-left: 8px; text-align: left; width: ${hideDetails ? '32%' : '22%'};">Design</th>
+                ${!hideDetails ? `<th style="border: 1px solid #ccc; padding-left: 8px; text-align: left; width: 10%;">Price</th>` : ''}
+                <th style="border: 1px solid #ccc; padding-left: 8px; text-align: left; width: ${hideDetails ? '68%' : '55%'};">Shades</th>
               </tr>
             </thead>
             <tbody style="break-inside:avoid;">`;
@@ -137,13 +132,11 @@ function BhiwandiListPrint() {
           entry.entries.forEach((order) => {
             html += `
             <tr style="page-break-inside:avoid;">
-              <td style="border: 1px solid #ccc; padding-left: 8px; width: 22%;">${
+              <td style="border: 1px solid #ccc; padding-left: 8px; width: ${hideDetails ? '32%' : '22%'};">${
                 order.design
               }</td>
-              <td style="border: 1px solid #ccc; padding-left: 8px; width: 10%;">${
-                order.price
-              }</td>
-              <td style="border: 1px solid #ccc; padding-left: 8px; width: 55%; ">
+              ${!hideDetails ? `<td style="border: 1px solid #ccc; padding-left: 8px; width: 10%;">${order.price}</td>` : ''}
+              <td style="border: 1px solid #ccc; padding-left: 8px; width: ${hideDetails ? '68%' : '55%'}; ">
               <div style="width: 100%; text-align: center; display: flex; flex-direction: row; flex-wrap: wrap;">
               ${formatShades(order.shades)}
               </div>  <strong style="color: red;">${
@@ -162,7 +155,7 @@ function BhiwandiListPrint() {
       return html;
     };
     setGeneratedHtml(handleGenerateHTML(designEntries));
-  }, [designEntries, date]);
+  }, [designEntries, date, hideDetails]);
 
   function groupByOrderId(entries: Entry[]): GroupedOrder[] {
     const grouped = new Map<string, GroupedOrder>();
@@ -261,6 +254,21 @@ function BhiwandiListPrint() {
     <div className="p-4">
       <Card className="max-w-md mx-auto shadow-lg p-6">
         <h1 className="text-2xl font-bold mb-4">Bhiwandi List Print</h1>
+        
+        {/* Checkbox to hide details */}
+        <div className="flex items-center mb-4">
+          <input
+            type="checkbox"
+            id="hideDetails"
+            checked={hideDetails}
+            onChange={(e) => setHideDetails(e.target.checked)}
+            className="mr-2"
+          />
+          <label htmlFor="hideDetails" className="text-sm">
+            Hide party names, price & transport details
+          </label>
+        </div>
+
         <div className="flex justify-between mb-4">
           <Button
             onClick={() => {
