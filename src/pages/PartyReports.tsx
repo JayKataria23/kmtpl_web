@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { FileText, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 function PartyReports() {
   const [partyCounts, setPartyCounts] = useState<PartyCount[]>([]);
@@ -22,6 +23,7 @@ function PartyReports() {
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
+  const [bhiwandiFilter, setBhiwandiFilter] = useState<string>("all");
   const { toast } = useToast();
 
   useEffect(() => {
@@ -36,35 +38,42 @@ function PartyReports() {
     loadPartyCounts();
   }, []);
 
-  // Filter orders based on date range
+  // Filter orders based on date range and Bhiwandi status
   useEffect(() => {
     if (!partyOrders.length) {
       setFilteredOrders([]);
       return;
     }
 
-    if (!startDate && !endDate) {
-      setFilteredOrders(partyOrders);
-      return;
+    let filtered = partyOrders;
+
+    // Filter by Bhiwandi status
+    if (bhiwandiFilter === "bhiwandi") {
+      filtered = filtered.filter((order) => order.bhiwandi_date);
+    } else if (bhiwandiFilter === "pending") {
+      filtered = filtered.filter((order) => !order.bhiwandi_date);
     }
 
-    const filtered = partyOrders.filter((order) => {
-      const orderDate = new Date(order.order_date);
-      const start = startDate ? new Date(startDate) : null;
-      const end = endDate ? new Date(endDate) : null;
+    // Filter by date range
+    if (startDate || endDate) {
+      filtered = filtered.filter((order) => {
+        const orderDate = new Date(order.order_date);
+        const start = startDate ? new Date(startDate) : null;
+        const end = endDate ? new Date(endDate) : null;
 
-      if (start && end) {
-        return orderDate >= start && orderDate <= end;
-      } else if (start) {
-        return orderDate >= start;
-      } else if (end) {
-        return orderDate <= end;
-      }
-      return true;
-    });
+        if (start && end) {
+          return orderDate >= start && orderDate <= end;
+        } else if (start) {
+          return orderDate >= start;
+        } else if (end) {
+          return orderDate <= end;
+        }
+        return true;
+      });
+    }
 
     setFilteredOrders(filtered);
-  }, [partyOrders, startDate, endDate]);
+  }, [partyOrders, startDate, endDate, bhiwandiFilter]);
 
   const handlePartySelect = async (partyName: string) => {
     setSelectedParty(partyName);
@@ -96,7 +105,7 @@ function PartyReports() {
 
     setIsGeneratingReport(true);
     try {
-      const htmlReport = generatePartyReport(selectedParty, filteredOrders);
+      const htmlReport = generatePartyReport(selectedParty, filteredOrders, startDate, endDate);
 
       const printWindow = window.open("", "_blank");
       if (!printWindow) {
@@ -131,10 +140,10 @@ function PartyReports() {
   };
 
   return (
-    <div className="container mx-auto mt-10 p-4">
-      <h1 className="text-2xl font-bold mb-6">Party Reports</h1>
+    <div className="container mx-auto mt-4 sm:mt-10 p-2 sm:p-4">
+      <h1 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6">Party Reports</h1>
 
-      <div className="mb-6 space-y-4">
+      <div className="mb-4 sm:mb-6 space-y-4">
         <InputWithAutocomplete
           id="party-select"
           value={selectedParty}
@@ -145,11 +154,11 @@ function PartyReports() {
           }))}
           placeholder="Select a party..."
           label="Party"
-          className="w-full max-w-md"
+          className="w-full"
         />
 
-        <div className="flex flex-wrap gap-4 items-end">
-          <div className="flex-1 min-w-[200px]">
+        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-end">
+          <div className="w-full sm:flex-1 min-w-[200px]">
             <Label htmlFor="start-date">Start Date</Label>
             <Input
               id="start-date"
@@ -159,7 +168,7 @@ function PartyReports() {
               className="w-full"
             />
           </div>
-          <div className="flex-1 min-w-[200px]">
+          <div className="w-full sm:flex-1 min-w-[200px]">
             <Label htmlFor="end-date">End Date</Label>
             <Input
               id="end-date"
@@ -169,10 +178,28 @@ function PartyReports() {
               className="w-full"
             />
           </div>
-          <Button variant="outline" onClick={handleClearDates} className="h-10">
+          <Button variant="outline" onClick={handleClearDates} className="w-full sm:w-auto h-10">
             Clear Dates
           </Button>
         </div>
+
+        <ToggleGroup
+          variant="outline"
+          type="single"
+          value={bhiwandiFilter}
+          onValueChange={(value) => setBhiwandiFilter(value || "all")}
+          className="w-full sm:w-auto mb-4"
+        >
+          <ToggleGroupItem value="all" aria-label="Show all" className="flex-1 sm:flex-none">
+            ALL
+          </ToggleGroupItem>
+          <ToggleGroupItem value="bhiwandi" aria-label="Show Bhiwandi" className="flex-1 sm:flex-none">
+            Bhiwandi
+          </ToggleGroupItem>
+          <ToggleGroupItem value="pending" aria-label="Show Pending" className="flex-1 sm:flex-none">
+            Pending
+          </ToggleGroupItem>
+        </ToggleGroup>
       </div>
 
       {isLoading ? (
@@ -182,19 +209,20 @@ function PartyReports() {
         </div>
       ) : selectedParty && filteredOrders.length > 0 ? (
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <h2 className="text-lg sm:text-xl font-semibold">
               {selectedParty} - {filteredOrders.length} Orders
-              {(startDate || endDate) && (
+              {(startDate || endDate || bhiwandiFilter !== "all") && (
                 <span className="text-sm font-normal text-gray-500 ml-2">
-                  (Filtered by date range)
+                  (Filtered{startDate || endDate ? " by date range" : ""}
+                  {bhiwandiFilter !== "all" ? ` and showing ${bhiwandiFilter} orders` : ""})
                 </span>
               )}
             </h2>
             <Button
               onClick={handleGenerateReport}
               disabled={isGeneratingReport}
-              className="flex items-center"
+              className="flex items-center w-full sm:w-auto"
             >
               {isGeneratingReport ? (
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -206,7 +234,57 @@ function PartyReports() {
           </div>
 
           <div className="bg-white rounded-lg shadow overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200">
+            {/* Mobile view - Card layout */}
+            <div className="sm:hidden">
+              {filteredOrders.map((order, index) => (
+                <div
+                  key={index}
+                  className={`p-4 border-b ${
+                    order.bhiwandi_date ? "bg-yellow-50" : ""
+                  }`}
+                >
+                  <div className="font-medium text-gray-900 mb-2">
+                    {order.design}
+                  </div>
+                  <div className="text-sm text-gray-500 mb-2">
+                    {order.shades.map((shade, idx) => {
+                      const shadeName = Object.keys(shade)[0];
+                      const shadeValue = shade[shadeName];
+                      return shadeValue ? (
+                        <div key={idx} className="mb-1">
+                          {shadeName}: {shadeValue}m
+                        </div>
+                      ) : null;
+                    })}
+                  </div>
+                  <div className="text-sm text-gray-500">
+                    {order.order_date && (
+                      <div className="mb-1">
+                        Order Date: {new Date(order.order_date).toLocaleDateString()}
+                      </div>
+                    )}
+                    {order.order_no && (
+                      <div className="mb-1">Order No: {order.order_no}</div>
+                    )}
+                    {order.price && (
+                      <div className="mb-1">Price: ₹{order.price}</div>
+                    )}
+                    {order.remark && (
+                      <div className="mb-1">Remark: {order.remark}</div>
+                    )}
+                    {order.bhiwandi_date && (
+                      <div className="text-red-600 mb-1">
+                        Bhiwandi Date:{" "}
+                        {new Date(order.bhiwandi_date).toLocaleDateString()}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop view - Table layout */}
+            <table className="hidden sm:table min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -270,7 +348,7 @@ function PartyReports() {
       ) : selectedParty ? (
         <div className="text-center p-6 text-gray-500">
           No orders found for this party
-          {(startDate || endDate) && " in the selected date range"}
+          {(startDate || endDate || bhiwandiFilter !== "all") && " with the selected filters"}
         </div>
       ) : null}
 

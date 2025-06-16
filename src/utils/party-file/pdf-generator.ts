@@ -151,10 +151,14 @@ const generateFooter = (totalPieces: number): string => `
  * Generate and export a PDF report for a party's orders
  * @param party - The party name
  * @param orders - List of design details/orders
+ * @param startDate - The start date of the report
+ * @param endDate - The end date of the report
  */
 export const generatePartyReport = (
   party: string,
-  orders: DesignDetail[]
+  orders: DesignDetail[],
+  startDate?: string,
+  endDate?: string
 ): string => {
   if (!orders?.length) return "<p>No orders available for this party.</p>"; // Handle no orders case
 
@@ -181,10 +185,10 @@ export const generatePartyReport = (
     ),
   ].sort((a, b) => a - b);
 
-  // Group order numbers into chunks of 3
+  // Group order numbers into chunks of 5
   const orderNumberGroups = uniqueOrderNumbers.reduce(
     (groups: number[][], num, index) => {
-      const groupIndex = Math.floor(index / 3);
+      const groupIndex = Math.floor(index / 5);
       if (!groups[groupIndex]) {
         groups[groupIndex] = [];
       }
@@ -193,6 +197,18 @@ export const generatePartyReport = (
     },
     []
   );
+
+  // Format date range text
+  const getDateRangeText = () => {
+    if (startDate && endDate) {
+      return `From ${formatDate(startDate)} to ${formatDate(endDate)}`;
+    } else if (startDate) {
+      return `From ${formatDate(startDate)}`;
+    } else if (endDate) {
+      return `Until ${formatDate(endDate)}`;
+    }
+    return `As on ${formatDate(new Date().toISOString())}`;
+  };
 
   const html = `
     <html>
@@ -238,6 +254,9 @@ export const generatePartyReport = (
         <div class="container">
           <div class="header">
             ${generateHeader(party)}
+            <div style="text-align: center; font-size: small; padding: 2px; border-bottom: 1px solid #000;">
+              ${getDateRangeText()}
+            </div>
             <div class="order-numbers">
               <strong>Order Numbers:</strong><br/>
               ${orderNumberGroups

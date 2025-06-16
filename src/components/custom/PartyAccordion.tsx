@@ -1,6 +1,5 @@
-import { useState, useCallback, memo } from "react";
-import { Button } from "@/components/ui/button";
-import { FileText, Loader2 } from "lucide-react";
+import { useCallback, memo } from "react";
+import { Loader2 } from "lucide-react";
 import {
   Accordion,
   AccordionContent,
@@ -12,7 +11,6 @@ import {
   DesignDetail,
   SelectedDesignDetail,
 } from "@/types/party-file";
-import { generatePartyReport } from "@/utils/party-file/pdf-generator";
 import { PartyOrderTable } from "./PartyOrderTable";
 
 interface PartyAccordionProps {
@@ -49,43 +47,6 @@ export const PartyAccordion = memo(
     setSelectedOrder,
     setPartyCounts,
   }: PartyAccordionProps) => {
-    const [generatingReport, setGeneratingReport] = useState<string | null>(
-      null
-    );
-
-    const handleGenerateReport = useCallback(
-      async (partyName: string) => {
-        try {
-          setGeneratingReport(partyName);
-          const htmlReport = generatePartyReport(
-            partyName,
-            partyOrders[partyName]
-          );
-
-          const printWindow = window.open("", "_blank");
-          if (!printWindow) {
-            throw new Error(
-              "Could not open print window. Please check your popup settings."
-            );
-          }
-
-          printWindow.document.write(htmlReport);
-          printWindow.document.close();
-
-          // Wait for resources to load before printing
-          printWindow.onload = () => {
-            printWindow.print();
-            printWindow.focus();
-          };
-        } catch (error) {
-          console.error("Error generating report:", error);
-        } finally {
-          setGeneratingReport(null);
-        }
-      },
-      [partyOrders]
-    );
-
     const handleAccordionClick = useCallback(
       (partyName: string) => {
         handleFetchOrderDetails(partyName);
@@ -112,23 +73,6 @@ export const PartyAccordion = memo(
                   {item.party_name}
                 </span>
                 <div className="flex items-center space-x-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="ml-2"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleGenerateReport(item.party_name);
-                    }}
-                    disabled={generatingReport === item.party_name}
-                  >
-                    {generatingReport === item.party_name ? (
-                      <Loader2 className="w-4 h-4 mr-1 animate-spin" />
-                    ) : (
-                      <FileText className="w-4 h-4 mr-1" />
-                    )}
-                    Report
-                  </Button>
                   <span className="text-sm text-gray-500 min-w-20 text-right">
                     count: {item.design_entry_count}
                   </span>
