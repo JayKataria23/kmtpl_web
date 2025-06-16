@@ -27,6 +27,7 @@ import EditChallan from "./pages/EditChallan";
 import FastOrderForm from "./pages/FastOrderForm";
 import PartyDispatchList from "./pages/PartyDispatchList";
 import PartOrderFile from "./pages/PartOrderFile";
+import PartyReports from "./pages/PartyReports";
 import DyeingBook from "./pages/DyeingBook";
 import SalesRegister from "./pages/SalesRegister";
 import PrintProgram from "./pages/PrintProgram";
@@ -82,14 +83,22 @@ createRoot(document.getElementById("root")!).render(
               </ProtectedRoute>
             }
           />
-          <Route
-            path="/party-file"
-            element={
-              <ProtectedRoute>
-                <PartyFile />
-              </ProtectedRoute>
-            }
-          />
+            <Route
+              path="/party-file"
+              element={
+                <ProtectedRoute>
+                  <PartyFile />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/party-reports"
+              element={
+                <ProtectedRoute>
+                  <PartyReports />
+                </ProtectedRoute>
+              }
+            />
           <Route
             path="/part-order-file"
             element={

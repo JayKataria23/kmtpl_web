@@ -172,6 +172,28 @@ export const generatePartyReport = (
     0
   );
 
+  // Get unique order numbers
+  const uniqueOrderNumbers = [
+    ...new Set(
+      sortedOrders
+        .filter((order) => order.order_no)
+        .map((order) => order.order_no)
+    ),
+  ].sort((a, b) => a - b);
+
+  // Group order numbers into chunks of 3
+  const orderNumberGroups = uniqueOrderNumbers.reduce(
+    (groups: number[][], num, index) => {
+      const groupIndex = Math.floor(index / 3);
+      if (!groups[groupIndex]) {
+        groups[groupIndex] = [];
+      }
+      groups[groupIndex].push(num);
+      return groups;
+    },
+    []
+  );
+
   const html = `
     <html>
       <head>
@@ -193,6 +215,15 @@ export const generatePartyReport = (
           }
           .header {
             max-height: 20%; /* Limit header height */
+            position: relative;
+          }
+          .order-numbers {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            text-align: right;
+            font-size: 12px;
+            color: #000;
           }
           .order-row {
             page-break-inside: avoid;
@@ -201,13 +232,18 @@ export const generatePartyReport = (
           .highlight {
             background-color: #fef9c3; /* Example color */
           }
-          
         </style>
       </head>
       <body>
         <div class="container">
           <div class="header">
             ${generateHeader(party)}
+            <div class="order-numbers">
+              <strong>Order Numbers:</strong><br/>
+              ${orderNumberGroups
+                .map((group) => group.join(", "))
+                .join("<br/>")}
+            </div>
           </div>
           ${generateTableHeader()}
             ${sortedOrders

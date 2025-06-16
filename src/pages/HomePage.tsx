@@ -4,7 +4,7 @@ import KMLogo from "@/assets/KM.svg";
 
 export default function HomePage() {
   const navigate = useNavigate();
-  
+
   const menuItems = [
     { path: "/order-form", label: "Order Form" },
     { path: "/fast-order-form", label: "Fast Order Form" },
@@ -17,6 +17,7 @@ export default function HomePage() {
     { path: "/sales-register", label: "Sales Register" },
     { path: "/bhiwandi-list", label: "Bhiwandi List" },
     { path: "/party-dispatch-list", label: "Party Dispatch List" },
+    { path: "/party-reports", label: "Party Reports" },
     { path: "/dispatch-list", label: "Dispatch List" },
     { path: "/create-challan", label: "Create Challan" },
     { path: "/challan-list", label: "Challan List" },
@@ -29,7 +30,7 @@ export default function HomePage() {
       <div className="flex justify-center mb-6">
         <img src={KMLogo} alt="KM Logo" className="w-24 h-auto" />
       </div>
-      
+
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
         {menuItems.map((item, index) => (
           <Button
