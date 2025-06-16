@@ -185,7 +185,12 @@ const BhiwandiList = () => {
       // Group the entries by order_id
       const groupedEntries = groupByOrderId(data);
 
-      setDesignEntries(groupedEntries);
+      // Sort the grouped entries by bill_to_party
+      const sortedEntries = groupedEntries.sort((a, b) =>
+        a.bill_to_party.localeCompare(b.bill_to_party)
+      );
+
+      setDesignEntries(sortedEntries);
     } catch (error) {
       console.error("Error fetching design entries:", error);
     }
@@ -304,7 +309,10 @@ const BhiwandiList = () => {
   };
 
   // New function to handle updating remarks
-  const handleRemarkUpdate = async (design_entry_id: number, remark: string) => {
+  const handleRemarkUpdate = async (
+    design_entry_id: number,
+    remark: string
+  ) => {
     try {
       const { error } = await supabase
         .from("design_entries")
@@ -444,7 +452,9 @@ const BhiwandiList = () => {
                   {designEntries.map((orderGroup, orderIndex) => (
                     <div
                       key={orderIndex}
-                      className={orderIndex % 2 === 0 ? "bg-white" : "bg-gray-100"}
+                      className={
+                        orderIndex % 2 === 0 ? "bg-white" : "bg-gray-100"
+                      }
                     >
                       <p style={{ textAlign: "left" }}>
                         <strong>Bill To:</strong> {orderGroup.bill_to_party}
@@ -456,7 +466,8 @@ const BhiwandiList = () => {
                         <strong>Order No.:</strong> {orderGroup.order_no}
                       </p>
                       <p style={{ textAlign: "left" }}>
-                        <strong>Transport:</strong> {orderGroup.transporter_name}
+                        <strong>Transport:</strong>{" "}
+                        {orderGroup.transporter_name}
                       </p>
                       <div>
                         {orderGroup.entries.map((designEntry, designIndex) => (
@@ -473,23 +484,31 @@ const BhiwandiList = () => {
                               </p>
                               <div className="text-sm md:text-base">
                                 <span className="mr-2">Remark:</span>
-                                {editingRemark && 
-                                  editingRemark.orderId === orderGroup.order_id && 
-                                  editingRemark.entryIndex === designIndex ? (
+                                {editingRemark &&
+                                editingRemark.orderId === orderGroup.order_id &&
+                                editingRemark.entryIndex === designIndex ? (
                                   <input
                                     type="text"
                                     value={designEntry.remark || ""}
                                     onChange={(e) => {
                                       const updatedEntries = [...designEntries];
-                                      updatedEntries[orderIndex].entries[designIndex].remark = e.target.value;
+                                      updatedEntries[orderIndex].entries[
+                                        designIndex
+                                      ].remark = e.target.value;
                                       setDesignEntries(updatedEntries);
                                     }}
-                                    onBlur={() => 
-                                      handleRemarkUpdate(designEntry.design_entry_id, designEntry.remark)
+                                    onBlur={() =>
+                                      handleRemarkUpdate(
+                                        designEntry.design_entry_id,
+                                        designEntry.remark
+                                      )
                                     }
                                     onKeyDown={(e) => {
                                       if (e.key === "Enter") {
-                                        handleRemarkUpdate(designEntry.design_entry_id, designEntry.remark);
+                                        handleRemarkUpdate(
+                                          designEntry.design_entry_id,
+                                          designEntry.remark
+                                        );
                                       }
                                     }}
                                     className="px-2 py-1 border rounded"
@@ -497,12 +516,13 @@ const BhiwandiList = () => {
                                     autoFocus
                                   />
                                 ) : (
-                                  <span 
-                                    onClick={() => 
+                                  <span
+                                    onClick={() =>
                                       setEditingRemark({
                                         orderId: orderGroup.order_id,
                                         entryIndex: designIndex,
-                                        design_entry_id: designEntry.design_entry_id
+                                        design_entry_id:
+                                          designEntry.design_entry_id,
                                       })
                                     }
                                     className="cursor-pointer hover:text-blue-600 hover:underline"
