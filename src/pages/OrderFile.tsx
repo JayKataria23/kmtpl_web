@@ -572,7 +572,7 @@ function OrderFile() {
                                   {order.partyName}
                                 </div>
                                 {order.order_remark && (
-                                  <div className="text-xs text-gray-500 mt-1">
+                                  <div className="text-xs text-gray-500 mt-1 break-all">
                                     Order Remark: {order.order_remark}
                                   </div>
                                 )}
