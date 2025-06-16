@@ -343,8 +343,8 @@ function PrintProgram() {
     Object.entries(programData).forEach(
       ([design, { partyNames, totalMeters }]) => {
         const colorCount = colorCounts[design] || 2; // Default to 2 if not set
-        const taka = Math.floor((totalMeters / 100) * colorCount); // Convert to integer
-        const lumpSet = Math.floor(totalMeters / 100); // Convert to integer
+        const taka = (totalMeters / 100) * colorCount; // Allow decimal values
+        const lumpSet = totalMeters / 100; // Allow decimal values
         const parties = includeParty
           ? partyNames
               .map((name) =>
