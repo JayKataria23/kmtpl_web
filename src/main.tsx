@@ -31,6 +31,7 @@ import PartyReports from "./pages/PartyReports";
 import DyeingBook from "./pages/DyeingBook";
 import SalesRegister from "./pages/SalesRegister";
 import PrintProgram from "./pages/PrintProgram";
+import DesignReports from "./pages/DesignReports";
 
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
@@ -188,6 +189,14 @@ createRoot(document.getElementById("root")!).render(
           <Route
             path="/sign-in/sso-callback"
             element={<AuthenticateWithRedirectCallback />}
+          />
+          <Route
+            path="/design-reports"
+            element={
+              <ProtectedRoute>
+                <DesignReports />
+              </ProtectedRoute>
+            }
           />
         </Routes>
       </Router>

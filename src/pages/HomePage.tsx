@@ -11,6 +11,7 @@ export default function HomePage() {
     { path: "/order-list", label: "Order List" },
     { path: "/order-file", label: "Design Wise Order" },
     { path: "/print-program", label: "Print Program" },
+    { path: "/design-reports", label: "Design Reports" },
     { path: "/party-file", label: "Party Wise Order" },
     { path: "/part-order-file", label: "Part Orders" },
     { path: "/dyeing-book", label: "Dyeing Book" },
