@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { X } from "lucide-react";
+import { X, Printer } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -278,6 +278,222 @@ function DesignReports() {
     return selectedEntries.some(entry => entry.id === orderId);
   };
 
+  const generateReport = () => {
+    // Get all unique shade names
+    const allShades = new Set<string>();
+    selectedEntries.forEach(entry => {
+      entry.shades.forEach(shade => {
+        const shadeName = Object.keys(shade)[0];
+        if (shade[shadeName] !== "") {
+          allShades.add(shadeName);
+        }
+      });
+    });
+    
+    // Check if all entries are from the same design
+    const uniqueDesigns = new Set(selectedEntries.map(entry => entry.design));
+    const isSingleDesign = uniqueDesigns.size === 1;
+    const designName = isSingleDesign ? Array.from(uniqueDesigns)[0] : null;
+
+    // Sort shade names numerically
+    const shadeNames = Array.from(allShades).sort((a, b) => {
+      // Extract numbers from shade names
+      const numA = parseInt(a.replace(/[^0-9]/g, ''));
+      const numB = parseInt(b.replace(/[^0-9]/g, ''));
+      
+      // If both are numbers, sort numerically
+      if (!isNaN(numA) && !isNaN(numB)) {
+        return numA - numB;
+      }
+      
+      // If only one is a number, put numbers first
+      if (!isNaN(numA)) return -1;
+      if (!isNaN(numB)) return 1;
+      
+      // If neither is a number, sort alphabetically
+      return a.localeCompare(b);
+    });
+
+    // Find the range of numeric shades
+    const numericShades = shadeNames.filter(name => !isNaN(parseInt(name.replace(/[^0-9]/g, ''))));
+    const minShade = Math.min(...numericShades.map(name => parseInt(name.replace(/[^0-9]/g, ''))));
+    const maxShade = Math.max(...numericShades.map(name => parseInt(name.replace(/[^0-9]/g, ''))));
+
+    // Create complete sequence of shades
+    const completeShadeSequence = [];
+    for (let i = minShade; i <= maxShade; i++) {
+      const shadeName = shadeNames.find(name => parseInt(name.replace(/[^0-9]/g, '')) === i);
+      if (shadeName) {
+        completeShadeSequence.push(shadeName);
+      } else {
+        completeShadeSequence.push(`Shade ${i}`);
+      }
+    }
+
+    // Add non-numeric shades at the end
+    const nonNumericShades = shadeNames.filter(name => isNaN(parseInt(name.replace(/[^0-9]/g, ''))));
+    completeShadeSequence.push(...nonNumericShades);
+
+    // Create HTML content
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Shade-wise Report</title>
+          <style>
+            body {
+              font-family: Arial, sans-serif;
+              margin: 20px;
+              font-size: 12px;
+            }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              margin-top: 20px;
+            }
+            th, td {
+              border: 1px solid #ddd;
+              padding: 6px;
+              text-align: center;
+              font-size: 11px;
+            }
+            th {
+              background-color: #f5f5f5;
+              font-weight: 600;
+            }
+            .party-name {
+              font-weight: bold;
+              text-align: left;
+            }
+            .total-row {
+              font-weight: bold;
+              background-color: #f5f5f5;
+            }
+            .shade-column {
+              text-align: left;
+              font-weight: 500;
+              width: 100px;
+            }
+            .empty-row {
+              background-color: #fafafa;
+            }
+            .empty-row td {
+              color: #999;
+            }
+            .empty-column {
+              background-color: #fafafa;
+              width: 40px;
+            }
+            .report-header {
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              margin-bottom: 15px;
+            }
+            h2 {
+              font-size: 16px;
+              margin: 0;
+            }
+            .date-info {
+              font-size: 12px;
+              color: #666;
+            }
+            button {
+              font-size: 12px;
+              padding: 6px 12px;
+            }
+            @media print {
+              body {
+                margin: 0;
+                padding: 15px;
+              }
+              .no-print {
+                display: none;
+              }
+              table {
+                margin-top: 15px;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="no-print">
+            <button onclick="window.print()">Print Report</button>
+          </div>
+          <div class="report-header">
+            <h2>Shade-wise Report${isSingleDesign ? ` - ${designName}` : ''}</h2>
+            <div class="date-info">Date: ${new Date().toLocaleDateString('en-GB', {
+              day: 'numeric',
+              month: 'long',
+              year: 'numeric'
+            })}</div>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th class="shade-column">Shade</th>
+                ${selectedEntries.map(entry => `
+                  <th>${entry.partyName}${!isSingleDesign ? ` (${entry.design})` : ''}</th>
+                `).join('')}
+                <th>Total</th>
+                <th class="empty-column"></th>
+                <th class="empty-column"></th>
+                <th class="empty-column"></th>
+              </tr>
+            </thead>
+            <tbody>
+              ${completeShadeSequence.map(shadeName => {
+                const isMissingShade = shadeName.startsWith('Shade ');
+                const rowData = selectedEntries.map(entry => {
+                  const shade = entry.shades.find(s => Object.keys(s)[0] === shadeName);
+                  return shade ? parseFloat(shade[shadeName]) || 0 : 0;
+                });
+                const total = rowData.reduce((sum, val) => sum + val, 0);
+                return `
+                  <tr class="${isMissingShade ? 'empty-row' : ''}">
+                    <td class="shade-column">${shadeName}</td>
+                    ${rowData.map(value => `
+                      <td>${isMissingShade ? '-' : value.toFixed(2)}</td>
+                    `).join('')}
+                    <td>${isMissingShade ? '-' : total.toFixed(2)}</td>
+                    <td class="empty-column"></td>
+                    <td class="empty-column"></td>
+                    <td class="empty-column"></td>
+                  </tr>
+                `;
+              }).join('')}
+              <tr class="total-row">
+                <td class="shade-column">Total</td>
+                ${selectedEntries.map(entry => {
+                  const total = entry.shades.reduce((sum, shade) => {
+                    const value = parseFloat(Object.values(shade)[0]) || 0;
+                    return sum + value;
+                  }, 0);
+                  return `<td>${total.toFixed(2)}</td>`;
+                }).join('')}
+                <td>${selectedEntries.reduce((sum, entry) => {
+                  return sum + entry.shades.reduce((entrySum, shade) => {
+                    return entrySum + (parseFloat(Object.values(shade)[0]) || 0);
+                  }, 0);
+                }, 0).toFixed(2)}</td>
+                <td class="empty-column"></td>
+                <td class="empty-column"></td>
+                <td class="empty-column"></td>
+              </tr>
+            </tbody>
+          </table>
+        </body>
+      </html>
+    `;
+
+    // Open new window with the report
+    const reportWindow = window.open('', '_blank');
+    if (reportWindow) {
+      reportWindow.document.write(htmlContent);
+      reportWindow.document.close();
+    }
+  };
+
   return (
     <div className="container mx-auto mt-4 p-2 sm:p-4 relative">
       <div className="sticky top-0 bg-white z-10 p-2 shadow-sm">
@@ -329,7 +545,17 @@ function DesignReports() {
               <SheetHeader>
                 <SheetTitle>Selected Entries</SheetTitle>
               </SheetHeader>
-              <div className="mt-4 space-y-4">
+              {selectedEntries.length > 0 && (
+                <Button
+                  onClick={generateReport}
+                  className="w-full mt-4"
+                  variant="default"
+                >
+                  <Printer className="w-4 h-4 mr-2" />
+                  Generate Report
+                </Button>
+              )}
+              <div className="mt-4 space-y-4 overflow-y-auto max-h-[calc(100vh-180px)] [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                 {selectedEntries.map((entry) => (
                   <div key={entry.id} className="p-4 border rounded-lg relative">
                     <Button
