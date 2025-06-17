@@ -421,11 +421,11 @@ function DesignReports() {
             table {
               width: 100%;
               border-collapse: collapse;
-              margin-top: 20px;
+              margin-top: 10px;
             }
             th, td {
               border: 1px solid #ddd;
-              padding: 6px;
+              padding: 3px;
               text-align: center;
               font-size: 11px;
             }
@@ -471,7 +471,7 @@ function DesignReports() {
               color: #666;
             }
             .table-section {
-              page-break-after: always;
+              page-break-after: auto;
             }
             .table-section:last-child {
               page-break-after: avoid;
@@ -490,6 +490,12 @@ function DesignReports() {
               }
               table {
                 margin-top: 15px;
+              }
+              .table-section {
+                page-break-after: auto;
+              }
+              .table-section:last-child {
+                page-break-after: avoid;
               }
             }
           </style>
