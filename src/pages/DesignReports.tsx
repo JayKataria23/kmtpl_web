@@ -320,7 +320,7 @@ function DesignReports() {
     const maxShade = Math.max(...numericShades.map(name => parseInt(name.replace(/[^0-9]/g, ''))));
 
     // Create complete sequence of shades
-    const completeShadeSequence = [];
+    const completeShadeSequence: string[] = [];
     for (let i = minShade; i <= maxShade; i++) {
       const shadeName = shadeNames.find(name => parseInt(name.replace(/[^0-9]/g, '')) === i);
       if (shadeName) {
@@ -333,6 +333,78 @@ function DesignReports() {
     // Add non-numeric shades at the end
     const nonNumericShades = shadeNames.filter(name => isNaN(parseInt(name.replace(/[^0-9]/g, ''))));
     completeShadeSequence.push(...nonNumericShades);
+
+    // Function to create a table section
+    const createTableSection = (entries: OrderDetail[], startIndex: number, endIndex: number, isLastSection: boolean) => {
+      const sectionEntries = entries.slice(startIndex, endIndex);
+      return `
+        <table style="page-break-inside: avoid;">
+          <thead>
+            <tr>
+              <th class="shade-column">Shade</th>
+              ${sectionEntries.map(entry => `
+                <th>${entry.partyName}${!isSingleDesign ? ` (${entry.design})` : ''}</th>
+              `).join('')}
+              ${isLastSection ? `
+                <th>Total</th>
+                <th class="empty-column"></th>
+                <th class="empty-column"></th>
+                <th class="empty-column"></th>
+              ` : ''}
+            </tr>
+          </thead>
+          <tbody>
+            ${completeShadeSequence.map(shadeName => {
+              const isMissingShade = shadeName.startsWith('Shade ');
+              const rowData = sectionEntries.map(entry => {
+                const shade = entry.shades.find(s => Object.keys(s)[0] === shadeName);
+                return shade ? parseFloat(shade[shadeName]) || 0 : 0;
+              });
+              const total = rowData.reduce((sum, val) => sum + val, 0);
+              return `
+                <tr class="${isMissingShade ? 'empty-row' : ''}">
+                  <td class="shade-column">${shadeName}</td>
+                  ${rowData.map(value => `
+                    <td>${isMissingShade ? '-' : value.toFixed(2)}</td>
+                  `).join('')}
+                  ${isLastSection ? `
+                    <td>${isMissingShade ? '-' : total.toFixed(2)}</td>
+                    <td class="empty-column"></td>
+                    <td class="empty-column"></td>
+                    <td class="empty-column"></td>
+                  ` : ''}
+                </tr>
+              `;
+            }).join('')}
+            ${isLastSection ? `
+              <tr class="total-row">
+                <td class="shade-column">Total</td>
+                ${sectionEntries.map(entry => {
+                  const total = entry.shades.reduce((sum, shade) => {
+                    const value = parseFloat(Object.values(shade)[0]) || 0;
+                    return sum + value;
+                  }, 0);
+                  return `<td>${total.toFixed(2)}</td>`;
+                }).join('')}
+                <td>${sectionEntries.reduce((sum, entry) => {
+                  return sum + entry.shades.reduce((entrySum, shade) => {
+                    return entrySum + (parseFloat(Object.values(shade)[0]) || 0);
+                  }, 0);
+                }, 0).toFixed(2)}</td>
+                <td class="empty-column"></td>
+                <td class="empty-column"></td>
+                <td class="empty-column"></td>
+              </tr>
+            ` : ''}
+          </tbody>
+        </table>
+      `;
+    };
+
+    // Calculate number of columns per table
+    const columnsPerTable = 17; // 1 shade column + 9 party columns + 1 total + 3 empty columns
+    const totalColumns = selectedEntries.length + 1; // +5 for shade, total, and 3 empty columns
+    const needsSplit = totalColumns > columnsPerTable;
 
     // Create HTML content
     const htmlContent = `
@@ -398,6 +470,12 @@ function DesignReports() {
               font-size: 12px;
               color: #666;
             }
+            .table-section {
+              page-break-after: always;
+            }
+            .table-section:last-child {
+              page-break-after: avoid;
+            }
             button {
               font-size: 12px;
               padding: 6px 12px;
@@ -428,60 +506,22 @@ function DesignReports() {
               year: 'numeric'
             })}</div>
           </div>
-          <table>
-            <thead>
-              <tr>
-                <th class="shade-column">Shade</th>
-                ${selectedEntries.map(entry => `
-                  <th>${entry.partyName}${!isSingleDesign ? ` (${entry.design})` : ''}</th>
-                `).join('')}
-                <th>Total</th>
-                <th class="empty-column"></th>
-                <th class="empty-column"></th>
-                <th class="empty-column"></th>
-              </tr>
-            </thead>
-            <tbody>
-              ${completeShadeSequence.map(shadeName => {
-                const isMissingShade = shadeName.startsWith('Shade ');
-                const rowData = selectedEntries.map(entry => {
-                  const shade = entry.shades.find(s => Object.keys(s)[0] === shadeName);
-                  return shade ? parseFloat(shade[shadeName]) || 0 : 0;
-                });
-                const total = rowData.reduce((sum, val) => sum + val, 0);
-                return `
-                  <tr class="${isMissingShade ? 'empty-row' : ''}">
-                    <td class="shade-column">${shadeName}</td>
-                    ${rowData.map(value => `
-                      <td>${isMissingShade ? '-' : value.toFixed(2)}</td>
-                    `).join('')}
-                    <td>${isMissingShade ? '-' : total.toFixed(2)}</td>
-                    <td class="empty-column"></td>
-                    <td class="empty-column"></td>
-                    <td class="empty-column"></td>
-                  </tr>
-                `;
-              }).join('')}
-              <tr class="total-row">
-                <td class="shade-column">Total</td>
-                ${selectedEntries.map(entry => {
-                  const total = entry.shades.reduce((sum, shade) => {
-                    const value = parseFloat(Object.values(shade)[0]) || 0;
-                    return sum + value;
-                  }, 0);
-                  return `<td>${total.toFixed(2)}</td>`;
-                }).join('')}
-                <td>${selectedEntries.reduce((sum, entry) => {
-                  return sum + entry.shades.reduce((entrySum, shade) => {
-                    return entrySum + (parseFloat(Object.values(shade)[0]) || 0);
-                  }, 0);
-                }, 0).toFixed(2)}</td>
-                <td class="empty-column"></td>
-                <td class="empty-column"></td>
-                <td class="empty-column"></td>
-              </tr>
-            </tbody>
-          </table>
+          ${needsSplit ? (
+            // Split into multiple tables
+            Array.from({ length: Math.ceil(selectedEntries.length / (columnsPerTable - 5)) }, (_, i) => {
+              const startIndex = i * (columnsPerTable - 5);
+              const endIndex = Math.min(startIndex + (columnsPerTable - 5), selectedEntries.length);
+              const isLastSection = i === Math.ceil(selectedEntries.length / (columnsPerTable - 5)) - 1;
+              return `
+                <div class="table-section">
+                  ${createTableSection(selectedEntries, startIndex, endIndex, isLastSection)}
+                </div>
+              `;
+            }).join('')
+          ) : (
+            // Single table
+            createTableSection(selectedEntries, 0, selectedEntries.length, true)
+          )}
         </body>
       </html>
     `;
