@@ -8,20 +8,17 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import {
-  Drawer,
-  DrawerClose,
-  DrawerContent,
-  DrawerDescription,
-  DrawerFooter,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerTrigger,
-} from "@/components/ui/drawer";
 import { useToast } from "@/hooks/use-toast"; // Import useToast at the top
 import { Input, Toaster } from "@/components/ui";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import * as XLSX from "xlsx"; // Import XLSX for Excel file generation
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+import { X, Truck } from "lucide-react"; // For icons
 
 interface DesignCount {
   design: string;
@@ -273,253 +270,143 @@ function OrderFile() {
     );
   };
 
-  const handleDownloadReport = (design: string) => {
-    const orderDetails = designOrders[design];
-    const shadeMap: { [key: string]: { [key: string]: number } } = {};
-    const totalMap: { [key: string]: number } = {}; // To store total quantities
-
-    // Use design entry ID as the unique identifier
-    const orderIdentifiers = orderDetails.map((order) => {
-      return `Entry-${order.id}`; // Use the design entry ID as the unique identifier
-    });
-
-    // Populate the shadeMap with distinct shade names and their quantities
-    designOrders[design].forEach((order, index) => {
-      const orderIdentifier = orderIdentifiers[index];
-
-      // Process each shade in the order
-      order.shades.forEach((shade) => {
-        const shadeName = Object.keys(shade)[0];
-        const shadeValue = shade[shadeName];
-
-        // Skip empty quantities
-        if (shadeValue === "") {
-          return;
-        }
-
-        const quantity = Number(shadeValue); // Ensure quantity is a number
-
-        // Initialize shade in maps if not present
-        if (!shadeMap[shadeName]) {
-          shadeMap[shadeName] = {};
-          totalMap[shadeName] = 0; // Initialize total for this shade
-        }
-
-        // Initialize the quantity for this order and shade if not present
-        if (!shadeMap[shadeName][orderIdentifier]) {
-          shadeMap[shadeName][orderIdentifier] = 0;
-        }
-
-        // Add the quantity for this shade and order
-        shadeMap[shadeName][orderIdentifier] += quantity;
-        totalMap[shadeName] += quantity; // Update total quantity
-      });
-    });
-
-    // Prepare data for Excel
-    const excelData = [
-      [
-        "Design Name",
-        design,
-        "",
-        "Date",
-        new Date().toLocaleDateString("en-GB"),
-      ],
-      [
-        "Shade Name",
-        ...orderIdentifiers.map((id) => {
-          // Create more readable column headers for orders
-          const order = orderDetails.find((o) => `Entry-${o.id}` === id);
-          return `${order?.partyName.split(" ").slice(0, 2).join(" ")} (${
-            order?.order_no
-          })`;
-        }),
-        "Total",
-      ], // Header row
-    ];
-
-    let highestNonZeroRowIndex = -1; // Track the highest row index with a non-zero total
-    const rowsToKeep: string[][] = []; // Explicitly define the type as a 2D array of strings
-
-    Object.entries(shadeMap).forEach(([shadeName, orderQuantities]) => {
-      const row: string[] = [shadeName]; // Define row as an array of strings
-      let totalQuantity = 0; // Initialize total for this row
-
-      orderIdentifiers.forEach((orderIdentifier) => {
-        const quantity = orderQuantities[orderIdentifier] || 0; // Get quantity or 0
-        row.push(String(quantity)); // Fill in quantities or 0 as string
-        totalQuantity += quantity; // Accumulate total quantity
-      });
-
-      row.push(String(totalQuantity)); // Add total quantity to the row
-
-      // Check if the total is not zero and if the shadeName is a digit
-      if (totalQuantity !== 0 && !isNaN(Number(shadeName))) {
-        highestNonZeroRowIndex = rowsToKeep.length; // Update the highest non-zero row index
-      }
-
-      // Add the row to the rowsToKeep array
-      rowsToKeep.push(row);
-    });
-
-    // Filter rows to keep only those before the highest non-zero row and all non-zero rows
-    const filteredRows = rowsToKeep.filter((row, index) => {
-      return (
-        index <= highestNonZeroRowIndex || Number(row[row.length - 1]) !== 0
-      );
-    });
-
-    // Add filtered rows to excelData
-    excelData.push(...filteredRows);
-
-    // Create a worksheet and workbook
-    const worksheet = XLSX.utils.aoa_to_sheet(excelData);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Report");
-
-    // Export the Excel file
-    XLSX.writeFile(workbook, `${design}_report.xlsx`);
-  };
-
   return (
-    <div className="container mx-auto mt-10 p-4 relative">
-      <div className="sticky top-0 bg-white z-10">
-        <Drawer open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
-          <DrawerTrigger asChild>
-            <Button className="absolute top-4 right-4">Bhiwandi</Button>
-          </DrawerTrigger>
-          <DrawerContent>
-            <DrawerHeader>
-              <DrawerTitle>Selected Entries</DrawerTitle>
-              <DrawerDescription>
-                Entries added to Bhiwandi list
-              </DrawerDescription>
-            </DrawerHeader>
-
-            <div className="p-4 overflow-y-auto max-h-[60vh]">
-              {Object.entries(
-                drawerEntries.reduce((acc, entry) => {
-                  if (!acc[entry.design]) acc[entry.design] = [];
-                  acc[entry.design].push(entry);
-                  return acc;
-                }, {} as Record<string, DrawerEntry[]>)
-              ).map(([design, entries]) => (
-                <div key={design} className="mb-4">
-                  <h3 className="text-lg font-semibold mb-2">{design}</h3>
-                  <table className="w-full divide-y divide-gray-200">
-                    <tbody>
-                      {entries.map((entry, index) => (
-                        <tr
-                          key={index}
-                          className={
-                            index % 2 === 0 ? "bg-white" : "bg-gray-50"
-                          }
+    <div className="container mx-auto mt-4 p-2 sm:p-4 relative">
+      <div className="sticky top-0 bg-white z-10 p-2 shadow-sm">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 mb-4">
+          <Button onClick={() => navigate("/")} className="w-full sm:w-auto">
+            Back to Home
+          </Button>
+          <ToggleGroup
+            variant="outline"
+            type="single"
+            value={filter}
+            onValueChange={(value) => {
+              setFilter(value);
+              setOpenAccordionItems([]);
+            }}
+            className="w-full sm:w-auto flex-wrap justify-start"
+          >
+            <ToggleGroupItem value="all" aria-label="Show all">
+              ALL
+            </ToggleGroupItem>
+            <ToggleGroupItem value="regular" aria-label="Show regular">
+              Regular
+            </ToggleGroupItem>
+            <ToggleGroupItem value="print" aria-label="Show print">
+              Print
+            </ToggleGroupItem>
+            <ToggleGroupItem value="digital" aria-label="Show digital">
+              Digital
+            </ToggleGroupItem>
+            <ToggleGroupItem value="Design No." aria-label="Show Design No.">
+              Design No.
+            </ToggleGroupItem>
+          </ToggleGroup>
+          <Sheet open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
+            <SheetTrigger asChild>
+              <Button variant="outline" className="relative">
+                <Truck className="w-4 h-4 mr-2" />
+                Bhiwandi
+                {drawerEntries.length > 0 && (
+                  <span className="absolute -top-2 -right-2 bg-yellow-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                    {drawerEntries.length}
+                  </span>
+                )}
+              </Button>
+            </SheetTrigger>
+            <SheetContent className="w-[400px] sm:w-[540px]">
+              <SheetHeader>
+                <SheetTitle>Selected Entries</SheetTitle>
+              </SheetHeader>
+              {drawerEntries.length > 0 && (
+                <Button
+                  onClick={handleSendBhiwandi}
+                  className="w-full mt-4"
+                  variant="default"
+                  disabled={drawerEntries.length === 0}
+                >
+                  Send to Bhiwandi
+                </Button>
+              )}
+              <div className="mt-4 space-y-4 overflow-y-auto max-h-[calc(100vh-180px)] [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                {Object.entries(
+                  drawerEntries.reduce((acc, entry) => {
+                    if (!acc[entry.design]) acc[entry.design] = [];
+                    acc[entry.design].push(entry);
+                    return acc;
+                  }, {} as Record<string, DrawerEntry[]>)
+                ).map(([design, entries]) => (
+                  <div key={design} className="mb-4">
+                    <h3 className="text-lg font-semibold mb-2">{design}</h3>
+                    {entries.map((entry, index) => (
+                      <div
+                        key={entry.id}
+                        className="p-4 border rounded-lg relative mb-2 bg-white"
+                      >
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="absolute top-2 right-2"
+                          onClick={() => handleRemoveFromDrawer(entry.id)}
                         >
-                          <td className="px-2 py-4 w-4/6 text-sm font-medium text-gray-900">
-                            <div className="break-words">{entry.partyName}</div>
-                            {entry.order_remark && (
-                              <div className="text-xs text-gray-500 mt-1">
-                                Remark: {entry.order_remark}
-                              </div>
-                            )}
-                            <div className="text-xs text-gray-500 mt-1">
-                              Price: {entry.price}
-                            </div>
-                            <div className="text-xs text-gray-500 mt-1">
-                              Remark:{" "}
-                              <Input
-                                value={entry.entry_remark}
-                                onChange={(e) =>
-                                  handleEntryRemarkChange(
-                                    entry.id,
-                                    e.target.value
-                                  )
-                                }
-                              ></Input>
-                              <Button
-                                className="m-2"
-                                onClick={() =>
-                                  handleEntryRemarkChange(entry.id, "")
-                                }
-                              >
-                                Clear
-                              </Button>
-                            </div>
-                          </td>
-                          <td className="px-2 py-4 w-2/6 text-sm text-gray-500">
+                          <X className="h-4 w-4" />
+                        </Button>
+                        <div className="font-medium">{entry.partyName}</div>
+                        <div className="text-xs text-gray-500 mt-1">
+                          Price: {entry.price}
+                        </div>
+                        <div className="text-xs text-gray-500 mt-1">
+                          <div className="flex flex-row items-center gap-2">
+                            <Input
+                              value={entry.entry_remark}
+                              onChange={(e) =>
+                                handleEntryRemarkChange(entry.id, e.target.value)
+                              }
+                              placeholder="Entry Remark"
+                              className="flex-1"
+                            />
+                            <Button
+                              size="sm"
+                              className=""
+                              onClick={() =>
+                                handleEntryRemarkChange(entry.id, "")
+                              }
+                            >
+                              Clear
+                            </Button>
+                          </div>
+                        </div>
+                        <div className="mt-2">
+                          <h4 className="text-xs font-medium">Shades:</h4>
+                          <div className="flex flex-wrap gap-2">
                             {entry.shades &&
                               entry.shades.map((shade, idx) => {
                                 const shadeName = Object.keys(shade)[0];
                                 const shadeValue = shade[shadeName];
-                                if (shadeValue == "") {
-                                  return;
-                                }
+                                if (!shadeValue) return null;
                                 return (
-                                  <div key={idx}>
-                                    {shadeName}: {shadeValue}m{" "}
-                                  </div>
+                                  <span
+                                    key={idx}
+                                    className="bg-gray-100 px-2 py-1 rounded text-xs"
+                                  >
+                                    {shadeName}: {shadeValue}m
+                                  </span>
                                 );
                               })}
-                          </td>
-                          <td className="px-2 py-4 w-1/6 text-right">
-                            <Button
-                              className="ml-2 rounded-full w-8 h-8 text-white"
-                              onClick={() => handleRemoveFromDrawer(entry.id)} // Call the remove function
-                            >
-                              X
-                            </Button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ))}
-            </div>
-            <DrawerFooter>
-              <Button
-                onClick={handleSendBhiwandi} // Call the function when clicked
-                className="mr-2" // Optional: Add some margin
-                disabled={drawerEntries.length === 0} // Disable if no items in drawer
-              >
-                Send to Bhiwandi
-              </Button>
-              <DrawerClose asChild>
-                <Button variant="outline">Close</Button>
-              </DrawerClose>
-            </DrawerFooter>
-          </DrawerContent>
-        </Drawer>
-
-        <Button onClick={() => navigate("/")} className="mb-4">
-          Back to Home
-        </Button>
-        <ToggleGroup
-          variant="outline"
-          type="single"
-          value={filter}
-          onValueChange={(value) => {
-            setFilter(value);
-            setOpenAccordionItems([]);
-          }}
-          className="mb-4" // Added border class
-        >
-          <ToggleGroupItem value="all" aria-label="Show all">
-            ALL
-          </ToggleGroupItem>
-          <ToggleGroupItem value="regular" aria-label="Show regular">
-            Regular
-          </ToggleGroupItem>
-          <ToggleGroupItem value="print" aria-label="Show print">
-            Print
-          </ToggleGroupItem>{" "}
-          <ToggleGroupItem value="digital" aria-label="Show digital">
-            Digital
-          </ToggleGroupItem>
-          <ToggleGroupItem value="Design No." aria-label="Show Design No.">
-            Design No.
-          </ToggleGroupItem>
-        </ToggleGroup>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ))}
+                {drawerEntries.length === 0 && (
+                  <p className="text-center text-gray-500">No entries selected</p>
+                )}
+              </div>
+            </SheetContent>
+          </Sheet>
+        </div>
       </div>
       <Accordion
         type="multiple"
@@ -529,114 +416,125 @@ function OrderFile() {
       >
         {filteredDesignCounts().map((item, index) => (
           <AccordionItem key={index} value={`item-${index}`}>
-            <AccordionTrigger
-              className="text-lg flex justify-between items-center w-full"
-              onClick={() => fetchOrderDetails(item.design)}
-            >
-              <span className="text-left flex-grow">{item.design}</span>
-              <Button onClick={() => handleDownloadReport(item.design)}>
-                Report
-              </Button>
-              <span className="text-sm text-gray-500 ml-2 mr-3">
-                count: {item.count}
-              </span>
-            </AccordionTrigger>
+            <div className="flex items-center justify-between w-full">
+              <AccordionTrigger
+                className="text-lg flex items-center w-full hover:bg-gray-50"
+                onClick={() => fetchOrderDetails(item.design)}
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-left font-medium">{item.design}</span>
+                  <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                    {item.count} orders
+                  </span>
+                </div>
+              </AccordionTrigger>
+            </div>
             <AccordionContent>
               {designOrders[item.design] ? (
                 <div className="overflow-x-auto">
-                  <table className="w-full divide-y divide-gray-200">
-                    <tbody>
-                      {designOrders[item.design]
-                        .sort((a, b) => Number(b.part) - Number(a.part)) // Sort orders with part = true at the top
-                        .map((order, orderIndex) => {
-                          const isSelected = drawerEntries.some(
-                            (entry) => entry.id === order.id
-                          );
-                          return (
-                            <tr
-                              key={order.id}
-                              className={
-                                isSelected
-                                  ? "bg-yellow-100"
-                                  : orderIndex % 2 === 0
-                                  ? "bg-white"
-                                  : "bg-gray-50"
-                              }
-                            >
-                              <td className="px-2 py-4 w-3/6 text-sm font-medium text-gray-900">
-                                <div
-                                  className={`break-words ${
-                                    order.part ? "text-red-500" : ""
-                                  }`}
+                  <div className="min-w-full divide-y divide-gray-200">
+                    {designOrders[item.design]
+                      .sort((a, b) => Number(b.part) - Number(a.part))
+                      .map((order, orderIndex) => {
+                        const isSelected = drawerEntries.some(
+                          (entry) => entry.id === order.id
+                        );
+                        return (
+                          <div
+                            key={order.id}
+                            className={`p-4 border rounded-lg mb-2 relative ${
+                              isSelected
+                                ? "bg-yellow-100 border-yellow-400"
+                                : "bg-white"
+                            }`}
+                          >
+                            <div className="flex flex-row sm:flex-row gap-4">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <h3
+                                    className={`text-base font-medium ${
+                                      order.part ? "text-red-500" : ""
+                                    }`}
+                                  >
+                                    {order.partyName}
+                                  </h3>
+                                  {order.part && (
+                                    <span className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded-full">
+                                      Part
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="space-y-1 text-sm text-gray-600">
+                                  {order.order_remark && (
+                                    <p className="break-all">
+                                      <span className="font-medium">Order Remark:</span> {order.order_remark}
+                                    </p>
+                                  )}
+                                  <p>
+                                    <span className="font-medium">Price:</span> ₹{order.price}
+                                  </p>
+                                  <p>
+                                    <span className="font-medium">Date:</span> {formatDate(order.order_date)}
+                                  </p>
+                                  {order.order_no && (
+                                    <p>
+                                      <span className="font-medium">Order No:</span> {order.order_no}
+                                    </p>
+                                  )}
+                                  {order.entry_remark && (
+                                    <p>
+                                      <span className="font-medium">Entry Remark:</span> {order.entry_remark}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="flex flex-row gap-2 sm:w-48">
+                                <div className="bg-gray-50 p-2 rounded-lg">
+                                  <h4 className="text-sm font-medium mb-2">Shades</h4>
+                                  <div className="space-y-1">
+                                    {order.shades &&
+                                      order.shades.map((shade, idx) => {
+                                        const shadeName = Object.keys(shade)[0];
+                                        const shadeValue = shade[shadeName];
+                                        if (!shadeValue) return null;
+                                        return (
+                                          <div key={idx} className="text-sm">
+                                            <span className="font-medium">{shadeName}:</span> {shadeValue}m
+                                          </div>
+                                        );
+                                      })}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex gap-2 mt-4">
+                              {isSelected ? (
+                                <Button
+                                  onClick={() => handleRemoveFromDrawer(order.id)}
+                                  variant="destructive"
+                                  className="flex-1"
                                 >
-                                  {order.partyName}
-                                </div>
-                                {order.order_remark && (
-                                  <div className="text-xs text-gray-500 mt-1 break-all">
-                                    Order Remark: {order.order_remark}
-                                  </div>
-                                )}
-                                <div className="text-xs text-gray-500 mt-1">
-                                  Price: {order.price}
-                                </div>
-                                <div className="text-xs text-gray-500 mt-1">
-                                  {formatDate(order.order_date)}
-                                </div>
-                                {order.order_no && (
-                                  <div className="text-xs text-gray-500 mt-1">
-                                    Order No: {order.order_no}
-                                  </div>
-                                )}
-                                {order.entry_remark && (
-                                  <div className="text-xs text-gray-500 mt-1">
-                                    Entry Remark: {order.entry_remark}
-                                  </div>
-                                )}
-                              </td>
-                              <td className="px-2 py-4 w-2/6 text-sm text-gray-500">
-                                {order.shades &&
-                                  order.shades.map((shade, idx) => {
-                                    const shadeName = Object.keys(shade)[0];
-                                    const shadeValue = shade[shadeName];
-                                    if (shadeValue == "") {
-                                      return;
-                                    }
-                                    return (
-                                      <div key={idx}>
-                                        {shadeName}: {shadeValue}m{" "}
-                                      </div>
-                                    );
-                                  })}
-                              </td>
-                              <td className="px-2 py-4 w-1/6">
-                                {isSelected ? (
-                                  <Button
-                                    className="ml-2 rounded-full w-10 h-10 text-lg text-white"
-                                    onClick={() =>
-                                      handleRemoveFromDrawer(order.id)
-                                    }
-                                  >
-                                    X
-                                  </Button>
-                                ) : (
-                                  <Button
-                                    onClick={() =>
-                                      handleAddToDrawer(order, item.design)
-                                    }
-                                    className="ml-2 rounded-full w-10 h-10 bg-yellow-500 active:bg-yellow-500 visited:bg-yellow-500 hover:bg-yellow-500 text-lg"
-                                  >
-                                    B
-                                  </Button>
-                                )}
-                              </td>
-                            </tr>
-                          );
-                        })}
-                    </tbody>
-                  </table>
+                                  Remove from Bhiwandi
+                                </Button>
+                              ) : (
+                                <Button
+                                  onClick={() => handleAddToDrawer(order, item.design)}
+                                  variant="outline"
+                                  className="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white"
+                                >
+                                  Add to Bhiwandi
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
                 </div>
               ) : (
-                <p>Loading order details...</p>
+                <div className="p-4 text-center text-gray-500">
+                  Loading order details...
+                </div>
               )}
             </AccordionContent>
           </AccordionItem>
