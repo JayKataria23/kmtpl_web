@@ -339,7 +339,7 @@ function OrderFile() {
                 ).map(([design, entries]) => (
                   <div key={design} className="mb-4">
                     <h3 className="text-lg font-semibold mb-2">{design}</h3>
-                    {entries.map((entry, index) => (
+                    {entries.map((entry) => (
                       <div
                         key={entry.id}
                         className="p-4 border rounded-lg relative mb-2 bg-white"
@@ -435,7 +435,7 @@ function OrderFile() {
                   <div className="min-w-full divide-y divide-gray-200">
                     {designOrders[item.design]
                       .sort((a, b) => Number(b.part) - Number(a.part))
-                      .map((order, orderIndex) => {
+                      .map((order) => {
                         const isSelected = drawerEntries.some(
                           (entry) => entry.id === order.id
                         );
