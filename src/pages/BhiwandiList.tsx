@@ -10,7 +10,6 @@ import {
   AccordionContent,
 } from "@/components/ui/accordion";
 import { Toaster } from "@/components/ui";
-import { Check } from "lucide-react";
 
 // --- Types ---
 interface BhiwandiEntry {
@@ -435,7 +434,7 @@ const BhiwandiListModern = () => {
                         <strong>Transport:</strong> {orderGroup.transporter_name}
                       </p>
                       <div>
-                        {orderGroup.entries.map((designEntry, designIndex) => (
+                        {orderGroup.entries.map((designEntry) => (
                           <div
                             key={designEntry.design_entry_id}
                             className="flex justify-between border-b p-4"
