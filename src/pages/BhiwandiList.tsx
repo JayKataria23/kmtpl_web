@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react"; // Import useEffect and useState
-import { Button } from "@/components/ui/button"; // Import Button
-import { useNavigate } from "react-router-dom"; // Import useNavigate
+import { useEffect, useState, useRef } from "react";
+import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
 import supabase from "@/utils/supabase";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -8,13 +8,15 @@ import {
   AccordionItem,
   AccordionTrigger,
   AccordionContent,
-} from "@/components/ui/accordion"; // Import Shadcn Accordion components
+} from "@/components/ui/accordion";
 import { Toaster } from "@/components/ui";
+import { Check } from "lucide-react";
 
+// --- Types ---
 interface BhiwandiEntry {
-  bhiwandi_date: string; // Date from the database
-  count: number; // Count of entries for that date
-  comment?: string; // Add comment field
+  bhiwandi_date: string;
+  count: number;
+  comment?: string;
 }
 
 interface Entry {
@@ -49,64 +51,63 @@ interface GroupedOrder {
   order_no: number;
 }
 
-// Utility function to format the date
+// --- Utility ---
 const formatDate = (dateString: string): string => {
   const date = new Date(dateString);
-  const optionsDate: Intl.DateTimeFormatOptions = {
-    day: "numeric",
-    month: "long", // Change month to 'long'
+  return date.toLocaleString("en-IN", {
+    day: "2-digit",
+    month: "short",
     year: "numeric",
-  };
-  const optionsTime: Intl.DateTimeFormatOptions = {
-    hour: "numeric",
-    minute: "numeric",
-    hour12: false, // Set hour12 to false for 24-hour format
-  };
-
-  const formattedDate = date.toLocaleDateString("en-US", optionsDate); // Format date
-  const formattedTime = date.toLocaleTimeString("en-US", optionsTime); // Format time
-
-  return `${formattedDate} ${formattedTime}`; // Return combined formatted date and time
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
 };
 
-const BhiwandiList = () => {
-  const [bhiwandiEntries, setBhiwandiEntries] = useState<BhiwandiEntry[]>([]); // State to hold Bhiwandi entries
-  const [selectedEntries, setSelectedEntries] = useState<Set<string>>(
-    new Set()
-  ); // New state for selected entries
-  const [designEntries, setDesignEntries] = useState<GroupedOrder[]>([]); // State to hold design entries for the selected date
+// --- Main Component ---
+const BhiwandiListModern = () => {
+  const [bhiwandiEntries, setBhiwandiEntries] = useState<BhiwandiEntry[]>([]);
+  const [selectedDates, setSelectedDates] = useState<Set<string>>(new Set());
+  const [expandedDate, setExpandedDate] = useState<string | null>(null);
+  const [designEntries, setDesignEntries] = useState<Record<string, GroupedOrder[]>>({});
+  const [editingRemarks, setEditingRemarks] = useState<{
+    [design_entry_id: number]: { value: string; saving: boolean; saved: boolean }
+  }>({});
+  const [editingComment, setEditingComment] = useState<{
+    bhiwandi_date: string;
+    value: string;
+    saved: boolean;
+  } | null>(null);
+  const [comments, setComments] = useState<{ [key: string]: string }>({});
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [openAccordion, setOpenAccordion] = useState<string | null>(null);
-  const [comments, setComments] = useState<{ [key: string]: string }>({});
-  const [editingComment, setEditingComment] = useState<string | null>(null);
-  const [editingRemark, setEditingRemark] = useState<{
-    orderId: string;
-    entryIndex: number;
-    design_entry_id: number;
-  } | null>(null);
+  const remarkInputRefs = useRef<{ [design_entry_id: number]: HTMLInputElement | null }>({});
+  const commentInputRef = useRef<HTMLInputElement>(null);
+  const remarkTimeoutRefs = useRef<{ [design_entry_id: number]: NodeJS.Timeout | null }>({});
 
+  // --- Fetchers ---
   useEffect(() => {
     fetchBhiwandiEntries();
     fetchComments();
+    return () => {
+      // Clean up all pending remark timeouts on unmount
+      Object.values(remarkTimeoutRefs.current).forEach((timeout) => {
+        if (timeout) clearTimeout(timeout);
+      });
+    };
   }, []);
 
   const fetchBhiwandiEntries = async () => {
     try {
-      const { data, error } = await supabase.rpc("get_bhiwandi_date_counts"); // Call the new function
-
+      const { data, error } = await supabase.rpc("get_bhiwandi_date_counts");
       if (error) throw error;
-
-      const formattedData: BhiwandiEntry[] = data.map(
-        (item: { bhiwandi_date: string; count: number }) => ({
-          bhiwandi_date: item.bhiwandi_date, // Format the date
-          count: item.count,
-        })
-      );
-
-      setBhiwandiEntries(formattedData); // Set the fetched data to state
+      setBhiwandiEntries(data);
     } catch (error) {
-      console.error("Error fetching Bhiwandi entries:", error);
+      toast({
+        title: "Error",
+        description: `Failed to fetch Bhiwandi entries: ${error instanceof Error ? error.message : "Unknown error"}`,
+        variant: "destructive",
+      });
     }
   };
 
@@ -115,9 +116,7 @@ const BhiwandiList = () => {
       const { data, error } = await supabase
         .from("bhiwandi_comments")
         .select("bhiwandi_date, comment");
-
       if (error) throw error;
-
       const commentMap = (data || []).reduce(
         (acc: { [key: string]: string }, item) => {
           acc[item.bhiwandi_date] = item.comment || "";
@@ -125,17 +124,37 @@ const BhiwandiList = () => {
         },
         {}
       );
-
       setComments(commentMap);
     } catch (error) {
-      console.error("Error fetching comments:", error);
+      toast({
+        title: "Error",
+        description: `Failed to fetch comments: ${error instanceof Error ? error.message : "Unknown error"}`,
+        variant: "destructive",
+      });
     }
   };
 
-  // Updated function to group entries by order_id
+  const fetchDesignEntries = async (date: string) => {
+    if (designEntries[date]) return; // Already loaded
+    try {
+      const { data, error } = await supabase.rpc(
+        "get_design_entries_by_bhiwandi_date",
+        { input_date: date }
+      );
+      if (error) throw error;
+      setDesignEntries((prev) => ({ ...prev, [date]: groupByOrderId(data) }));
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: `Failed to fetch design entries: ${error instanceof Error ? error.message : "Unknown error"}`,
+        variant: "destructive",
+      });
+    }
+  };
+
+  // --- Grouping ---
   function groupByOrderId(entries: Entry[]): GroupedOrder[] {
     const grouped = new Map<string, GroupedOrder>();
-
     entries.forEach((entry) => {
       const {
         order_id,
@@ -150,10 +169,7 @@ const BhiwandiList = () => {
         shades,
         order_no,
       } = entry;
-
-      // Check if the order_id already exists in the map
       if (!grouped.has(order_id)) {
-        // Create a new GroupedOrder if it doesn't exist
         grouped.set(order_id, {
           order_id,
           bill_to_party,
@@ -161,223 +177,187 @@ const BhiwandiList = () => {
           broker_name,
           transporter_name,
           order_no,
-          entries: [], // Initialize with an empty entries array
+          entries: [],
         });
       }
-
-      // Get the existing group and push the design entry into it
       const group = grouped.get(order_id)!;
       group.entries.push({ design, price, remark, shades, design_entry_id });
     });
-
-    return Array.from(grouped.values()); // Return the grouped orders as an array
+    return Array.from(grouped.values());
   }
 
-  const fetchDesignEntries = async (date: string) => {
-    try {
-      const { data, error } = await supabase.rpc(
-        "get_design_entries_by_bhiwandi_date",
-        { input_date: date }
-      );
-
-      if (error) throw error;
-
-      // Group the entries by order_id
-      const groupedEntries = groupByOrderId(data);
-
-      // Sort the grouped entries by bill_to_party
-      const sortedEntries = groupedEntries.sort((a, b) =>
-        a.bill_to_party.localeCompare(b.bill_to_party)
-      );
-
-      setDesignEntries(sortedEntries);
-    } catch (error) {
-      console.error("Error fetching design entries:", error);
+  // --- Actions ---
+  const handleRemarkEdit = (design_entry_id: number, value: string) => {
+    // Clear any timeout for this entry
+    if (remarkTimeoutRefs.current[design_entry_id]) {
+      clearTimeout(remarkTimeoutRefs.current[design_entry_id]!);
+      remarkTimeoutRefs.current[design_entry_id] = null;
     }
+    setEditingRemarks((prev) => ({
+      ...prev,
+      [design_entry_id]: { value, saving: false, saved: false },
+    }));
+    setTimeout(() => {
+      remarkInputRefs.current[design_entry_id]?.focus();
+    }, 0);
   };
 
-  const handleDelete = async (design_entry_id: number) => {
+  const saveRemark = async (design_entry_id: number, value: string, date: string) => {
+    setEditingRemarks((prev) => ({
+      ...prev,
+      [design_entry_id]: { ...prev[design_entry_id], saving: true, saved: false },
+    }));
     try {
-      // Update the design entry to set bhiwandi_date to null
       const { error } = await supabase
         .from("design_entries")
-        .update({ bhiwandi_date: null }) // Set bhiwandi_date to null
+        .update({ remark: value })
         .eq("id", design_entry_id);
-
       if (error) throw error;
-      fetchBhiwandiEntries();
-      toast({
-        title: "Success!",
-        description: "Design entry deleted from Bhiwandi List",
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: `Failed to delete design entry from Bhiwandi List: ${
-          error instanceof Error ? error.message : "Unknown error"
-        }`,
-        variant: "destructive",
-      });
-    }
-  };
-
-  const closeAllAccordions = () => {
-    setOpenAccordion(null);
-  };
-
-  const handleCheckboxChange = (entryDate: string) => {
-    const updatedSelection = new Set(selectedEntries);
-    if (updatedSelection.has(entryDate)) {
-      updatedSelection.delete(entryDate); // Deselect if already selected
-    } else {
-      updatedSelection.add(entryDate); // Select if not already selected
-    }
-    setSelectedEntries(updatedSelection); // Update state
-  };
-
-  const combineBhiwandiLists = async () => {
-    // Make the function async
-    if (selectedEntries.size < 2) {
-      toast({
-        title: "Error",
-        description: "Please select at least two entries to combine.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const today = new Date(
-      new Date().getTime() + 5.5 * 60 * 60 * 1000
-    ).toISOString();
-
-    const { error } = await supabase
-      .from("design_entries")
-      .update({ bhiwandi_date: today })
-      .in("bhiwandi_date", Array.from(selectedEntries)); // Update only for selected entries
-
-    if (error) {
-      toast({
-        title: "Error",
-        description: `Failed to combine Bhiwandi entries: ${
-          error instanceof Error ? error.message : "Unknown error"
-        }`,
-        variant: "destructive",
-      });
-      return; // Exit the function if there's an error
-    }
-
-    // Refresh the page if there are no errors
-    window.location.reload(); // Refresh the page
-  };
-
-  const handleCommentUpdate = async (
-    bhiwandi_date: string,
-    comment: string
-  ) => {
-    try {
-      const { error } = await supabase.from("bhiwandi_comments").upsert(
-        {
-          bhiwandi_date,
-          comment,
-        },
-        {
-          onConflict: "bhiwandi_date",
-        }
-      );
-
-      if (error) throw error;
-
-      setComments((prev) => ({
+      setDesignEntries((prev) => ({
         ...prev,
-        [bhiwandi_date]: comment,
+        [date]: prev[date].map((order) => ({
+          ...order,
+          entries: order.entries.map((entry) =>
+            entry.design_entry_id === design_entry_id ? { ...entry, remark: value } : entry
+          ),
+        })),
       }));
-      setEditingComment(null);
-
-      toast({
-        title: "Success!",
-        description: "Comment updated successfully",
-      });
+      // Mark as saved, then clear after a short delay
+      setEditingRemarks((prev) => ({
+        ...prev,
+        [design_entry_id]: { ...prev[design_entry_id], saving: false, saved: true },
+      }));
+      if (remarkTimeoutRefs.current[design_entry_id]) {
+        clearTimeout(remarkTimeoutRefs.current[design_entry_id]!);
+      }
+      remarkTimeoutRefs.current[design_entry_id] = setTimeout(() => {
+        setEditingRemarks((prev) => {
+          const { [design_entry_id]: _, ...rest } = prev;
+          return rest;
+        });
+        remarkTimeoutRefs.current[design_entry_id] = null;
+      }, 800);
     } catch (error) {
       toast({
         title: "Error",
-        description: `Failed to update comment: ${
-          error instanceof Error ? error.message : "Unknown error"
-        }`,
+        description: `Failed to update remark: ${error instanceof Error ? error.message : "Unknown error"}`,
         variant: "destructive",
+      });
+      setEditingRemarks((prev) => {
+        const { [design_entry_id]: _, ...rest } = prev;
+        return rest;
       });
     }
   };
 
-  // New function to handle updating remarks
-  const handleRemarkUpdate = async (
-    design_entry_id: number,
-    remark: string
-  ) => {
+  const handleCommentEdit = (bhiwandi_date: string, value: string) => {
+    setEditingComment({ bhiwandi_date, value, saved: false });
+    setTimeout(() => commentInputRef.current?.focus(), 0);
+  };
+
+  const saveComment = async (bhiwandi_date: string, value: string) => {
     try {
+      setEditingComment((prev) => prev && prev.bhiwandi_date === bhiwandi_date ? { ...prev, saved: true } : prev);
+      const { error } = await supabase.from("bhiwandi_comments").upsert(
+        { bhiwandi_date, comment: value },
+        { onConflict: "bhiwandi_date" }
+      );
+      if (error) throw error;
+      setComments((prev) => ({ ...prev, [bhiwandi_date]: value }));
+      setTimeout(() => setEditingComment(null), 800);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: `Failed to update comment: ${error instanceof Error ? error.message : "Unknown error"}`,
+        variant: "destructive",
+      });
+      setEditingComment(null);
+    }
+  };
+
+  const handleDelete = async (design_entry_id: number, date: string) => {
+    try {
+      setDesignEntries((prev) => ({
+        ...prev,
+        [date]: prev[date].map((order) => ({
+          ...order,
+          entries: order.entries.filter((entry) => entry.design_entry_id !== design_entry_id),
+        })).filter((order) => order.entries.length > 0),
+      }));
       const { error } = await supabase
         .from("design_entries")
-        .update({ remark })
+        .update({ bhiwandi_date: null })
         .eq("id", design_entry_id);
-
       if (error) throw error;
-
-      // Update the local state to reflect the changes
-      setDesignEntries(
-        designEntries.map((orderGroup) => ({
-          ...orderGroup,
-          entries: orderGroup.entries.map((entry) =>
-            entry.design_entry_id === design_entry_id
-              ? { ...entry, remark }
-              : entry
-          ),
-        }))
-      );
-
-      setEditingRemark(null);
-
-      toast({
-        title: "Success!",
-        description: "Remark updated successfully",
-      });
     } catch (error) {
       toast({
         title: "Error",
-        description: `Failed to update remark: ${
-          error instanceof Error ? error.message : "Unknown error"
-        }`,
+        description: `Failed to delete design entry: ${error instanceof Error ? error.message : "Unknown error"}`,
         variant: "destructive",
       });
     }
   };
 
+  // --- Batch Actions ---
+  const handleDateSelect = (date: string) => {
+    setSelectedDates((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(date)) newSet.delete(date);
+      else newSet.add(date);
+      return newSet;
+    });
+  };
+
+  const handleCombine = async () => {
+    if (selectedDates.size < 2) return;
+    try {
+      const today = new Date(new Date().getTime() + 5.5 * 60 * 60 * 1000).toISOString();
+      const { error } = await supabase
+        .from("design_entries")
+        .update({ bhiwandi_date: today })
+        .in("bhiwandi_date", Array.from(selectedDates));
+      if (error) throw error;
+      setBhiwandiEntries((prev) => prev.filter((e) => !selectedDates.has(e.bhiwandi_date)));
+      setSelectedDates(new Set());
+      setDesignEntries({});
+      fetchBhiwandiEntries();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: `Failed to combine entries: ${error instanceof Error ? error.message : "Unknown error"}`,
+        variant: "destructive",
+      });
+    }
+  };
+
+  // --- Render ---
   return (
     <div className="container mx-auto mt-10 text-center">
       <h1 className="text-2xl font-bold">Bhiwandi List</h1>
       <Button onClick={() => navigate("/")} className="mt-4 m-2">
         Back to Home
       </Button>
-
       <Button
-        onClick={combineBhiwandiLists}
-        disabled={selectedEntries.size < 2} // Disable if less than 2 selected
+        onClick={handleCombine}
+        disabled={selectedDates.size < 2}
         className="mt-4 m-2"
       >
         Combine
       </Button>
-
       <div className="mt-6">
         <Accordion
           type="single"
           collapsible
           className="w-full"
-          value={openAccordion as string | undefined}
-          onValueChange={setOpenAccordion}
+          value={expandedDate as string | undefined}
+          onValueChange={setExpandedDate}
         >
           {bhiwandiEntries.map((entry, index) => (
-            <AccordionItem key={index} value={`item-${index}`}>
+            <AccordionItem key={index} value={entry.bhiwandi_date}>
               <AccordionTrigger
                 className="p-4 flex justify-between items-center"
                 onClick={() => {
+                  setExpandedDate(expandedDate === entry.bhiwandi_date ? null : entry.bhiwandi_date);
                   fetchDesignEntries(entry.bhiwandi_date);
                 }}
               >
@@ -385,8 +365,11 @@ const BhiwandiList = () => {
                   <div>
                     <input
                       type="checkbox"
-                      checked={selectedEntries.has(entry.bhiwandi_date)}
-                      onChange={() => handleCheckboxChange(entry.bhiwandi_date)}
+                      checked={selectedDates.has(entry.bhiwandi_date)}
+                      onChange={e => {
+                        e.stopPropagation();
+                        handleDateSelect(entry.bhiwandi_date);
+                      }}
                       className="mr-2"
                     />
                     <span className="text-lg font-semibold">
@@ -397,39 +380,26 @@ const BhiwandiList = () => {
                     </span>
                   </div>
                   <div className="ml-4 flex items-center">
-                    {editingComment === entry.bhiwandi_date ? (
+                    {editingComment && editingComment.bhiwandi_date === entry.bhiwandi_date ? (
                       <input
                         type="text"
-                        value={comments[entry.bhiwandi_date] || ""}
-                        onChange={(e) => {
-                          setComments((prev) => ({
-                            ...prev,
-                            [entry.bhiwandi_date]: e.target.value,
-                          }));
+                        ref={commentInputRef}
+                        value={editingComment.value}
+                        onChange={e => setEditingComment({ ...editingComment, value: e.target.value, saved: false })}
+                        onBlur={() => saveComment(entry.bhiwandi_date, editingComment.value)}
+                        onKeyDown={e => {
+                          if (e.key === "Enter") saveComment(entry.bhiwandi_date, editingComment.value);
                         }}
-                        onBlur={() =>
-                          handleCommentUpdate(
-                            entry.bhiwandi_date,
-                            comments[entry.bhiwandi_date] || ""
-                          )
-                        }
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            handleCommentUpdate(
-                              entry.bhiwandi_date,
-                              comments[entry.bhiwandi_date] || ""
-                            );
-                          }
-                        }}
-                        onClick={(e) => e.stopPropagation()}
+                        onClick={e => e.stopPropagation()}
                         className="px-2 py-1 border rounded"
                         placeholder="NA"
+                        style={{ minWidth: 120 }}
                       />
                     ) : (
                       <span
-                        onClick={(e) => {
+                        onClick={e => {
                           e.stopPropagation();
-                          setEditingComment(entry.bhiwandi_date);
+                          handleCommentEdit(entry.bhiwandi_date, comments[entry.bhiwandi_date] || "");
                         }}
                         className="text-sm text-gray-600 cursor-pointer hover:text-gray-900"
                       >
@@ -442,19 +412,15 @@ const BhiwandiList = () => {
               <AccordionContent className="p-4 border rounded mt-2">
                 <div>
                   <Button
-                    onClick={() => {
-                      navigate(`/bhiwandi-list-print/:${entry.bhiwandi_date}`); // Navigate to BhiwandiListPrint with designEntries
-                    }}
+                    onClick={() => navigate(`/bhiwandi-list-print/:${entry.bhiwandi_date}`)}
                     className="mb-4"
                   >
                     Open PDF
                   </Button>
-                  {designEntries.map((orderGroup, orderIndex) => (
+                  {designEntries[entry.bhiwandi_date] && designEntries[entry.bhiwandi_date].map((orderGroup, orderIndex) => (
                     <div
                       key={orderIndex}
-                      className={
-                        orderIndex % 2 === 0 ? "bg-white" : "bg-gray-100"
-                      }
+                      className={orderIndex % 2 === 0 ? "bg-white" : "bg-gray-100"}
                     >
                       <p style={{ textAlign: "left" }}>
                         <strong>Bill To:</strong> {orderGroup.bill_to_party}
@@ -466,13 +432,12 @@ const BhiwandiList = () => {
                         <strong>Order No.:</strong> {orderGroup.order_no}
                       </p>
                       <p style={{ textAlign: "left" }}>
-                        <strong>Transport:</strong>{" "}
-                        {orderGroup.transporter_name}
+                        <strong>Transport:</strong> {orderGroup.transporter_name}
                       </p>
                       <div>
                         {orderGroup.entries.map((designEntry, designIndex) => (
                           <div
-                            key={designIndex}
+                            key={designEntry.design_entry_id}
                             className="flex justify-between border-b p-4"
                           >
                             <div className="text-left w-3/6">
@@ -484,32 +449,22 @@ const BhiwandiList = () => {
                               </p>
                               <div className="text-sm md:text-base">
                                 <span className="mr-2">Remark:</span>
-                                {editingRemark &&
-                                editingRemark.orderId === orderGroup.order_id &&
-                                editingRemark.entryIndex === designIndex ? (
+                                {editingRemarks[designEntry.design_entry_id] ? (
                                   <input
+                                    ref={el => (remarkInputRefs.current[designEntry.design_entry_id] = el)}
                                     type="text"
-                                    value={designEntry.remark || ""}
-                                    onChange={(e) => {
-                                      const updatedEntries = [...designEntries];
-                                      updatedEntries[orderIndex].entries[
-                                        designIndex
-                                      ].remark = e.target.value;
-                                      setDesignEntries(updatedEntries);
-                                    }}
-                                    onBlur={() =>
-                                      handleRemarkUpdate(
-                                        designEntry.design_entry_id,
-                                        designEntry.remark
-                                      )
-                                    }
-                                    onKeyDown={(e) => {
-                                      if (e.key === "Enter") {
-                                        handleRemarkUpdate(
-                                          designEntry.design_entry_id,
-                                          designEntry.remark
-                                        );
-                                      }
+                                    value={editingRemarks[designEntry.design_entry_id].value}
+                                    onChange={e => setEditingRemarks(prev => ({
+                                      ...prev,
+                                      [designEntry.design_entry_id]: {
+                                        ...prev[designEntry.design_entry_id],
+                                        value: e.target.value,
+                                        saved: false,
+                                      },
+                                    }))}
+                                    onBlur={() => saveRemark(designEntry.design_entry_id, editingRemarks[designEntry.design_entry_id].value, entry.bhiwandi_date)}
+                                    onKeyDown={e => {
+                                      if (e.key === "Enter") saveRemark(designEntry.design_entry_id, editingRemarks[designEntry.design_entry_id].value, entry.bhiwandi_date);
                                     }}
                                     className="px-2 py-1 border rounded"
                                     placeholder="Enter remark"
@@ -517,14 +472,7 @@ const BhiwandiList = () => {
                                   />
                                 ) : (
                                   <span
-                                    onClick={() =>
-                                      setEditingRemark({
-                                        orderId: orderGroup.order_id,
-                                        entryIndex: designIndex,
-                                        design_entry_id:
-                                          designEntry.design_entry_id,
-                                      })
-                                    }
+                                    onClick={() => handleRemarkEdit(designEntry.design_entry_id, designEntry.remark || "")}
                                     className="cursor-pointer hover:text-blue-600 hover:underline"
                                   >
                                     {designEntry.remark || "N/A"}
@@ -554,16 +502,7 @@ const BhiwandiList = () => {
                               <Button
                                 variant="destructive"
                                 size="sm"
-                                onClick={() => {
-                                  handleDelete(designEntry.design_entry_id);
-                                  setDesignEntries(
-                                    designEntries.filter(
-                                      (entry) =>
-                                        entry.order_id !== orderGroup.order_id
-                                    )
-                                  );
-                                  closeAllAccordions();
-                                }}
+                                onClick={() => handleDelete(designEntry.design_entry_id, entry.bhiwandi_date)}
                               >
                                 X
                               </Button>
@@ -584,4 +523,4 @@ const BhiwandiList = () => {
   );
 };
 
-export default BhiwandiList;
+export default BhiwandiListModern; 
