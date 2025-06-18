@@ -62,6 +62,7 @@ function DesignReports() {
   const [newShadeName, setNewShadeName] = useState("");
   const [newShadeValue, setNewShadeValue] = useState("");
   const { toast } = useToast();
+  const [customPrefix, setCustomPrefix] = useState("");
 
   useEffect(() => {
     fetchDesignCounts();
@@ -182,6 +183,10 @@ function DesignReports() {
           const numB = Number(b.design.split("-").pop());
           return numA - numB;
         });
+    } else if (filter === "prefix") {
+      return designCounts
+        .filter((item) => item.design.startsWith(customPrefix))
+        .sort((a, b) => a.design.localeCompare(b.design));
     } else {
       return designCounts
         .filter(
@@ -297,20 +302,13 @@ function DesignReports() {
 
     // Sort shade names numerically
     const shadeNames = Array.from(allShades).sort((a, b) => {
-      // Extract numbers from shade names
       const numA = parseInt(a.replace(/[^0-9]/g, ''));
       const numB = parseInt(b.replace(/[^0-9]/g, ''));
-      
-      // If both are numbers, sort numerically
       if (!isNaN(numA) && !isNaN(numB)) {
         return numA - numB;
       }
-      
-      // If only one is a number, put numbers first
       if (!isNaN(numA)) return -1;
       if (!isNaN(numB)) return 1;
-      
-      // If neither is a number, sort alphabetically
       return a.localeCompare(b);
     });
 
@@ -329,10 +327,35 @@ function DesignReports() {
         completeShadeSequence.push(`Shade ${i}`);
       }
     }
-
     // Add non-numeric shades at the end
     const nonNumericShades = shadeNames.filter(name => isNaN(parseInt(name.replace(/[^0-9]/g, ''))));
     completeShadeSequence.push(...nonNumericShades);
+
+    // Precompute totals for all selected entries (for all sections)
+    // 1. For each shade, sum across all selected entries
+    const totalPerShade: { [shade: string]: number } = {};
+    completeShadeSequence.forEach(shadeName => {
+      let total = 0;
+      selectedEntries.forEach(entry => {
+        const shade = entry.shades.find(s => Object.keys(s)[0] === shadeName);
+        total += shade ? parseFloat(shade[shadeName]) || 0 : 0;
+      });
+      totalPerShade[shadeName] = total;
+    });
+    // 2. For each entry, sum all its shades
+    const totalPerEntry: { [entryId: number]: number } = {};
+    selectedEntries.forEach(entry => {
+      totalPerEntry[entry.id] = entry.shades.reduce((sum, shade) => {
+        const value = parseFloat(Object.values(shade)[0]) || 0;
+        return sum + value;
+      }, 0);
+    });
+    // 3. Grand total (sum of all values for all selected entries)
+    const grandTotal = selectedEntries.reduce((sum, entry) => {
+      return sum + entry.shades.reduce((entrySum, shade) => {
+        return entrySum + (parseFloat(Object.values(shade)[0]) || 0);
+      }, 0);
+    }, 0);
 
     // Function to create a table section
     const createTableSection = (entries: OrderDetail[], startIndex: number, endIndex: number, isLastSection: boolean) => {
@@ -360,7 +383,8 @@ function DesignReports() {
                 const shade = entry.shades.find(s => Object.keys(s)[0] === shadeName);
                 return shade ? parseFloat(shade[shadeName]) || 0 : 0;
               });
-              const total = rowData.reduce((sum, val) => sum + val, 0);
+              // Total for this shade across ALL selected entries
+              const total = totalPerShade[shadeName];
               return `
                 <tr class="${isMissingShade ? 'empty-row' : ''}">
                   <td class="shade-column">${shadeName}</td>
@@ -380,17 +404,10 @@ function DesignReports() {
               <tr class="total-row">
                 <td class="shade-column">Total</td>
                 ${sectionEntries.map(entry => {
-                  const total = entry.shades.reduce((sum, shade) => {
-                    const value = parseFloat(Object.values(shade)[0]) || 0;
-                    return sum + value;
-                  }, 0);
+                  const total = totalPerEntry[entry.id];
                   return `<td>${total.toFixed(2)}</td>`;
                 }).join('')}
-                <td>${sectionEntries.reduce((sum, entry) => {
-                  return sum + entry.shades.reduce((entrySum, shade) => {
-                    return entrySum + (parseFloat(Object.values(shade)[0]) || 0);
-                  }, 0);
-                }, 0).toFixed(2)}</td>
+                <td>${grandTotal.toFixed(2)}</td>
                 <td class="empty-column"></td>
                 <td class="empty-column"></td>
                 <td class="empty-column"></td>
@@ -513,7 +530,6 @@ function DesignReports() {
             })}</div>
           </div>
           ${needsSplit ? (
-            // Split into multiple tables
             Array.from({ length: Math.ceil(selectedEntries.length / (columnsPerTable - 5)) }, (_, i) => {
               const startIndex = i * (columnsPerTable - 5);
               const endIndex = Math.min(startIndex + (columnsPerTable - 5), selectedEntries.length);
@@ -525,7 +541,6 @@ function DesignReports() {
               `;
             }).join('')
           ) : (
-            // Single table
             createTableSection(selectedEntries, 0, selectedEntries.length, true)
           )}
         </body>
@@ -537,6 +552,51 @@ function DesignReports() {
     if (reportWindow) {
       reportWindow.document.write(htmlContent);
       reportWindow.document.close();
+    }
+  };
+
+  const areAllEntriesSelectedForDesign = (design: string) => {
+    const orders = designOrders[design] || [];
+    if (!orders.length) return false;
+    return orders.every(order => selectedEntries.some(e => e.id === order.id));
+  };
+
+  const handleSelectAllForDesign = async (design: string) => {
+    let orders = designOrders[design];
+    if (!orders) {
+      // Fetch and use the result directly
+      try {
+        const { data, error } = await supabase.rpc("get_orders_by_design", {
+          design_input: design,
+        });
+        if (error) throw error;
+        orders = data.map((entry: any) => ({
+          partyName: entry.party_name,
+          shades: entry.shades,
+          order_remark: entry.order_remark,
+          id: entry.id,
+          price: entry.price,
+          part: entry.part,
+          entry_remark: entry.entry_remark,
+          order_date: entry.order_date,
+          order_no: entry.order_no,
+          design: design,
+        }));
+        setDesignOrders((prev) => ({ ...prev, [design]: orders }));
+      } catch (err) {
+        console.error("Error fetching order details for select all:", err);
+        return;
+      }
+    }
+    const allSelected = areAllEntriesSelectedForDesign(design);
+    if (allSelected) {
+      setSelectedEntries(prev => prev.filter(entry => entry.design !== design));
+    } else {
+      setSelectedEntries(prev => {
+        const existingIds = new Set(prev.map(e => e.id));
+        const toAdd = (orders || []).filter(order => !existingIds.has(order.id));
+        return [...prev, ...toAdd];
+      });
     }
   };
 
@@ -575,7 +635,21 @@ function DesignReports() {
             <ToggleGroupItem value="Design No." aria-label="Show Design No.">
               Design No.
             </ToggleGroupItem>
+            <ToggleGroupItem value="prefix" aria-label="Show prefix">
+              Prefix
+            </ToggleGroupItem>
           </ToggleGroup>
+          {filter === "prefix" && (
+            <div className="flex items-center gap-2 mt-2">
+              <Input
+                placeholder="Enter prefix..."
+                value={customPrefix}
+                onChange={e => setCustomPrefix(e.target.value)}
+                className="w-48"
+              />
+              <span className="text-sm text-gray-500">Filtering designs starting with: <b>{customPrefix || "(none)"}</b></span>
+            </div>
+          )}
           <Sheet open={isReportDrawerOpen} onOpenChange={setIsReportDrawerOpen}>
             <SheetTrigger asChild>
               <Button variant="outline" className="relative">
@@ -649,17 +723,30 @@ function DesignReports() {
       >
         {filteredDesignCounts().map((item, index) => (
           <AccordionItem key={index} value={`item-${index}`}>
-            <AccordionTrigger
-              className="text-lg flex justify-between items-center w-full hover:bg-gray-50"
-              onClick={() => fetchOrderDetails(item.design)}
-            >
-              <div className="flex items-center gap-2">
-                <span className="text-left font-medium">{item.design}</span>
-                <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
-                  {item.count} orders
-                </span>
-              </div>
-            </AccordionTrigger>
+            <div className="flex items-center justify-between w-full">
+              <AccordionTrigger
+                className="text-lg flex items-center w-full hover:bg-gray-50"
+                onClick={() => fetchOrderDetails(item.design)}
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-left font-medium">{item.design}</span>
+                  <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                    {item.count} orders
+                  </span>
+                </div>
+              </AccordionTrigger>
+              <Button
+                size="sm"
+                variant={areAllEntriesSelectedForDesign(item.design) ? "destructive" : "outline"}
+                className="ml-2 whitespace-nowrap"
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  await handleSelectAllForDesign(item.design);
+                }}
+              >
+                {areAllEntriesSelectedForDesign(item.design) ? "Deselect All" : "Select All"}
+              </Button>
+            </div>
             <AccordionContent>
               {designOrders[item.design] ? (
                 <div className="overflow-x-auto">
