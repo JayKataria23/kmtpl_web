@@ -276,10 +276,12 @@ export default function BhiwandiDesigns() {
   };
 
   return (
-    <div className="container mx-auto py-8 px-4">
-      <div className="sticky top-0 z-10 bg-white p-2 shadow-sm mb-4">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 mb-2">
-          <Button onClick={() => navigate("/")}>Back to Home</Button>
+    <div className="container mx-auto mt-4 p-2 sm:p-4 relative">
+      <div className="sticky top-0 bg-white z-10 p-2 shadow-sm">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 mb-4">
+          <Button onClick={() => navigate("/")} className="w-full sm:w-auto">
+            Back to Home
+          </Button>
           <h1 className="text-2xl font-bold">Bhiwandi Designs</h1>
           <Sheet open={isDispatchDrawerOpen} onOpenChange={setIsDispatchDrawerOpen}>
             <SheetTrigger asChild>
@@ -306,8 +308,11 @@ export default function BhiwandiDesigns() {
                 </Button>
               )}
               <div className="mt-4 space-y-4 overflow-y-auto max-h-[calc(100vh-180px)] [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                {dispatchEntries.length === 0 && (
+                  <p className="text-center text-gray-500">No entries selected</p>
+                )}
                 {dispatchEntries.map((entry) => (
-                  <div key={entry.id} className="p-4 border rounded-lg relative">
+                  <div key={entry.id} className="p-4 border rounded-lg relative mb-2 bg-white">
                     <Button
                       variant="ghost"
                       size="icon"
@@ -316,11 +321,11 @@ export default function BhiwandiDesigns() {
                     >
                       <X className="h-4 w-4" />
                     </Button>
-                    <h3 className="font-medium">{entry.bill_to_party}</h3>
-                    <p className="text-sm text-gray-600">Order No: {entry.order_no}</p>
-                    <p className="text-sm text-gray-600">Price: ₹{entry.price}</p>
+                    <div className="font-medium">{entry.bill_to_party}</div>
+                    <div className="text-xs text-gray-500 mt-1">Order No: {entry.order_no}</div>
+                    <div className="text-xs text-gray-500 mt-1">Price: ₹{entry.price}</div>
                     <div className="mt-2">
-                      <h4 className="text-sm font-medium">Shades:</h4>
+                      <h4 className="text-xs font-medium">Shades:</h4>
                       <div className="flex flex-wrap gap-2">
                         {entry.shades && entry.shades.map((shade, idx) => {
                           const shadeName = Object.keys(shade)[0];
@@ -336,9 +341,6 @@ export default function BhiwandiDesigns() {
                     </div>
                   </div>
                 ))}
-                {dispatchEntries.length === 0 && (
-                  <p className="text-center text-gray-500">No entries selected</p>
-                )}
               </div>
             </SheetContent>
           </Sheet>
@@ -385,88 +387,118 @@ export default function BhiwandiDesigns() {
           value={openAccordionItems}
           onValueChange={handleAccordionChange}
         >
-          {filteredDesignCounts().map((item) => (
+          {filteredDesignCounts().map((item, index) => (
             <AccordionItem key={item.design} value={item.design}>
-              <AccordionTrigger className="flex items-center justify-between">
-                <span className="font-medium">{item.design}</span>
-                <span className="text-xs bg-gray-100 text-gray-700 px-2 py-0.5 rounded-full ml-2">{item.count} entries</span>
-              </AccordionTrigger>
+              <div className="flex items-center justify-between w-full">
+                <AccordionTrigger className="text-lg flex items-center w-full hover:bg-gray-50">
+                  <div className="flex items-center gap-2">
+                    <span className="text-left font-medium">{item.design}</span>
+                    <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                      {item.count} entries
+                    </span>
+                  </div>
+                </AccordionTrigger>
+              </div>
               <AccordionContent>
                 {loadingEntries[item.design] ? (
-                  <p>Loading entries...</p>
+                  <div className="p-4 text-center text-gray-500">Loading entries...</div>
                 ) : designEntries[item.design] && designEntries[item.design].length > 0 ? (
-                  <div className="space-y-4">
-                    {designEntries[item.design].map((entry) => (
-                      <div key={entry.id} className="p-4 border rounded-lg bg-white">
-                        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-2">
-                          <div>
-                            <span className="font-semibold">Bill to Party:</span> {entry.bill_to_party}
-                          </div>
-                          <div>
-                            <span className="font-semibold">Order No:</span> {entry.order_no}
-                          </div>
-                          <div>
-                            <span className="font-semibold">Price:</span> ₹{entry.price}
-                          </div>
-                        </div>
-                        <div className="mb-1">
-                          <span className="font-semibold">Remark:</span> {entry.remark || <span className="text-gray-400">None</span>}
-                        </div>
-                        <div className="mb-1">
-                          <span className="font-semibold">Order Remark:</span> {entry.order_remark || <span className="text-gray-400">None</span>}
-                        </div>
-                        <div className="mb-1">
-                          <span className="font-semibold">Bhiwandi Date:</span> {formatDate(entry.bhiwandi_date)}
-                        </div>
-                        <div className="mb-1">
-                          <span className="font-semibold">Shades:</span>
-                          <div className="flex flex-wrap gap-2 mt-1">
-                            {entry.shades && entry.shades.length > 0 ? (
-                              entry.shades.map((shade, idx) => {
-                                const shadeName = Object.keys(shade)[0];
-                                const shadeValue = shade[shadeName];
-                                if (!shadeValue) return null;
-                                return (
-                                  <span key={idx} className="bg-gray-100 px-2 py-1 rounded text-xs">
-                                    {shadeName}: {shadeValue}m
-                                  </span>
-                                );
-                              })
-                            ) : (
-                              <span className="text-gray-400">No shades</span>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex justify-end mt-2 gap-2">
-                          <button
-                            className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-xs"
-                            onClick={() => handleRemoveBhiwandiDate(item.design, entry.id)}
+                  <div className="overflow-x-auto">
+                    <div className="min-w-full divide-y divide-gray-200">
+                      {designEntries[item.design].map((entry) => {
+                        const isSelected = dispatchEntries.some((e) => e.id === entry.id);
+                        return (
+                          <div
+                            key={entry.id}
+                            className={`p-4 border rounded-lg mb-2 relative ${
+                              isSelected
+                                ? "bg-green-100 border-green-400"
+                                : "bg-white"
+                            }`}
                           >
-                            Remove Bhiwandi Date
-                          </button>
-                          {dispatchEntries.some((e) => e.id === entry.id) ? (
-                            <Button
-                              className="px-3 py-1 text-xs bg-red-500 hover:bg-red-600 text-white"
-                              variant="destructive"
-                              onClick={() => handleRemoveFromDispatch(entry.id)}
-                            >
-                              Remove from Dispatch
-                            </Button>
-                          ) : (
-                            <Button
-                              className="px-3 py-1 text-xs"
-                              variant="outline"
-                              onClick={() => handleAddToDispatch(entry)}
-                            >
-                              Add to Dispatch
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    ))}
+                            <div className="flex flex-row sm:flex-row gap-4">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <h3 className="text-base font-medium">
+                                    {entry.bill_to_party}
+                                  </h3>
+                                </div>
+                                <div className="space-y-1 text-sm text-gray-600">
+                                  <p>
+                                    <span className="font-medium">Order No:</span> {entry.order_no}
+                                  </p>
+                                  <p>
+                                    <span className="font-medium">Price:</span> ₹{entry.price}
+                                  </p>
+                                  <p>
+                                    <span className="font-medium">Bhiwandi Date:</span> {formatDate(entry.bhiwandi_date)}
+                                  </p>
+                                  <p>
+                                    <span className="font-medium">Remark:</span> {entry.remark || <span className="text-gray-400">None</span>}
+                                  </p>
+                                  <p>
+                                    <span className="font-medium">Order Remark:</span> {entry.order_remark || <span className="text-gray-400">None</span>}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="flex flex-row gap-2 sm:w-48">
+                                <div className="bg-gray-50 p-2 rounded-lg">
+                                  <h4 className="text-sm font-medium mb-2">Shades</h4>
+                                  <div className="space-y-1">
+                                    {entry.shades && entry.shades.length > 0 ? (
+                                      entry.shades.map((shade, idx) => {
+                                        const shadeName = Object.keys(shade)[0];
+                                        const shadeValue = shade[shadeName];
+                                        if (!shadeValue) return null;
+                                        return (
+                                          <div key={idx} className="text-sm">
+                                            <span className="font-medium">{shadeName}:</span> {shadeValue}m
+                                          </div>
+                                        );
+                                      })
+                                    ) : (
+                                      <span className="text-gray-400">No shades</span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex gap-2 mt-4 justify-end">
+                              <Button
+                                className="flex-1"
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => handleRemoveBhiwandiDate(item.design, entry.id)}
+                              >
+                                Remove Bhiwandi Date
+                              </Button>
+                              {isSelected ? (
+                                <Button
+                                  className="flex-1"
+                                  variant="destructive"
+                                  size="sm"
+                                  onClick={() => handleRemoveFromDispatch(entry.id)}
+                                >
+                                  Remove from Dispatch
+                                </Button>
+                              ) : (
+                                <Button
+                                  className="flex-1 bg-green-500 hover:bg-green-600 text-white"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleAddToDispatch(entry)}
+                                >
+                                  Add to Dispatch
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 ) : (
-                  <p className="text-gray-500">No entries found for this design.</p>
+                  <div className="p-4 text-center text-gray-500">No entries found for this design.</div>
                 )}
               </AccordionContent>
             </AccordionItem>
