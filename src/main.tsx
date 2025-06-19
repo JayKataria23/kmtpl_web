@@ -32,6 +32,7 @@ import DyeingBook from "./pages/DyeingBook";
 import SalesRegister from "./pages/SalesRegister";
 import PrintProgram from "./pages/PrintProgram";
 import DesignReports from "./pages/DesignReports";
+import BhiwandiDesigns from "./pages/BhiwandiDesigns";
 
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
@@ -195,6 +196,14 @@ createRoot(document.getElementById("root")!).render(
             element={
               <ProtectedRoute>
                 <DesignReports />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/bhiwandi-designs"
+            element={
+              <ProtectedRoute>
+                <BhiwandiDesigns />
               </ProtectedRoute>
             }
           />

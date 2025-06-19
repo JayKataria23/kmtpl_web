@@ -22,6 +22,7 @@ export default function HomePage() {
         { path: "/order-file", label: "Design Wise Order" },
         { path: "/party-file", label: "Party Wise Order" },
         { path: "/bhiwandi-list", label: "Bhiwandi List" },
+        { path: "/bhiwandi-designs", label: "Bhiwandi Designs" },
       ],
     },
     {
