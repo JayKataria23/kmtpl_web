@@ -54,6 +54,13 @@ export default function HomePage() {
         { path: "/print-program", label: "Print Program" },
       ],
     },
+    {
+      title: "Dispatch",
+      items: [
+        { path: "/dispatch-list", label: "Dispatch List" },
+        { path: "/party-dispatch-list", label: "Party Dispatch List" },
+      ],
+    },
   ];
 
   return (
