@@ -387,7 +387,7 @@ export default function BhiwandiDesigns() {
           value={openAccordionItems}
           onValueChange={handleAccordionChange}
         >
-          {filteredDesignCounts().map((item, index) => (
+          {filteredDesignCounts().map((item) => (
             <AccordionItem key={item.design} value={item.design}>
               <div className="flex items-center justify-between w-full">
                 <AccordionTrigger className="text-lg flex items-center w-full hover:bg-gray-50">
