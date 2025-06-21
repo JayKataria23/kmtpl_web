@@ -63,6 +63,8 @@ function DesignReports() {
   const [newShadeValue, setNewShadeValue] = useState("");
   const { toast } = useToast();
   const [customPrefix, setCustomPrefix] = useState("");
+  const [totalShades, setTotalShades] = useState<number | null>(null);
+  const [isSavingTotalShades, setIsSavingTotalShades] = useState(false);
 
   useEffect(() => {
     fetchDesignCounts();
@@ -203,10 +205,21 @@ function DesignReports() {
     }
   };
 
-  const handleEditShades = (order: OrderDetail) => {
+  const handleEditShades = async (order: OrderDetail) => {
     setSelectedOrder(order);
     setEditedShades([...order.shades]);
     setIsEditDialogOpen(true);
+    // Fetch total_shades from designs table
+    const { data, error } = await supabase
+      .from("designs")
+      .select("total_shades")
+      .eq("title", order.design)
+      .single();
+    if (!error && data && typeof data.total_shades === 'number') {
+      setTotalShades(data.total_shades);
+    } else {
+      setTotalShades(null);
+    }
   };
 
   const handleSaveShades = async () => {
@@ -866,6 +879,40 @@ function DesignReports() {
             <DialogTitle>Edit Shades</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <div className="text-sm text-blue-700 font-medium bg-blue-50 rounded p-2 flex items-center gap-2">
+                Total Shades for this design:
+                <input
+                  type="number"
+                  min={0}
+                  value={totalShades ?? 0}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTotalShades(parseInt(e.target.value, 10) || 0)}
+                  className="ml-2 w-16 border border-blue-300 rounded px-2 py-1 text-blue-900 bg-white"
+                  style={{ fontWeight: 600 }}
+                />
+                <Button
+                  size="sm"
+                  className="ml-2"
+                  disabled={isSavingTotalShades || !selectedOrder}
+                  onClick={async () => {
+                    if (!selectedOrder) return;
+                    setIsSavingTotalShades(true);
+                    const { error } = await supabase
+                      .from("designs")
+                      .update({ total_shades: totalShades ?? 0 })
+                      .eq("title", selectedOrder.design);
+                    setIsSavingTotalShades(false);
+                    if (!error) {
+                      toast({ title: "Success", description: "Total shades updated." });
+                    } else {
+                      toast({ title: "Error", description: "Failed to update total shades.", variant: "destructive" });
+                    }
+                  }}
+                >
+                  Save
+                </Button>
+              </div>
+            </div>
             <div className="max-h-[300px] overflow-y-auto space-y-2">
               {editedShades.map((shade, index) => {
                 const shadeName = Object.keys(shade)[0];
@@ -887,6 +934,36 @@ function DesignReports() {
                       >
                         +50
                       </Button>
+                      {shadeName === 'All Colours' && (
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          className="ml-2"
+                          onClick={() => {
+                            if (!totalShades || totalShades < 1) return;
+                            const allColoursValue = shade[shadeName];
+                            if (!allColoursValue || isNaN(Number(allColoursValue))) return;
+                            setEditedShades(prev => {
+                              // Remove existing numeric shades 1..totalShades
+                              const filtered = prev.filter(s => {
+                                const n = Number(Object.keys(s)[0]);
+                                return isNaN(n) || n < 1 || n > totalShades;
+                              });
+                              // Add/replace numeric shades 1..totalShades with the value
+                              const newShades = [...filtered];
+                              for (let i = 1; i <= totalShades; i++) {
+                                newShades.push({ [i.toString()]: allColoursValue });
+                              }
+                              // Set All Colours to blank
+                              return newShades.map(s =>
+                                Object.keys(s)[0] === 'All Colours' ? { 'All Colours': '' } : s
+                              );
+                            });
+                          }}
+                        >
+                          Apply to All
+                        </Button>
+                      )}
                     </div>
                     <span className="text-sm text-gray-500">m</span>
                     <Button
