@@ -312,7 +312,7 @@ const PartyDispatchList = () => {
     let totalMeters = 0;
     let totalEntries = 0;
 
-    party.designs.forEach((design, dIdx) => {
+    party.designs.forEach((design) => {
       content += `
         <div class="design-section" style="page-break-inside: avoid; margin-bottom: 28px;">
           <h3 style="margin-bottom:10px; font-size:1.25em; font-weight:700; color:#0d47a1; letter-spacing:0.5px;">${design.design} <span style="font-weight:normal; font-size:1em; color:#333;">(Price: ${design.entries[0].price})</span></h3>
