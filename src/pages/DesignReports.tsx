@@ -916,64 +916,67 @@ function DesignReports() {
             <div className="max-h-[300px] overflow-y-auto space-y-2">
               {editedShades.map((shade, index) => {
                 const shadeName = Object.keys(shade)[0];
+                const isAllColours = shadeName === 'All Colours';
                 return (
-                  <div key={index} className="flex items-center gap-2 bg-gray-50 p-2 rounded-lg">
-                    <span className="font-medium min-w-[80px]">{shadeName}</span>
-                    <div className="flex items-center gap-1">
-                      <Input
-                        type="number"
-                        value={shade[shadeName]}
-                        onChange={(e) => handleUpdateShade(index, e.target.value)}
-                        className="w-24"
-                      />
-                      <Button
-                        onClick={() => handleAddFifty(index)}
-                        size="sm"
-                        variant="outline"
-                        className="px-2"
-                      >
-                        +50
-                      </Button>
-                      {shadeName === 'All Colours' && (
+                  <div key={index} className="flex flex-col gap-1 bg-gray-50 p-2 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium min-w-[80px]">{shadeName}</span>
+                      <div className="flex items-center gap-1">
+                        <Input
+                          type="number"
+                          value={shade[shadeName]}
+                          onChange={(e) => handleUpdateShade(index, e.target.value)}
+                          className="w-24"
+                        />
                         <Button
+                          onClick={() => handleAddFifty(index)}
                           size="sm"
-                          variant="secondary"
-                          className="ml-2"
-                          onClick={() => {
-                            if (!totalShades || totalShades < 1) return;
-                            const allColoursValue = shade[shadeName];
-                            if (!allColoursValue || isNaN(Number(allColoursValue))) return;
-                            setEditedShades(prev => {
-                              // Remove existing numeric shades 1..totalShades
-                              const filtered = prev.filter(s => {
-                                const n = Number(Object.keys(s)[0]);
-                                return isNaN(n) || n < 1 || n > totalShades;
-                              });
-                              // Add/replace numeric shades 1..totalShades with the value
-                              const newShades = [...filtered];
-                              for (let i = 1; i <= totalShades; i++) {
-                                newShades.push({ [i.toString()]: allColoursValue });
-                              }
-                              // Set All Colours to blank
-                              return newShades.map(s =>
-                                Object.keys(s)[0] === 'All Colours' ? { 'All Colours': '' } : s
-                              );
-                            });
-                          }}
+                          variant="outline"
+                          className="px-2"
                         >
-                          Apply to All
+                          +50
                         </Button>
-                      )}
+                      </div>
+                      <span className="text-sm text-gray-500">m</span>
+                      <Button
+                        onClick={() => handleRemoveShade(index)}
+                        variant="destructive"
+                        size="sm"
+                        className="ml-auto"
+                      >
+                        Remove
+                      </Button>
                     </div>
-                    <span className="text-sm text-gray-500">m</span>
-                    <Button
-                      onClick={() => handleRemoveShade(index)}
-                      variant="destructive"
-                      size="sm"
-                      className="ml-auto"
-                    >
-                      Remove
-                    </Button>
+                    {isAllColours && (
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        className="w-full mt-2"
+                        onClick={() => {
+                          if (!totalShades || totalShades < 1) return;
+                          const allColoursValue = shade[shadeName];
+                          if (!allColoursValue || isNaN(Number(allColoursValue))) return;
+                          setEditedShades(prev => {
+                            // Remove existing numeric shades 1..totalShades
+                            const filtered = prev.filter(s => {
+                              const n = Number(Object.keys(s)[0]);
+                              return isNaN(n) || n < 1 || n > totalShades;
+                            });
+                            // Add/replace numeric shades 1..totalShades with the value
+                            const newShades = [...filtered];
+                            for (let i = 1; i <= totalShades; i++) {
+                              newShades.push({ [i.toString()]: allColoursValue });
+                            }
+                            // Set All Colours to blank
+                            return newShades.map(s =>
+                              Object.keys(s)[0] === 'All Colours' ? { 'All Colours': '' } : s
+                            );
+                          });
+                        }}
+                      >
+                        Apply to All
+                      </Button>
+                    )}
                   </div>
                 );
               })}
