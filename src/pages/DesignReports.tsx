@@ -15,6 +15,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -740,7 +741,9 @@ function DesignReports() {
                       </div>
                     </div>
                     <div className="mt-2 text-sm">
-                      <span className="font-medium">Program:</span> {entry.program || <span className="text-gray-400">(none)</span>}
+                      <span className="font-medium">Program:</span> {entry.program && (
+                        <span className="text-blue-600">{entry.program}</span>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -836,6 +839,11 @@ function DesignReports() {
                                   {order.entry_remark && (
                                     <p>
                                       <span className="font-medium">Entry Remark:</span> {order.entry_remark}
+                                    </p>
+                                  )}
+                                  {order.program && (
+                                    <p className="text-blue-600">
+                                      Program Entry No.:{order.program}
                                     </p>
                                   )}
                                 </div>
@@ -1052,9 +1060,12 @@ function DesignReports() {
       </Dialog>
 
       <Dialog open={isProgramDialogOpen} onOpenChange={setIsProgramDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>Edit Program Entry No.</DialogTitle>
+            <DialogDescription>
+              Enter or update the program entry number for this design entry.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <Input
