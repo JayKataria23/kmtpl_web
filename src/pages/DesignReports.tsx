@@ -73,6 +73,9 @@ function DesignReports() {
   const [lastProgramInput, setLastProgramInput] = useState("");
   const [showProgramView, setShowProgramView] = useState(false);
   const [programExtras, setProgramExtras] = useState<{ [design: string]: { [shade: string]: number } }>({});
+  const [programTableTitle, setProgramTableTitle] = useState("");
+  const [programEntryNo, setProgramEntryNo] = useState("");
+  const [programLotNo, setProgramLotNo] = useState("");
 
   useEffect(() => {
     fetchDesignCounts();
@@ -680,6 +683,8 @@ function DesignReports() {
       if (hasExtra) partyNames += " (extra)";
       return { taka, design, orderStr, partyNames };
     });
+    // Calculate total taka
+    const totalTaka = rows.reduce((sum, row) => sum + parseFloat(row.taka), 0).toFixed(2);
     // Generate HTML
     const htmlContent = `
       <!DOCTYPE html>
@@ -693,34 +698,61 @@ function DesignReports() {
             th { background-color: #f5f5f5; font-weight: 600; }
             h2 { font-size: 18px; margin: 0 0 10px 0; }
             .no-print { margin-bottom: 10px; }
+            .total-taka-row { font-size: 1.5em; font-weight: bold; margin-top: 24px; text-align: center; }
             @media print { .no-print { display: none; } }
           </style>
         </head>
         <body>
           <div class="no-print">
             <button onclick="window.print()">Print Program</button>
+            <button style="margin-left:10px;" onclick="printWithoutParty()">Print Program Without Party</button>
           </div>
-          <h2>Program Table</h2>
-          <table>
-            <thead>
-              <tr>
-                <th>Taka</th>
-                <th>Design</th>
-                <th>Order</th>
-                <th>Party</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${rows.map(row => `
+          <div style="text-align:center; margin-bottom: 10px;">
+            <div style="font-size:1.3em; font-weight:bold;">${programTableTitle || "Program Table"}</div>
+          </div>
+          <div id="program-table-container">
+            <table id="program-table">
+              <thead>
                 <tr>
-                  <td>${row.taka}</td>
-                  <td>${row.design}</td>
-                  <td>${row.orderStr}</td>
-                  <td>${row.partyNames}</td>
+                  <th>Taka</th>
+                  <th>Design</th>
+                  <th>Order</th>
+                  <th class="party-col">Party</th>
                 </tr>
-              `).join("")}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                ${rows.map(row => `
+                  <tr>
+                    <td>${row.taka}</td>
+                    <td>${row.design}</td>
+                    <td>${row.orderStr}</td>
+                    <td class="party-col">${row.partyNames}</td>
+                  </tr>
+                `).join("")}
+              </tbody>
+            </table>
+          </div>
+          <script>
+            function printWithoutParty() {
+              // Hide party column
+              var partyHeaders = document.querySelectorAll('.party-col');
+              partyHeaders.forEach(function(el) { el.style.display = 'none'; });
+              // Hide header
+              var ths = document.querySelectorAll('th.party-col');
+              ths.forEach(function(el) { el.style.display = 'none'; });
+              window.print();
+              // Restore after print
+              setTimeout(function() {
+                partyHeaders.forEach(function(el) { el.style.display = ''; });
+                ths.forEach(function(el) { el.style.display = ''; });
+              }, 500);
+            }
+          </script>
+          <div class="total-taka-row">Total Taka: ${totalTaka}</div>
+          ${(programEntryNo || programLotNo) ? `<div class="total-taka-row" style="margin-top: 10px;">
+            ${programEntryNo ? `Entry No.: ${programEntryNo}` : ""}
+            ${programLotNo ? `&nbsp;&nbsp;Lot No.: ${programLotNo}` : ""}
+          </div>` : ""}
         </body>
       </html>
     `;
@@ -823,13 +855,40 @@ function DesignReports() {
                 </Button>
               )}
               {selectedEntries.length > 0 && showProgramView && (
-                <Button
-                  onClick={generateProgram}
-                  className="w-full mb-4"
-                  variant="secondary"
-                >
-                  Generate Program
-                </Button>
+                <>
+                  <div className="mb-4 flex flex-col gap-2">
+                    <input
+                      type="text"
+                      className="border rounded px-2 py-1 text-sm"
+                      placeholder="Table Title"
+                      value={programTableTitle}
+                      onChange={e => setProgramTableTitle(e.target.value)}
+                    />
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        className="border rounded px-2 py-1 text-sm flex-1"
+                        placeholder="Entry No."
+                        value={programEntryNo}
+                        onChange={e => setProgramEntryNo(e.target.value)}
+                      />
+                      <input
+                        type="text"
+                        className="border rounded px-2 py-1 text-sm flex-1"
+                        placeholder="Lot No."
+                        value={programLotNo}
+                        onChange={e => setProgramLotNo(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <Button
+                    onClick={generateProgram}
+                    className="w-full mb-4"
+                    variant="secondary"
+                  >
+                    Generate Program
+                  </Button>
+                </>
               )}
               <div className="mt-4 space-y-4 overflow-y-auto max-h-[calc(100vh-180px)] [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                 {selectedEntries.length === 0 ? (
