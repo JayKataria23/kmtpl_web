@@ -36,6 +36,7 @@ interface OrderDetail {
   entry_remark: string;
   order_date: string;
   order_no: number;
+  program?: string; // Add program field
 }
 
 interface DrawerEntry extends OrderDetail {
@@ -127,6 +128,7 @@ function OrderFile() {
           entry_remark: string | null;
           order_date: string;
           order_no: number;
+          program?: string;
         }) => ({
           partyName: entry.party_name,
           shades: entry.shades,
@@ -137,6 +139,7 @@ function OrderFile() {
           entry_remark: entry.entry_remark,
           order_date: entry.order_date,
           order_no: entry.order_no,
+          program: entry.program || "", // Add program mapping
         })
       );
 
@@ -484,6 +487,11 @@ function OrderFile() {
                                   {order.entry_remark && (
                                     <p>
                                       <span className="font-medium">Entry Remark:</span> {order.entry_remark}
+                                    </p>
+                                  )}
+                                  {order.program && (
+                                    <p className="text-blue-600">
+                                      Program Entry No.: {order.program}
                                     </p>
                                   )}
                                 </div>
