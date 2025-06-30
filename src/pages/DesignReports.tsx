@@ -923,7 +923,7 @@ function DesignReports() {
                   </Button>
                 </>
               )}
-              <div className="mt-4 space-y-4 overflow-y-auto max-h-[calc(100vh-180px)] [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+              <div className="mt-4 space-y-4 overflow-y-auto max-h-[calc(100vh-120px)] pb-64 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                 {selectedEntries.length === 0 ? (
                   <p className="text-center text-gray-500">No entries selected</p>
                 ) : showProgramView ? (
