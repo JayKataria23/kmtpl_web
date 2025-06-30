@@ -627,7 +627,7 @@ function DesignReports() {
   };
 
   // Swipe right detection handler
-  const handleTouchStart = (e: React.TouchEvent, order: OrderDetail) => {
+  const handleTouchStart = (e: React.TouchEvent) => {
     (e.target as HTMLElement).setAttribute('data-touchstart-x', String(e.touches[0].clientX));
   };
   const handleTouchEnd = (e: React.TouchEvent, order: OrderDetail) => {
@@ -1081,7 +1081,7 @@ function DesignReports() {
                           className={`p-4 ${
                             orderIndex % 2 === 0 ? "bg-white" : "bg-gray-50"
                           }`}
-                          onTouchStart={e => handleTouchStart(e, order)}
+                          onTouchStart={e => handleTouchStart(e)}
                           onTouchEnd={e => handleTouchEnd(e, order)}
                         >
                           <div className="flex sm:flex-row gap-4">
