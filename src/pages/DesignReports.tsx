@@ -44,6 +44,7 @@ interface OrderDetail {
   order_date: string;
   order_no: number;
   design: string;
+  program?: string;
 }
 
 function DesignReports() {
@@ -65,6 +66,10 @@ function DesignReports() {
   const [customPrefix, setCustomPrefix] = useState("");
   const [totalShades, setTotalShades] = useState<number | null>(null);
   const [isSavingTotalShades, setIsSavingTotalShades] = useState(false);
+  const [isProgramDialogOpen, setIsProgramDialogOpen] = useState(false);
+  const [programEditOrder, setProgramEditOrder] = useState<OrderDetail | null>(null);
+  const [programInput, setProgramInput] = useState("");
+  const [lastProgramInput, setLastProgramInput] = useState("");
 
   useEffect(() => {
     fetchDesignCounts();
@@ -137,6 +142,7 @@ function DesignReports() {
           entry_remark: string | null;
           order_date: string;
           order_no: number;
+          program?: string;
         }) => ({
           partyName: entry.party_name,
           shades: entry.shades,
@@ -148,6 +154,7 @@ function DesignReports() {
           order_date: entry.order_date,
           order_no: entry.order_no,
           design: design,
+          program: entry.program || "",
         })
       );
 
@@ -613,6 +620,21 @@ function DesignReports() {
     }
   };
 
+  // Swipe right detection handler
+  const handleTouchStart = (e: React.TouchEvent, order: OrderDetail) => {
+    (e.target as HTMLElement).setAttribute('data-touchstart-x', String(e.touches[0].clientX));
+  };
+  const handleTouchEnd = (e: React.TouchEvent, order: OrderDetail) => {
+    const startX = Number((e.target as HTMLElement).getAttribute('data-touchstart-x'));
+    const endX = e.changedTouches[0].clientX;
+    if (endX - startX > 60) { // right swipe
+      setProgramEditOrder(order);
+      // Prefill with order.program if present, else lastProgramInput
+      setProgramInput(order.program && order.program !== "" ? order.program : lastProgramInput);
+      setIsProgramDialogOpen(true);
+    }
+  };
+
   return (
     <div className="container mx-auto mt-4 p-2 sm:p-4 relative">
       <div className="sticky top-0 bg-white z-10 p-2 shadow-sm">
@@ -717,6 +739,9 @@ function DesignReports() {
                         })}
                       </div>
                     </div>
+                    <div className="mt-2 text-sm">
+                      <span className="font-medium">Program:</span> {entry.program || <span className="text-gray-400">(none)</span>}
+                    </div>
                   </div>
                 ))}
                 {selectedEntries.length === 0 && (
@@ -772,6 +797,8 @@ function DesignReports() {
                           className={`p-4 ${
                             orderIndex % 2 === 0 ? "bg-white" : "bg-gray-50"
                           }`}
+                          onTouchStart={e => handleTouchStart(e, order)}
+                          onTouchEnd={e => handleTouchEnd(e, order)}
                         >
                           <div className="flex sm:flex-row gap-4">
                             <div className="flex-1 min-w-0 flex flex-row gap-4">
@@ -1018,6 +1045,52 @@ function DesignReports() {
               </Button>
               <Button onClick={handleSaveShades}>
                 Save Changes
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isProgramDialogOpen} onOpenChange={setIsProgramDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Edit Program Entry No.</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Input
+              placeholder="Enter program entry no."
+              value={programInput}
+              onChange={e => setProgramInput(e.target.value)}
+              className="w-full"
+            />
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setIsProgramDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                onClick={async () => {
+                  if (!programEditOrder) return;
+                  const { error } = await supabase
+                    .from("design_entries")
+                    .update({ program: programInput })
+                    .eq("id", programEditOrder.id);
+                  if (!error) {
+                    setDesignOrders(prev => ({
+                      ...prev,
+                      [programEditOrder.design]: prev[programEditOrder.design].map(order =>
+                        order.id === programEditOrder.id ? { ...order, program: programInput } : order
+                      ),
+                    }));
+                    toast({ title: "Success", description: "Program updated." });
+                    setIsProgramDialogOpen(false);
+                    // Save last used program input
+                    setLastProgramInput(programInput);
+                  } else {
+                    toast({ title: "Error", description: "Failed to update program.", variant: "destructive" });
+                  }
+                }}
+              >
+                Save
               </Button>
             </div>
           </div>
