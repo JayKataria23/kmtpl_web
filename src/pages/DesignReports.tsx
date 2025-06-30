@@ -76,6 +76,7 @@ function DesignReports() {
   const [programTableTitle, setProgramTableTitle] = useState("");
   const [programEntryNo, setProgramEntryNo] = useState("");
   const [programLotNo, setProgramLotNo] = useState("");
+  const [showPartyColumn, setShowPartyColumn] = useState(true);
 
   useEffect(() => {
     fetchDesignCounts();
@@ -694,6 +695,10 @@ function DesignReports() {
           <style>
             body { font-family: Arial, sans-serif; margin: 20px; font-size: 13px; }
             table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+            @media (max-width: 640px) {
+              table, th, td { font-size: 11px; }
+              th, td { padding: 3px; }
+            }
             th, td { border: 1px solid #ddd; padding: 6px; text-align: left; }
             th { background-color: #f5f5f5; font-weight: 600; }
             h2 { font-size: 18px; margin: 0 0 10px 0; }
@@ -705,19 +710,18 @@ function DesignReports() {
         <body>
           <div class="no-print">
             <button onclick="window.print()">Print Program</button>
-            <button style="margin-left:10px;" onclick="printWithoutParty()">Print Program Without Party</button>
           </div>
           <div style="text-align:center; margin-bottom: 10px;">
             <div style="font-size:1.3em; font-weight:bold;">${programTableTitle || "Program Table"}</div>
           </div>
-          <div id="program-table-container">
+          <div id="program-table-container" style="overflow-x:auto;">
             <table id="program-table">
               <thead>
                 <tr>
                   <th>Taka</th>
                   <th>Design</th>
                   <th>Order</th>
-                  <th class="party-col">Party</th>
+                  ${showPartyColumn ? '<th class="party-col">Party</th>' : ''}
                 </tr>
               </thead>
               <tbody>
@@ -726,7 +730,7 @@ function DesignReports() {
                     <td>${row.taka}</td>
                     <td>${row.design}</td>
                     <td>${row.orderStr}</td>
-                    <td class="party-col">${row.partyNames}</td>
+                    ${showPartyColumn ? `<td class="party-col">${row.partyNames}</td>` : ''}
                   </tr>
                 `).join("")}
               </tbody>
@@ -880,6 +884,15 @@ function DesignReports() {
                         onChange={e => setProgramLotNo(e.target.value)}
                       />
                     </div>
+                    <label className="flex items-center gap-2 mt-2 text-xs sm:text-sm">
+                      <input
+                        type="checkbox"
+                        checked={showPartyColumn}
+                        onChange={e => setShowPartyColumn(e.target.checked)}
+                        className="accent-blue-500 w-4 h-4"
+                      />
+                      Show Party Column
+                    </label>
                   </div>
                   <Button
                     onClick={generateProgram}
@@ -951,51 +964,55 @@ function DesignReports() {
                     const extras = programExtras[design] || {};
                     return (
                       <div key={design} className="mb-6">
-                        <h4 className="font-semibold mb-2">Design: {design}</h4>
-                        <div className="mb-2 text-xs text-gray-600">
-                          <span className="font-medium">Parties:</span> {partyNames}
-                        </div>
-                        <table className="w-full border text-xs">
-                          <thead>
-                            <tr>
-                              <th className="border px-2 py-1 text-left">Shade</th>
-                              <th className="border px-2 py-1 text-right">Total (m)</th>
-                              <th className="border px-2 py-1 text-right">+ Extra</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {filteredShades.map(([shade, val]) => (
-                              <tr key={shade}>
-                                <td className="border px-2 py-1">{shade}</td>
-                                <td className="border px-2 py-1 text-right">{val}</td>
-                                <td className="border px-2 py-1 text-right">
-                                  <input
-                                    type="number"
-                                    min="0"
-                                    className="w-16 px-1 py-0.5 border rounded text-right"
-                                    value={extras[shade] ?? ""}
-                                    onChange={e => {
-                                      const v = e.target.value === "" ? 0 : Number(e.target.value);
-                                      setProgramExtras(prev => ({
-                                        ...prev,
-                                        [design]: {
-                                          ...(prev[design] || {}),
-                                          [shade]: v
-                                        }
-                                      }));
-                                    }}
-                                    placeholder="0"
-                                  />
-                                </td>
+                        <h4 className="font-semibold mb-2 text-base sm:text-lg">Design: {design}</h4>
+                        {showPartyColumn && (
+                          <div className="mb-2 text-xs text-gray-600">
+                            <span className="font-medium">Parties:</span> {partyNames}
+                          </div>
+                        )}
+                        <div className="overflow-x-auto">
+                          <table className="w-full min-w-[340px] border text-xs sm:text-sm">
+                            <thead>
+                              <tr>
+                                <th className="border px-1 py-1 sm:px-2 sm:py-1 text-left">Shade</th>
+                                <th className="border px-1 py-1 sm:px-2 sm:py-1 text-right">Total (m)</th>
+                                <th className="border px-1 py-1 sm:px-2 sm:py-1 text-right">+ Extra</th>
                               </tr>
-                            ))}
-                            <tr className="font-bold">
-                              <td className="border px-2 py-1">Total</td>
-                              <td className="border px-2 py-1 text-right">{total}</td>
-                              <td className="border px-2 py-1"></td>
-                            </tr>
-                          </tbody>
-                        </table>
+                            </thead>
+                            <tbody>
+                              {filteredShades.map(([shade, val]) => (
+                                <tr key={shade}>
+                                  <td className="border px-1 py-1 sm:px-2 sm:py-1">{shade}</td>
+                                  <td className="border px-1 py-1 sm:px-2 sm:py-1 text-right">{val}</td>
+                                  <td className="border px-1 py-1 sm:px-2 sm:py-1 text-right">
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      className="w-14 sm:w-16 px-1 py-0.5 border rounded text-right"
+                                      value={extras[shade] ?? ""}
+                                      onChange={e => {
+                                        const v = e.target.value === "" ? 0 : Number(e.target.value);
+                                        setProgramExtras(prev => ({
+                                          ...prev,
+                                          [design]: {
+                                            ...(prev[design] || {}),
+                                            [shade]: v
+                                          }
+                                        }));
+                                      }}
+                                      placeholder="0"
+                                    />
+                                  </td>
+                                </tr>
+                              ))}
+                              <tr className="font-bold">
+                                <td className="border px-1 py-1 sm:px-2 sm:py-1">Total</td>
+                                <td className="border px-1 py-1 sm:px-2 sm:py-1 text-right">{total}</td>
+                                <td className="border px-1 py-1 sm:px-2 sm:py-1"></td>
+                              </tr>
+                            </tbody>
+                          </table>
+                        </div>
                       </div>
                     );
                   })
