@@ -71,6 +71,8 @@ function DesignReports() {
   const [programEditOrder, setProgramEditOrder] = useState<OrderDetail | null>(null);
   const [programInput, setProgramInput] = useState("");
   const [lastProgramInput, setLastProgramInput] = useState("");
+  const [showProgramView, setShowProgramView] = useState(false);
+  const [programExtras, setProgramExtras] = useState<{ [design: string]: { [shade: string]: number } }>({});
 
   useEffect(() => {
     fetchDesignCounts();
@@ -636,6 +638,100 @@ function DesignReports() {
     }
   };
 
+  // --- Generate Program Function ---
+  const generateProgram = () => {
+    // Group selected entries by design
+    const designMap: { [design: string]: OrderDetail[] } = {};
+    selectedEntries.forEach(entry => {
+      if (!designMap[entry.design]) designMap[entry.design] = [];
+      designMap[entry.design].push(entry);
+    });
+    // Prepare rows
+    const rows = Object.entries(designMap).map(([design, entries]) => {
+      // Taka: sum all meters (all shades) for that design, divide by 100
+      let totalMeters = 0;
+      const shadeTotals: { [shade: string]: number } = {};
+      entries.forEach(entry => {
+        entry.shades.forEach(shade => {
+          const shadeName = Object.keys(shade)[0];
+          const value = parseFloat(shade[shadeName]) || 0;
+          totalMeters += value;
+          shadeTotals[shadeName] = (shadeTotals[shadeName] || 0) + value;
+        });
+      });
+      // Add extras to totals
+      const extras = programExtras[design] || {};
+      let totalMetersWithExtras = totalMeters;
+      Object.entries(extras).forEach(([shade, extra]) => {
+        if (!shadeTotals[shade]) shadeTotals[shade] = 0;
+        shadeTotals[shade] += extra;
+        totalMetersWithExtras += extra;
+      });
+      const taka = (totalMetersWithExtras / 100).toFixed(2);
+      // Order: shade wise total (with extras), only if total > 0
+      const orderStr = Object.entries(shadeTotals)
+        .filter(([, val]) => val > 0)
+        .map(([shade, val]) => `${shade}/${val} `)
+        .join(", ");
+      // Party: all party names, comma separated, unique
+      let partyNames = Array.from(new Set(entries.map(e => e.partyName))).join(", ");
+      // Only append (extra) if any extra > 0
+      const hasExtra = Object.values(extras).some(val => val > 0);
+      if (hasExtra) partyNames += " (extra)";
+      return { taka, design, orderStr, partyNames };
+    });
+    // Generate HTML
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Program Table</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 20px; font-size: 13px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+            th, td { border: 1px solid #ddd; padding: 6px; text-align: left; }
+            th { background-color: #f5f5f5; font-weight: 600; }
+            h2 { font-size: 18px; margin: 0 0 10px 0; }
+            .no-print { margin-bottom: 10px; }
+            @media print { .no-print { display: none; } }
+          </style>
+        </head>
+        <body>
+          <div class="no-print">
+            <button onclick="window.print()">Print Program</button>
+          </div>
+          <h2>Program Table</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Taka</th>
+                <th>Design</th>
+                <th>Order</th>
+                <th>Party</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows.map(row => `
+                <tr>
+                  <td>${row.taka}</td>
+                  <td>${row.design}</td>
+                  <td>${row.orderStr}</td>
+                  <td>${row.partyNames}</td>
+                </tr>
+              `).join("")}
+            </tbody>
+          </table>
+        </body>
+      </html>
+    `;
+    // Open new window
+    const programWindow = window.open('', '_blank');
+    if (programWindow) {
+      programWindow.document.write(htmlContent);
+      programWindow.document.close();
+    }
+  };
+
   return (
     <div className="container mx-auto mt-4 p-2 sm:p-4 relative">
       <div className="sticky top-0 bg-white z-10 p-2 shadow-sm">
@@ -701,7 +797,22 @@ function DesignReports() {
               <SheetHeader>
                 <SheetTitle>Selected Entries</SheetTitle>
               </SheetHeader>
-              {selectedEntries.length > 0 && (
+              <div className="flex justify-center mb-4">
+                <ToggleGroup
+                  type="single"
+                  value={showProgramView ? "program" : "entry"}
+                  onValueChange={val => setShowProgramView(val === "program")}
+                  className="bg-gray-100 rounded-lg p-1"
+                >
+                  <ToggleGroupItem value="entry" aria-label="Entry List" className="px-4 py-2">
+                    Entry List
+                  </ToggleGroupItem>
+                  <ToggleGroupItem value="program" aria-label="Program View" className="px-4 py-2">
+                    Program View
+                  </ToggleGroupItem>
+                </ToggleGroup>
+              </div>
+              {selectedEntries.length > 0 && !showProgramView && (
                 <Button
                   onClick={generateReport}
                   className="w-full mt-4"
@@ -711,44 +822,122 @@ function DesignReports() {
                   Generate Report
                 </Button>
               )}
+              {selectedEntries.length > 0 && showProgramView && (
+                <Button
+                  onClick={generateProgram}
+                  className="w-full mb-4"
+                  variant="secondary"
+                >
+                  Generate Program
+                </Button>
+              )}
               <div className="mt-4 space-y-4 overflow-y-auto max-h-[calc(100vh-180px)] [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-                {selectedEntries.map((entry) => (
-                  <div key={entry.id} className="p-4 border rounded-lg relative">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="absolute top-2 right-2"
-                      onClick={() => handleRemoveEntry(entry.id)}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                    <h3 className="font-medium">{entry.partyName}</h3>
-                    <p className="text-sm text-gray-600">Design: {entry.design}</p>
-                    <p className="text-sm text-gray-600">Order No: {entry.order_no}</p>
-                    <div className="mt-2">
-                      <h4 className="text-sm font-medium">Shades:</h4>
-                      <div className="space-y-1">
-                        {entry.shades.map((shade, idx) => {
-                          const shadeName = Object.keys(shade)[0];
-                          const shadeValue = shade[shadeName];
-                          if (shadeValue === "") return null;
-                          return (
-                            <div key={idx} className="text-sm">
-                              <span className="font-medium">{shadeName}:</span> {shadeValue}m
-                            </div>
-                          );
-                        })}
+                {selectedEntries.length === 0 ? (
+                  <p className="text-center text-gray-500">No entries selected</p>
+                ) : showProgramView ? (
+                  // Program View tables for each design
+                  Object.entries(selectedEntries.reduce((acc, entry) => {
+                    if (!acc[entry.design]) acc[entry.design] = [];
+                    acc[entry.design].push(entry);
+                    return acc;
+                  }, {} as { [design: string]: OrderDetail[] })).map(([design, entries]) => {
+                    // Compute shade totals for this design
+                    const shadeTotals: { [shade: string]: number } = {};
+                    entries.forEach(entry => {
+                      entry.shades.forEach(shade => {
+                        const shadeName = Object.keys(shade)[0];
+                        const value = parseFloat(shade[shadeName]) || 0;
+                        shadeTotals[shadeName] = (shadeTotals[shadeName] || 0) + value;
+                      });
+                    });
+                    // Only shades with total > 0
+                    const filteredShades = Object.entries(shadeTotals).filter(([, val]) => val > 0);
+                    const total = filteredShades.reduce((sum, [, val]) => sum + val, 0);
+                    // Party names (unique, comma separated)
+                    const partyNames = Array.from(new Set(entries.map(e => e.partyName))).join(", ");
+                    // Get extras for this design
+                    const extras = programExtras[design] || {};
+                    return (
+                      <div key={design} className="mb-6">
+                        <h4 className="font-semibold mb-2">Design: {design}</h4>
+                        <div className="mb-2 text-xs text-gray-600">
+                          <span className="font-medium">Parties:</span> {partyNames}
+                        </div>
+                        <table className="w-full border text-xs">
+                          <thead>
+                            <tr>
+                              <th className="border px-2 py-1 text-left">Shade</th>
+                              <th className="border px-2 py-1 text-right">Total (m)</th>
+                              <th className="border px-2 py-1 text-right">+ Extra</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {filteredShades.map(([shade, val]) => (
+                              <tr key={shade}>
+                                <td className="border px-2 py-1">{shade}</td>
+                                <td className="border px-2 py-1 text-right">{val}</td>
+                                <td className="border px-2 py-1 text-right">
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    className="w-16 px-1 py-0.5 border rounded text-right"
+                                    value={extras[shade] ?? ""}
+                                    onChange={e => {
+                                      const v = e.target.value === "" ? 0 : Number(e.target.value);
+                                      setProgramExtras(prev => ({
+                                        ...prev,
+                                        [design]: {
+                                          ...(prev[design] || {}),
+                                          [shade]: v
+                                        }
+                                      }));
+                                    }}
+                                    placeholder="0"
+                                  />
+                                </td>
+                              </tr>
+                            ))}
+                            <tr className="font-bold">
+                              <td className="border px-2 py-1">Total</td>
+                              <td className="border px-2 py-1 text-right">{total}</td>
+                              <td className="border px-2 py-1"></td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    );
+                  })
+                ) : (
+                  selectedEntries.map((entry) => (
+                    <div key={entry.id} className="p-4 border rounded-lg relative">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="absolute top-2 right-2"
+                        onClick={() => handleRemoveEntry(entry.id)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                      <h3 className="font-medium">{entry.partyName}</h3>
+                      <p className="text-sm text-gray-600">Design: {entry.design}</p>
+                      <p className="text-sm text-gray-600">Order No: {entry.order_no}</p>
+                      <div className="mt-2">
+                        <h4 className="text-sm font-medium">Shades:</h4>
+                        <div className="space-y-1">
+                          {entry.shades.map((shade, idx) => {
+                            const shadeName = Object.keys(shade)[0];
+                            const shadeValue = shade[shadeName];
+                            if (shadeValue === "") return null;
+                            return (
+                              <div key={idx} className="text-sm">
+                                <span className="font-medium">{shadeName}:</span> {shadeValue}m
+                              </div>
+                            );
+                          })}
+                        </div>
                       </div>
                     </div>
-                    <div className="mt-2 text-sm">
-                      <span className="font-medium">Program:</span> {entry.program && (
-                        <span className="text-blue-600">{entry.program}</span>
-                      )}
-                    </div>
-                  </div>
-                ))}
-                {selectedEntries.length === 0 && (
-                  <p className="text-center text-gray-500">No entries selected</p>
+                  ))
                 )}
               </div>
             </SheetContent>
