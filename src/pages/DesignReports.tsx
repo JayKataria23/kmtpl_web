@@ -888,6 +888,39 @@ function DesignReports() {
                   >
                     Generate Program
                   </Button>
+                  <Button
+                    onClick={async () => {
+                      if (!programEntryNo) return;
+                      try {
+                        const ids = selectedEntries.map(e => e.id);
+                        const { error } = await supabase
+                          .from("design_entries")
+                          .update({ program: programEntryNo })
+                          .in("id", ids);
+                        if (error) throw error;
+                        // Update local state
+                        setDesignOrders(prev => {
+                          const updated = { ...prev };
+                          Object.keys(updated).forEach(design => {
+                            updated[design] = updated[design].map(order =>
+                              ids.includes(order.id) ? { ...order, program: programEntryNo } : order
+                            );
+                          });
+                          return updated;
+                        });
+                        // Also update selectedEntries
+                        setSelectedEntries(prev => prev.map(e => ({ ...e, program: programEntryNo })));
+                        toast({ title: "Success", description: "Entry number applied to all selected entries." });
+                      } catch (err) {
+                        toast({ title: "Error", description: "Failed to update entry numbers.", variant: "destructive" });
+                      }
+                    }}
+                    className="w-full mb-4"
+                    variant="outline"
+                    disabled={!programEntryNo || selectedEntries.length === 0}
+                  >
+                    Give Entry Number
+                  </Button>
                 </>
               )}
               <div className="mt-4 space-y-4 overflow-y-auto max-h-[calc(100vh-180px)] [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
