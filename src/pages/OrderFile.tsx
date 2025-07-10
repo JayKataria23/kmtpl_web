@@ -306,6 +306,25 @@ function OrderFile() {
               Design No.
             </ToggleGroupItem>
           </ToggleGroup>
+          {/* Open All Button */}
+          <Button
+            variant="outline"
+            className="w-full sm:w-auto"
+            onClick={async () => {
+              const filtered = filteredDesignCounts();
+              const allAccordionValues = filtered.map((_, idx) => `item-${idx}`);
+              setOpenAccordionItems(allAccordionValues);
+              // Fetch order details for all designs if not already loaded
+              for (const item of filtered) {
+                if (!designOrders[item.design]) {
+                  await fetchOrderDetails(item.design);
+                }
+              }
+            }}
+          >
+            Open All
+          </Button>
+          {/* End Open All Button */}
           <Sheet open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
             <SheetTrigger asChild>
               <Button variant="outline" className="relative">
