@@ -634,7 +634,7 @@ function DesignReports() {
   const handleTouchEnd = (e: React.TouchEvent, order: OrderDetail) => {
     const startX = Number((e.target as HTMLElement).getAttribute('data-touchstart-x'));
     const endX = e.changedTouches[0].clientX;
-    if (endX - startX > 60) { // right swipe
+    if (endX - startX > 200) { // right swipe
       setProgramEditOrder(order);
       // Prefill with order.program if present, else lastProgramInput
       setProgramInput(order.program && order.program !== "" ? order.program : lastProgramInput);
