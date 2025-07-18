@@ -47,14 +47,6 @@ export default function HomePage() {
       ],
     },
     {
-      title: "Other",
-      items: [
-        { path: "/dyeing-book", label: "Dyeing Book" },
-        { path: "/sales-register", label: "Sales Register" },
-        { path: "/print-program", label: "Print Program" },
-      ],
-    },
-    {
       title: "Dispatch",
       items: [
         { path: "/dispatch-list", label: "Dispatch List" },
