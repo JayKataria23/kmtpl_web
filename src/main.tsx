@@ -28,9 +28,6 @@ import FastOrderForm from "./pages/FastOrderForm";
 import PartyDispatchList from "./pages/PartyDispatchList";
 import PartOrderFile from "./pages/PartOrderFile";
 import PartyReports from "./pages/PartyReports";
-import DyeingBook from "./pages/DyeingBook";
-import SalesRegister from "./pages/SalesRegister";
-import PrintProgram from "./pages/PrintProgram";
 import DesignReports from "./pages/DesignReports";
 import BhiwandiDesigns from "./pages/BhiwandiDesigns";
 
@@ -67,7 +64,6 @@ createRoot(document.getElementById("root")!).render(
             element={<OrderPreviewPage />}
           />
           <Route path="/challan-view/:challanId" element={<ChallanView />} />
-          <Route path="/sales-register" element={<SalesRegister />} />
           <Route path="/challan-edit/:challanId" element={<EditChallan />} />
           <Route
             path="/order-file"
@@ -77,14 +73,7 @@ createRoot(document.getElementById("root")!).render(
               </ProtectedRoute>
             }
           />
-          <Route
-            path="/print-program"
-            element={
-              <ProtectedRoute>
-                <PrintProgram />
-              </ProtectedRoute>
-            }
-          />
+
             <Route
               path="/party-file"
               element={
@@ -106,14 +95,6 @@ createRoot(document.getElementById("root")!).render(
             element={
               <ProtectedRoute>
                 <PartOrderFile />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/dyeing-book"
-            element={
-              <ProtectedRoute>
-                <DyeingBook />
               </ProtectedRoute>
             }
           />
