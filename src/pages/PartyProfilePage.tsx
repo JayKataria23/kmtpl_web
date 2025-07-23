@@ -311,7 +311,7 @@ export default function PartyProfilePage() {
       }
     }
   </style>
-  <div class="rotated-address">
+  <div>
     To,
     <p style="line-height:100%; font-size: 36px; font-weight:bold; margin: 0 0 6px 0;">
       ${party.name}
