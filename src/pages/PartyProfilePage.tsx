@@ -304,7 +304,7 @@ export default function PartyProfilePage() {
       .rotated-address {
         position: absolute;
         bottom: 0in;
-        right: 6.5in;
+        right: 8.5in;
         transform: rotate(180deg);
         text-align: left;
         box-sizing: border-box;
