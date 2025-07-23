@@ -304,14 +304,14 @@ export default function PartyProfilePage() {
       .rotated-address {
         position: absolute;
         bottom: 0in;
-        right: 1.5in;
+        right: 6.5in;
         transform: rotate(180deg);
         text-align: left;
         box-sizing: border-box;
       }
     }
   </style>
-  <div>
+  <div class="rotated-address">
     To,
     <p style="line-height:100%; font-size: 36px; font-weight:bold; margin: 0 0 6px 0;">
       ${party.name}
