@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import supabase from "@/utils/supabase";
@@ -27,6 +27,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import html2canvas from "html2canvas";
 
 interface DesignCount {
   design: string;
@@ -77,6 +78,10 @@ function DesignReports() {
   const [programEntryNo, setProgramEntryNo] = useState("");
   const [programLotNo, setProgramLotNo] = useState("");
   const [showPartyColumn, setShowPartyColumn] = useState(true);
+  const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
+  const [shareOrder, setShareOrder] = useState<OrderDetail | null>(null);
+  const [shareImageUrl, setShareImageUrl] = useState<string | null>(null);
+  const shareRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetchDesignCounts();
@@ -639,6 +644,17 @@ function DesignReports() {
       // Prefill with order.program if present, else lastProgramInput
       setProgramInput(order.program && order.program !== "" ? order.program : lastProgramInput);
       setIsProgramDialogOpen(true);
+    } else if (startX - endX > 200) { // left swipe
+      setShareOrder(order);
+      setIsShareDialogOpen(true);
+      setShareImageUrl(null); // reset image
+      setTimeout(() => {
+        if (shareRef.current) {
+          html2canvas(shareRef.current).then(canvas => {
+            setShareImageUrl(canvas.toDataURL("image/png"));
+          });
+        }
+      }, 100); // allow dialog to render
     }
   };
 
@@ -1402,6 +1418,69 @@ function DesignReports() {
                 Save
               </Button>
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isShareDialogOpen} onOpenChange={setIsShareDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Share Order Details</DialogTitle>
+            <DialogDescription>
+              Share the following order details as an image.
+            </DialogDescription>
+          </DialogHeader>
+          <div ref={shareRef} style={{ background: '#fff', padding: 16, borderRadius: 8, marginBottom: 16 }}>
+            {shareOrder && (
+              <div>
+                <div style={{ fontWeight: 'bold', fontSize: 18, marginBottom: 8 }}>Order No: {shareOrder.order_no}</div>
+                <div style={{ fontWeight: 'bold', fontSize: 16, marginBottom: 8 }}>Design: {shareOrder.design}</div>
+                <div style={{ fontWeight: 'bold', fontSize: 15, marginBottom: 8 }}>Shades:</div>
+                <ul style={{ marginLeft: 16 }}>
+                  {shareOrder.shades.map((shade, idx) => {
+                    const shadeName = Object.keys(shade)[0];
+                    const shadeValue = shade[shadeName];
+                    if (!shadeValue) return null;
+                    return (
+                      <li key={idx} style={{ fontSize: 14 }}>{shadeName}: {shadeValue}m</li>
+                    );
+                  })}
+                </ul>
+              </div>
+            )}
+          </div>
+          {shareImageUrl && (
+            <div style={{ textAlign: 'center', marginBottom: 12 }}>
+              <img src={shareImageUrl} alt="Order Details" style={{ maxWidth: '100%' }} />
+            </div>
+          )}
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setIsShareDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={async () => {
+                if (!shareOrder) return;
+                const { error } = await supabase
+                  .from("design_entries")
+                  .update({ program: "J" })
+                  .eq("id", shareOrder.id);
+                if (!error) {
+                  setDesignOrders(prev => ({
+                    ...prev,
+                    [shareOrder.design]: prev[shareOrder.design].map(order =>
+                      order.id === shareOrder.id ? { ...order, program: "J" } : order
+                    ),
+                  }));
+                  toast({ title: "Success", description: "Program set to J." });
+                  setIsShareDialogOpen(false);
+                } else {
+                  toast({ title: "Error", description: "Failed to update program.", variant: "destructive" });
+                }
+              }}
+            >
+              Submit
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
