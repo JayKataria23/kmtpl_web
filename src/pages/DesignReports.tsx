@@ -1430,7 +1430,11 @@ function DesignReports() {
               Share the following order details as an image.
             </DialogDescription>
           </DialogHeader>
-          <div ref={shareRef} style={{ background: '#fff', padding: 16, borderRadius: 8, marginBottom: 16 }}>
+          {/* Hidden div for html2canvas rendering only */}
+          <div ref={shareRef} style={{
+            background: '#fff', padding: 16, borderRadius: 8, marginBottom: 16,
+            position: 'absolute', left: '-9999px', top: 0, width: 300, pointerEvents: 'none', zIndex: -1
+          }} aria-hidden="true">
             {shareOrder && (
               <div>
                 <div style={{ fontWeight: 'bold', fontSize: 18, marginBottom: 8 }}>Order No: {shareOrder.order_no}</div>
@@ -1449,6 +1453,7 @@ function DesignReports() {
               </div>
             )}
           </div>
+          {/* Only show the image to the user */}
           {shareImageUrl && (
             <div style={{ textAlign: 'center', marginBottom: 12 }}>
               <img src={shareImageUrl} alt="Order Details" style={{ maxWidth: '100%' }} />
