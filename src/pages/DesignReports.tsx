@@ -82,6 +82,7 @@ function DesignReports() {
   const [shareOrder, setShareOrder] = useState<OrderDetail | null>(null);
   const [shareImageUrl, setShareImageUrl] = useState<string | null>(null);
   const shareRef = useRef<HTMLDivElement>(null);
+  const [shareDesignName, setShareDesignName] = useState<string>("");
 
   useEffect(() => {
     fetchDesignCounts();
@@ -646,6 +647,7 @@ function DesignReports() {
       setIsProgramDialogOpen(true);
     } else if (startX - endX > 200) { // left swipe
       setShareOrder(order);
+      setShareDesignName(order.design); // Set initial editable design name
       setIsShareDialogOpen(true);
       setShareImageUrl(null); // reset image
       setTimeout(() => {
@@ -1430,11 +1432,22 @@ function DesignReports() {
               Share the following order details as an image.
             </DialogDescription>
           </DialogHeader>
+          {/* Editable design name input for the image */}
+          {shareOrder && (
+            <div className="mb-4">
+              <label className="block text-sm font-medium mb-1">Design Name for Image</label>
+              <Input
+                value={shareDesignName}
+                onChange={e => setShareDesignName(e.target.value)}
+                className="w-full"
+              />
+            </div>
+          )}
           <div ref={shareRef} style={{ background: '#fff', padding: 16, borderRadius: 8, marginBottom: 16, position: 'absolute' , left: '-9999px'}}>
             {shareOrder && (
               <div>
                 <div style={{ fontWeight: 'bold', fontSize: 18, marginBottom: 8 }}>Order No: {shareOrder.order_no}</div>
-                <div style={{ fontWeight: 'bold', fontSize: 16, marginBottom: 8 }}>Design: {shareOrder.design}</div>
+                <div style={{ fontWeight: 'bold', fontSize: 16, marginBottom: 8 }}>Design: {shareDesignName}</div>
                 <div style={{ fontWeight: 'bold', fontSize: 15, marginBottom: 8 }}>Shades:</div>
                 <ul style={{ marginLeft: 16 }}>
                   {shareOrder.shades.map((shade, idx) => {
