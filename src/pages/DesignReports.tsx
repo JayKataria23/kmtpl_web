@@ -1430,6 +1430,26 @@ function DesignReports() {
               Share the following order details as an image.
             </DialogDescription>
           </DialogHeader>
+          </DialogHeader>
+          <div ref={shareRef} style={{ background: '#fff', padding: 16, borderRadius: 8, marginBottom: 16 }}>
+            {shareOrder && (
+              <div>
+                <div style={{ fontWeight: 'bold', fontSize: 18, marginBottom: 8 }}>Order No: {shareOrder.order_no}</div>
+                <div style={{ fontWeight: 'bold', fontSize: 16, marginBottom: 8 }}>Design: {shareOrder.design}</div>
+                <div style={{ fontWeight: 'bold', fontSize: 15, marginBottom: 8 }}>Shades:</div>
+                <ul style={{ marginLeft: 16 }}>
+                  {shareOrder.shades.map((shade, idx) => {
+                    const shadeName = Object.keys(shade)[0];
+                    const shadeValue = shade[shadeName];
+                    if (!shadeValue) return null;
+                    return (
+                      <li key={idx} style={{ fontSize: 14 }}>{shadeName}: {shadeValue}m</li>
+                    );
+                  })}
+                </ul>
+              </div>
+            )}
+          </div>
           {shareImageUrl && (
             <div style={{ textAlign: 'center', marginBottom: 12 }}>
               <img src={shareImageUrl} alt="Order Details" style={{ maxWidth: '100%' }} />
