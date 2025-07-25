@@ -786,6 +786,21 @@ function DesignReports() {
     }
   };
 
+  // Helper to group shades by meter value for display (like party report)
+  function groupShadesByMeters(shades: { [key: string]: string }[]) {
+    const meterGroups: Record<string, string[]> = {};
+    shades.forEach((shadeObj) => {
+      const shadeName = Object.keys(shadeObj)[0];
+      const meterValue = shadeObj[shadeName];
+      if (!meterValue) return;
+      if (!meterGroups[meterValue]) {
+        meterGroups[meterValue] = [];
+      }
+      meterGroups[meterValue].push(shadeName);
+    });
+    return meterGroups;
+  }
+
   return (
     <div className="container mx-auto mt-4 p-2 sm:p-4 relative">
       <div className="sticky top-0 bg-white z-10 p-2 shadow-sm">
@@ -1449,16 +1464,14 @@ function DesignReports() {
                 <div style={{ fontWeight: 'bold', fontSize: 18, marginBottom: 8 }}>Order No: {shareOrder.order_no}</div>
                 <div style={{ fontWeight: 'bold', fontSize: 16, marginBottom: 8 }}>Design: {shareDesignName}</div>
                 <div style={{ fontWeight: 'bold', fontSize: 15, marginBottom: 8 }}>Shades:</div>
-                <ul style={{ marginLeft: 16 }}>
-                  {shareOrder.shades.map((shade, idx) => {
-                    const shadeName = Object.keys(shade)[0];
-                    const shadeValue = shade[shadeName];
-                    if (!shadeValue) return null;
-                    return (
-                      <li key={idx} style={{ fontSize: 14 }}>{shadeName}: {shadeValue}m</li>
-                    );
-                  })}
-                </ul>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginLeft: 16 }}>
+                  {Object.entries(groupShadesByMeters(shareOrder.shades)).map(([meters, shadeNames], idx) => (
+                    <div key={idx} style={{ display: 'inline-block', margin: 2 }}>
+                      <div style={{ borderBottom: '1px solid #000', textAlign: 'center' }}>{shadeNames.join(' - ')}</div>
+                      <div style={{ borderTop: '1px solid #000', textAlign: 'center' }}>{meters} mtr</div>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>
