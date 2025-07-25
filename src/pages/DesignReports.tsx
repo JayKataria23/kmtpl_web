@@ -1430,7 +1430,7 @@ function DesignReports() {
               Share the following order details as an image.
             </DialogDescription>
           </DialogHeader>
-          <div ref={shareRef} className="invisible" style={{ background: '#fff', padding: 16, borderRadius: 8, marginBottom: 16 }}>
+          <div ref={shareRef} style={{ background: '#fff', padding: 16, borderRadius: 8, marginBottom: 16, position: 'absolute' , left: '-9999px'}}>
             {shareOrder && (
               <div>
                 <div style={{ fontWeight: 'bold', fontSize: 18, marginBottom: 8 }}>Order No: {shareOrder.order_no}</div>
