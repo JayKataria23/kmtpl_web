@@ -88,6 +88,19 @@ function DesignReports() {
     fetchDesignCounts();
   }, []);
 
+  // Regenerate image when shareDesignName changes
+  useEffect(() => {
+    if (isShareDialogOpen && shareOrder && shareRef.current) {
+      setTimeout(() => {
+        if (shareRef.current) {
+          html2canvas(shareRef.current).then(canvas => {
+            setShareImageUrl(canvas.toDataURL("image/png"));
+          });
+        }
+      }, 100);
+    }
+  }, [shareDesignName, isShareDialogOpen, shareOrder]);
+
   const formatDate = (dateString: string): string => {
     const date = new Date(dateString);
     const optionsDate: Intl.DateTimeFormatOptions = {
