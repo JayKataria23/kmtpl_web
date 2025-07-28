@@ -456,7 +456,8 @@ function OrderFile() {
                 <div className="overflow-x-auto">
                   <div className="min-w-full divide-y divide-gray-200">
                     {designOrders[item.design]
-                      .sort((a, b) => Number(b.part) - Number(a.part))
+                      .sort((a, b) => a.order_no - b.order_no) // Sort by order_no ascending
+                      .sort((a, b) => Number(b.part) - Number(a.part)) // Keep part orders on top if needed
                       .map((order) => {
                         const isSelected = drawerEntries.some(
                           (entry) => entry.id === order.id
