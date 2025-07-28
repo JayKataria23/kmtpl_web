@@ -949,12 +949,12 @@ function DesignReports() {
                   </Button>
                   <Button
                     onClick={async () => {
-                      if (!programEntryNo) return;
+                      if (!(programEntryNo+"/"+programLotNo)) return;
                       try {
                         const ids = selectedEntries.map(e => e.id);
                         const { error } = await supabase
                           .from("design_entries")
-                          .update({ program: programEntryNo })
+                          .update({ program: (programEntryNo+"/"+programLotNo) })
                           .in("id", ids);
                         if (error) throw error;
                         // Update local state
@@ -962,13 +962,13 @@ function DesignReports() {
                           const updated = { ...prev };
                           Object.keys(updated).forEach(design => {
                             updated[design] = updated[design].map(order =>
-                              ids.includes(order.id) ? { ...order, program: programEntryNo } : order
+                              ids.includes(order.id) ? { ...order, program: programEntryNo+"/"+programLotNo } : order
                             );
                           });
                           return updated;
                         });
                         // Also update selectedEntries
-                        setSelectedEntries(prev => prev.map(e => ({ ...e, program: programEntryNo })));
+                        setSelectedEntries(prev => prev.map(e => ({ ...e, program: programEntryNo+"/"+programLotNo })));
                         toast({ title: "Success", description: "Entry number applied to all selected entries." });
                       } catch (err) {
                         toast({ title: "Error", description: "Failed to update entry numbers.", variant: "destructive" });
