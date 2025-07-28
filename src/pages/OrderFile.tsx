@@ -115,6 +115,9 @@ function OrderFile() {
   const { toast } = useToast();
   const [filter, setFilter] = useState<string>("all"); // State for filter
   const [openAccordionItems, setOpenAccordionItems] = useState<string[]>([]);
+  const [programEntryNoInput, setProgramEntryNoInput] = useState("");
+  const [searchedDesigns, setSearchedDesigns] = useState<string[] | null>(null);
+  const [isSearching, setIsSearching] = useState(false);
 
   useEffect(() => {
     fetchDesignCounts();
@@ -333,6 +336,30 @@ function OrderFile() {
     );
   };
 
+  // Handler for searching by program entry no.
+  const handleProgramEntryNoSearch = async () => {
+    if (!programEntryNoInput) return;
+    setIsSearching(true);
+    try {
+      const { data, error } = await supabase
+        .from("design_entries")
+        .select("design")
+        .ilike("program", `%${programEntryNoInput}%`);
+      if (error) throw error;
+      const designNames = Array.from(new Set((data || []).map((row: any) => row.design)));
+      setSearchedDesigns(designNames);
+    } catch (err) {
+      setSearchedDesigns([]);
+    }
+    setIsSearching(false);
+  };
+
+  // Handler to clear the search
+  const handleClearProgramEntryNoSearch = () => {
+    setProgramEntryNoInput("");
+    setSearchedDesigns(null);
+  };
+
   return (
     <div className="container mx-auto mt-4 p-2 sm:p-4 relative">
       <div className="sticky top-0 bg-white z-10 p-2 shadow-sm">
@@ -340,6 +367,36 @@ function OrderFile() {
           <Button onClick={() => navigate("/")} className="w-full sm:w-auto">
             Back to Home
           </Button>
+          {/* Program Entry No. Input and Search Button */}
+          <div className="flex flex-row gap-2 items-center w-full sm:w-auto">
+            <input
+              type="text"
+              placeholder="Program Entry No."
+              value={programEntryNoInput}
+              onChange={e => setProgramEntryNoInput(e.target.value)}
+              className="border rounded px-2 py-1 text-sm w-full sm:w-48"
+              style={{ maxWidth: 200 }}
+            />
+            <Button
+              type="button"
+              className="px-4"
+              onClick={handleProgramEntryNoSearch}
+              disabled={isSearching || !programEntryNoInput}
+            >
+              {isSearching ? "Searching..." : "Search"}
+            </Button>
+            {searchedDesigns && (
+              <Button
+                type="button"
+                variant="outline"
+                className="px-2"
+                onClick={handleClearProgramEntryNoSearch}
+              >
+                Clear
+              </Button>
+            )}
+          </div>
+          {/* End Program Entry No. Input and Search Button */}
           <ToggleGroup
             variant="outline"
             type="single"
@@ -481,7 +538,10 @@ function OrderFile() {
         value={openAccordionItems}
         onValueChange={setOpenAccordionItems}
       >
-        {filteredDesignCounts().map((item, index) => (
+        {(searchedDesigns
+          ? filteredDesignCounts().filter(item => searchedDesigns.includes(item.design))
+          : filteredDesignCounts()
+        ).map((item, index) => (
           <AccordionItem key={index} value={`item-${index}`}>
             <div className="flex items-center justify-between w-full">
               <AccordionTrigger
