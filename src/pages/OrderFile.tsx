@@ -305,7 +305,7 @@ function OrderFile() {
     } else if (filter === "digital") {
       return designCounts
         .filter(
-          (item) => item.design.includes("D-") // Check if design ends with a 4-digit number
+          (item) => item.design.includes("D-") || item.design.includes("DDBY-") // Check if design ends with a 4-digit number
         )
         .sort((a, b) => {
           const numA = Number(a.design.split("-").pop());
