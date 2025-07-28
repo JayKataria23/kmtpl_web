@@ -19,6 +19,7 @@ interface Entry {
   order_id: string;
   order_no: number;
   order_remark: string;
+  part: boolean | string; // <-- Added part
 }
 
 interface GroupedEntry {
@@ -27,6 +28,7 @@ interface GroupedEntry {
   remark: string;
   shades: { [key: string]: string }[];
   design_entry_id: number;
+  part: boolean | string; // <-- Added part
 }
 
 interface GroupedOrder {
@@ -132,9 +134,10 @@ function BhiwandiListPrint() {
           entry.entries.forEach((order) => {
             html += `
             <tr style="page-break-inside:avoid;">
-              <td style="border: 1px solid #ccc; padding-left: 8px; width: ${hideDetails ? '32%' : '22%'};">${
-                order.design
-              }</td>
+              <td style="border: 1px solid #ccc; padding-left: 8px; width: ${hideDetails ? '32%' : '22%'};">
+                ${order.design}
+                ${order.part === true || order.part === 'true' ? '<span style="background: #eab308; color: #fff; font-size: 12px; border-radius: 4px; padding: 2px 6px; margin-left: 8px;">PART</span>' : ''}
+              </td>
               ${!hideDetails ? `<td style="border: 1px solid #ccc; padding-left: 8px; width: 10%;">${order.price}</td>` : ''}
               <td style="border: 1px solid #ccc; padding-left: 8px; width: ${hideDetails ? '68%' : '55%'}; ">
               <div style="width: 100%; text-align: center; display: flex; flex-direction: row; flex-wrap: wrap;">
@@ -174,6 +177,7 @@ function BhiwandiListPrint() {
         shades,
         order_no,
         order_remark,
+        part, // <-- Added part
       } = entry;
 
       // Check if the order_id already exists in the map
@@ -193,7 +197,7 @@ function BhiwandiListPrint() {
 
       // Get the existing group and push the design entry into it
       const group = grouped.get(order_id)!;
-      group.entries.push({ design, price, remark, shades, design_entry_id });
+      group.entries.push({ design, price, remark, shades, design_entry_id, part }); // <-- Pass part
     });
 
     return Array.from(grouped.values()); // Return the grouped orders as an array
