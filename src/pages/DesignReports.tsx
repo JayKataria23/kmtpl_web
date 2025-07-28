@@ -814,6 +814,65 @@ function DesignReports() {
     return meterGroups;
   }
 
+  const renderGroupedShades = (shades: { [key: string]: string }[]) => {
+    // Group shades by meter value for more efficient rendering
+    const meterGroups = new Map<string, { shadeIndices: number[]; shadeNames: string[] }>();
+
+    shades.forEach((shadeObj, index) => {
+      const shadeName = Object.keys(shadeObj)[0];
+      const meterValue = shadeObj[shadeName];
+      if (!meterValue) return;
+      const existingGroup = meterGroups.get(meterValue);
+      if (existingGroup) {
+        existingGroup.shadeIndices.push(index + 1);
+        existingGroup.shadeNames.push(shadeName);
+      } else {
+        meterGroups.set(meterValue, {
+          shadeIndices: [index + 1],
+          shadeNames: [shadeName],
+        });
+      }
+    });
+
+    // Helper to chunk an array into groups of n
+    function chunkArray<T>(arr: T[], size: number): T[][] {
+      const result: T[][] = [];
+      for (let i = 0; i < arr.length; i += size) {
+        result.push(arr.slice(i, i + size));
+      }
+      return result;
+    }
+
+    // Helper to check if all shade names are non-numeric
+    function allNonNumeric(names: string[]): boolean {
+      return names.every(name => isNaN(Number(name)));
+    }
+
+    return (
+      <div className="flex flex-col gap-2">
+        {[...meterGroups.entries()].map(([meters, { shadeNames }], idx) => {
+          const perRow = allNonNumeric(shadeNames) ? 2 : 5;
+          return (
+            <div
+              key={idx}
+              className="inline-block rounded pb-1 text-xs bg-gray-50"
+              style={{ margin: 2 }}
+            >
+              <div className="border-b border-gray-400 text-center font-medium">
+                {chunkArray(shadeNames, perRow).map((chunk, i) => (
+                  <div key={i}>{chunk.join(" - ")}</div>
+                ))}
+              </div>
+              <div className="border-t border-gray-400 text-center">
+                {meters} mtr
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
   return (
     <div className="container mx-auto mt-4 p-2 sm:p-4 relative">
       <div className="sticky top-0 bg-white z-10 p-2 shadow-sm">
@@ -1078,18 +1137,7 @@ function DesignReports() {
                       <p className="text-sm text-gray-600">Order No: {entry.order_no}</p>
                       <div className="mt-2">
                         <h4 className="text-sm font-medium">Shades:</h4>
-                        <div className="space-y-1">
-                          {entry.shades.map((shade, idx) => {
-                            const shadeName = Object.keys(shade)[0];
-                            const shadeValue = shade[shadeName];
-                            if (shadeValue === "") return null;
-                            return (
-                              <div key={idx} className="text-sm">
-                                <span className="font-medium">{shadeName}:</span> {shadeValue}m
-                              </div>
-                            );
-                          })}
-                        </div>
+                        {renderGroupedShades(entry.shades)}
                       </div>
                     </div>
                   ))
@@ -1196,19 +1244,7 @@ function DesignReports() {
                               <div className="flex flex-row gap-2 sm:w-48">
                                 <div className="bg-gray-50 p-2 rounded-lg">
                                   <h4 className="text-sm font-medium mb-2">Shades</h4>
-                                  <div className="space-y-1">
-                                    {order.shades &&
-                                      order.shades.map((shade, idx) => {
-                                        const shadeName = Object.keys(shade)[0];
-                                        const shadeValue = shade[shadeName];
-                                        if (shadeValue == "") return null;
-                                        return (
-                                          <div key={idx} className="text-sm">
-                                            <span className="font-medium">{shadeName}:</span> {shadeValue}m
-                                          </div>
-                                        );
-                                      })}
-                                  </div>
+                                  {renderGroupedShades(order.shades)}
                                 </div>
                               </div>
                             </div>

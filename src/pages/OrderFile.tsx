@@ -74,26 +74,32 @@ const renderGroupedShades = (shades: { [key: string]: string }[]) => {
     return result;
   }
 
+  // Helper to check if all shade names are non-numeric
+  function allNonNumeric(names: string[]): boolean {
+    return names.every(name => isNaN(Number(name)));
+  }
+
   return (
-    <div
-      className="flex flex-col gap-2"
-    >
-      {[...meterGroups.entries()].map(([meters, { shadeNames }], idx) => (
-        <div
-          key={idx}
-          className="inline-block rounded pb-1 text-xs bg-gray-50"
-          style={{ margin: 2 }}
-        >
-          <div className="border-b border-gray-400 text-center font-medium">
-            {chunkArray(shadeNames, 5).map((chunk, i) => (
-              <div key={i}>{chunk.join(" - ")}</div>
-            ))}
+    <div className="flex flex-col gap-2">
+      {[...meterGroups.entries()].map(([meters, { shadeNames }], idx) => {
+        const perRow = allNonNumeric(shadeNames) ? 2 : 5;
+        return (
+          <div
+            key={idx}
+            className="inline-block rounded pb-1 text-xs bg-gray-50"
+            style={{ margin: 2 }}
+          >
+            <div className="border-b border-gray-400 text-center font-medium">
+              {chunkArray(shadeNames, perRow).map((chunk, i) => (
+                <div key={i}>{chunk.join(" - ")}</div>
+              ))}
+            </div>
+            <div className="border-t border-gray-400 text-center">
+              {meters} mtr
+            </div>
           </div>
-          <div className="border-t border-gray-400 text-center">
-            {meters} mtr
-          </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 };
