@@ -31,6 +31,7 @@ interface PartyProfile {
   broker_id: number | null;
   transport_id: number | null;
   pincode: string | null;
+  discount: string | null; // Added discount field
 }
 
 interface Broker {
@@ -62,6 +63,7 @@ export default function PartyProfilePage() {
     broker_id: null,
     transport_id: null,
     pincode: null,
+    discount: "0", // Default discount to '0'
   });
   const [isEditing, setIsEditing] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -118,6 +120,7 @@ export default function PartyProfilePage() {
         broker_id: null,
         transport_id: null,
         pincode: null,
+        discount: "0", // Default discount to '0' on new
       }
     );
     setIsEditing(!!party);
@@ -374,7 +377,7 @@ export default function PartyProfilePage() {
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
-            {["name", "gstin", "address", "contact_number", "pincode"].map(
+            {["name", "gstin", "address", "contact_number", "pincode", "discount"].map(
               (field) => (
                 <div key={field} className="space-y-2">
                   <Label htmlFor={field}>
@@ -462,11 +465,10 @@ export default function PartyProfilePage() {
             <CardContent className="pt-6 flex flex-col h-full">
               <div className="flex-grow">
                 <h3 className="text-lg font-semibold mb-2">{party.name}</h3>
-                {["gstin", "address", "contact_number", "pincode"].map(
+                {(["gstin", "address", "contact_number", "pincode", "discount"] as const).map(
                   (field) => (
                     <p key={field} className="text-sm text-gray-500">
-                      {field.charAt(0).toUpperCase() + field.slice(1)}:{" "}
-                      {party[field as keyof PartyProfile] || "N/A"}
+                      {field.charAt(0).toUpperCase() + field.slice(1)}: {party[field] || "N/A"}
                     </p>
                   )
                 )}
