@@ -30,6 +30,7 @@ import PartOrderFile from "./pages/PartOrderFile";
 import PartyReports from "./pages/PartyReports";
 import DesignReports from "./pages/DesignReports";
 import BhiwandiDesigns from "./pages/BhiwandiDesigns";
+import Outstanding from "./pages/Outstanding";
 
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
@@ -185,6 +186,14 @@ createRoot(document.getElementById("root")!).render(
             element={
               <ProtectedRoute>
                 <BhiwandiDesigns />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/outstanding"
+            element={
+              <ProtectedRoute>
+                <Outstanding />
               </ProtectedRoute>
             }
           />

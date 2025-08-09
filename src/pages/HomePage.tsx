@@ -37,6 +37,7 @@ export default function HomePage() {
       items: [
         { path: "/party-reports", label: "Party Reports" },
         { path: "/design-reports", label: "Design Reports" },
+        { path: "/outstanding", label: "Outstanding" },
       ],
     },
     {
