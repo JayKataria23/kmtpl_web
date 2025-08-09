@@ -31,16 +31,6 @@ interface Design {
   title: string;
 }
 
-interface DyeingUnit {
-  id: number;
-  dyeing_unit: string;
-}
-
-interface SupplierName {
-  id: number;
-  supplier_name: string;
-}
-
 const scrollableContentClass = "max-h-[300px] overflow-y-auto pr-2";
 
 export default function BrokerTransportPage() {

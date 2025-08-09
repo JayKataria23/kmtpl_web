@@ -11,7 +11,6 @@ import {
   DrawerTitle,
   DrawerClose,
 } from "@/components/ui/drawer";
-import { useNavigate } from "react-router-dom";
 
 interface ReceivableRow {
   id: number;
