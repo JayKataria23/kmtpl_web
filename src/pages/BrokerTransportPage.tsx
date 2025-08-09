@@ -47,12 +47,8 @@ export default function BrokerTransportPage() {
   const [brokers, setBrokers] = useState<Profile[]>([]);
   const [transports, setTransports] = useState<Profile[]>([]);
   const [designs, setDesigns] = useState<Design[]>([]);
-  const [dyeingUnits, setDyeingUnits] = useState<DyeingUnit[]>([]);
-  const [supplierNames, setSupplierNames] = useState<SupplierName[]>([]);
   const [newBroker, setNewBroker] = useState("");
   const [newTransport, setNewTransport] = useState("");
-  const [newDyeingUnit, setNewDyeingUnit] = useState("");
-  const [newSupplierName, setNewSupplierName] = useState("");
   const [isAddDesignOpen, setIsAddDesignOpen] = useState(false);
   const [remarkOptions, setRemarkOptions] = useState<string[]>([]);
   const [newRemark, setNewRemark] = useState("");

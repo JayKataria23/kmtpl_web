@@ -29,25 +29,20 @@ interface PartyTotal {
 
 export default function Outstanding() {
   const { toast } = useToast();
-  const [isLoading, setIsLoading] = useState(false);
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
-
   const [partyTotals, setPartyTotals] = useState<PartyTotal[]>([]);
   const [search, setSearch] = useState("");
 
   const [selectedParty, setSelectedParty] = useState<string>("");
   const [selectedPartyInvoices, setSelectedPartyInvoices] = useState<ReceivableRow[]>([]);
-  const [viewMode, setViewMode] = useState<"month" | "invoice">("month");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [lastUploadDate, setLastUploadDate] = useState<string>("");
   const [monthDrilldown, setMonthDrilldown] = useState<string | null>(null);
 
-  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchPartyTotals = async () => {
       try {
-        setIsLoading(true);
         // Fetch minimal columns for totals
         const { data, error } = await supabase
           .from("sales_receivables")
@@ -83,8 +78,6 @@ export default function Outstanding() {
           description: err?.message || "Please try again",
           variant: "destructive",
         });
-      } finally {
-        setIsLoading(false);
       }
     };
     // Fetch latest created_at date
@@ -135,7 +128,6 @@ export default function Outstanding() {
     try {
       setIsLoadingDetails(true);
       setSelectedParty(partyName);
-      setViewMode("month");
       setDrawerOpen(true);
       const { data, error } = await supabase
         .from("sales_receivables")
