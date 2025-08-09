@@ -19,6 +19,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { AddNewDesign } from "@/components/custom/AddNewDesign";
+import * as XLSX from "xlsx";
 
 interface Profile {
   id: number;
@@ -61,22 +62,13 @@ export default function BrokerTransportPage() {
     [key: number]: boolean;
   }>({});
   const [editTitles, setEditTitles] = useState<{ [key: number]: string }>({});
-  const [editingDyeingUnit, setEditingDyeingUnit] = useState<{
-    [key: number]: boolean;
-  }>({});
-  const [editingSupplierName, setEditingSupplierName] = useState<{
-    [key: number]: boolean;
-  }>({});
-  const [editDyeingUnitValues, setEditDyeingUnitValues] = useState<{
-    [key: number]: string;
-  }>({});
-  const [editSupplierNameValues, setEditSupplierNameValues] = useState<{
-    [key: number]: string;
-  }>({});
   const [selectedDesigns, setSelectedDesigns] = useState<Design[]>([]);
   const [isPinDialogOpen, setIsPinDialogOpen] = useState(false);
   const [pin, setPin] = useState("");
   const CORRECT_PIN = "1234"; // You can change this to any 4-digit PIN
+  // State for sales receivables upload
+  const [receivablesFile, setReceivablesFile] = useState<File | null>(null);
+  const [isUploadingReceivables, setIsUploadingReceivables] = useState(false);
 
   useEffect(() => {
     fetchBrokers();
@@ -276,9 +268,159 @@ export default function BrokerTransportPage() {
     }
   };
 
- 
+  // Helpers for Sales Receivables upload
+  const formatExcelSerialToISO = (serial: number, date1904: boolean = false): string | null => {
+    if (typeof serial !== "number" || isNaN(serial)) return null;
+    const o = (XLSX.SSF as any).parse_date_code(serial, { date1904 });
+    if (!o) return null;
+    const y = String(o.y).padStart(4, "0");
+    const m = String(o.m).padStart(2, "0");
+    const d = String(o.d).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  };
 
- 
+  const formatStringDateToISO = (value: string): string | null => {
+    const s = value.trim();
+    if (!s) return null;
+    // ISO-like
+    if (/^\d{4}-\d{1,2}-\d{1,2}$/.test(s)) {
+      const [y, m, d] = s.split("-");
+      return `${y}-${String(Number(m)).padStart(2, "0")}-${String(Number(d)).padStart(2, "0")}`;
+    }
+    // d/m/y
+    if (/^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test(s)) {
+      const [d, m, yRaw] = s.split("/");
+      const yNum = yRaw.length === 2 ? Number(yRaw) + 2000 : Number(yRaw);
+      return `${yNum}-${String(Number(m)).padStart(2, "0")}-${String(Number(d)).padStart(2, "0")}`;
+    }
+    // d-m-y
+    if (/^\d{1,2}-\d{1,2}-\d{2,4}$/.test(s)) {
+      const [d, m, yRaw] = s.split("-");
+      const yNum = yRaw.length === 2 ? Number(yRaw) + 2000 : Number(yRaw);
+      return `${yNum}-${String(Number(m)).padStart(2, "0")}-${String(Number(d)).padStart(2, "0")}`;
+    }
+    return null;
+  };
+
+  const toIsoDate = (value: unknown): string | null => {
+    if (value == null || value === "") return null;
+    if (typeof value === "number") return formatExcelSerialToISO(value);
+    if (value instanceof Date) {
+      return `${value.getUTCFullYear()}-${String(value.getUTCMonth() + 1).padStart(2, "0")}-${String(value.getUTCDate()).padStart(2, "0")}`;
+    }
+    if (typeof value === "string") return formatStringDateToISO(value);
+    return null;
+  };
+
+  const parsePendingAmount = (value: unknown): number | null => {
+    if (value == null || value === "") return null;
+    if (typeof value === "number") return value;
+    if (typeof value === "string") {
+      const cleaned = value.replace(/[\,\s]/g, "");
+      const num = Number(cleaned);
+      return isNaN(num) ? null : num;
+    }
+    return null;
+  };
+
+  const uploadReceivablesFromExcel = async () => {
+    if (!receivablesFile) {
+      toast({ title: "No file", description: "Please choose an Excel file" });
+      return;
+    }
+    setIsUploadingReceivables(true);
+    try {
+      const arrayBuffer = await receivablesFile.arrayBuffer();
+      // Do not use cellDates; keep Excel serials to avoid timezone conversions
+      const workbook = XLSX.read(arrayBuffer, { type: "array" });
+      const firstSheetName = workbook.SheetNames[0];
+      const sheet = workbook.Sheets[firstSheetName];
+      const rows: Record<string, any>[] = XLSX.utils.sheet_to_json(sheet, {
+        defval: "",
+        raw: true,
+      });
+      const isDate1904 = !!(workbook.Workbook && workbook.Workbook.WBProps && workbook.Workbook.WBProps.date1904);
+
+      if (!rows.length) {
+        toast({ title: "Empty sheet", description: "No rows found" });
+        return;
+      }
+
+      const payload = rows
+        .map((r) => {
+          const isoDate = typeof r["Date"] === "number" ? formatExcelSerialToISO(r["Date"], isDate1904) : toIsoDate(r["Date"]);
+          const reference = String(r["Ref. No."] ?? "").toString().trim();
+          const party = String(r["Party's Name"] ?? "").toString().trim();
+          const amount = parsePendingAmount(r["Pending"]);
+          if (!isoDate || !reference || !party || amount == null) return null;
+          return {
+            transaction_date: isoDate,
+            reference_number: reference,
+            party_name: party,
+            pending_amount: amount,
+          } as {
+            transaction_date: string;
+            reference_number: string;
+            party_name: string;
+            pending_amount: number;
+          };
+        })
+        .filter(Boolean) as Array<{
+        transaction_date: string;
+        reference_number: string;
+        party_name: string;
+        pending_amount: number;
+      }>;
+
+      if (!payload.length) {
+        toast({ title: "No valid rows", description: "Nothing to upload" });
+        return;
+      }
+
+      const chunkSize = 500;
+      let insertedTotal = 0;
+      for (let i = 0; i < payload.length; i += chunkSize) {
+        const chunk = payload.slice(i, i + chunkSize);
+        const { error } = await supabase.from("sales_receivables").insert(chunk);
+        if (error) throw error;
+        insertedTotal += chunk.length;
+      }
+
+      toast({
+        title: "Upload complete",
+        description: `${insertedTotal} receivable rows uploaded`,
+      });
+      setReceivablesFile(null);
+    } catch (error: any) {
+      toast({
+        title: "Upload failed",
+        description: error?.message || "Unable to upload receivables",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploadingReceivables(false);
+    }
+  };
+
+  const deleteAllSalesReceivables = async () => {
+    const confirmed = window.confirm(
+      "Delete ALL rows from sales_receivables? This cannot be undone."
+    );
+    if (!confirmed) return;
+    const { error } = await supabase.from("sales_receivables").delete().gte("id", 0);
+    if (error) {
+      toast({
+        title: "Delete failed",
+        description: "Could not delete all receivables",
+        variant: "destructive",
+      });
+    } else {
+      toast({ title: "Deleted", description: "All receivables removed" });
+    }
+  };
+
+  
+  
   const editDesign = async (id: number, title: string) => {
     if (title.trim()) {
       const { error } = await supabase
@@ -302,9 +444,9 @@ export default function BrokerTransportPage() {
   };
 
   
-
   
-
+  
+  
   const handleDesignSelect = (design: Design) => {
     if (selectedDesigns.find((d) => d.id === design.id)) {
       setSelectedDesigns(selectedDesigns.filter((d) => d.id !== design.id));
@@ -604,6 +746,33 @@ export default function BrokerTransportPage() {
               </AccordionContent>
             </AccordionItem>
           </Accordion>
+        </div>
+        <div>
+          <h2 className="text-2xl font-bold mb-4">Sales Receivables (Outstandings)</h2>
+          <div className="space-y-3 mb-4">
+            <Label htmlFor="receivablesFile">Upload Excel</Label>
+            <input
+              id="receivablesFile"
+              type="file"
+              accept=".xlsx,.xls"
+              onChange={(e) => setReceivablesFile(e.target.files?.[0] || null)}
+              className="block w-full text-sm"
+            />
+            <div className="flex flex-wrap gap-2">
+              <Button onClick={uploadReceivablesFromExcel} disabled={isUploadingReceivables || !receivablesFile}>
+                {isUploadingReceivables ? "Uploading..." : "Upload"}
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={deleteAllSalesReceivables}
+              >
+                Delete All Receivables
+              </Button>
+            </div>
+            <div className="text-xs text-gray-500">
+              Expected headers: Date, Ref. No., Party's Name, Pending
+            </div>
+          </div>
         </div>
       </div>
       <AddNewDesign
