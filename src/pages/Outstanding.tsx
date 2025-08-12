@@ -3,7 +3,7 @@ import supabase from "@/utils/supabase";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Toaster } from "@/components/ui";
-import { Loader2 } from "lucide-react";
+import { Loader2, ArrowUpDown, ChevronUp, ChevronDown } from "lucide-react";
 import {
   Drawer,
   DrawerContent,
@@ -37,6 +37,8 @@ export default function Outstanding() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [lastUploadDate, setLastUploadDate] = useState<string>("");
   const [monthDrilldown, setMonthDrilldown] = useState<string | null>(null);
+  const [sortBy, setSortBy] = useState<"party" | "invoices" | "total">("total");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
 
 
   useEffect(() => {
@@ -97,9 +99,21 @@ export default function Outstanding() {
 
   const filteredPartyTotals = useMemo(() => {
     const s = search.trim().toLowerCase();
-    if (!s) return partyTotals;
-    return partyTotals.filter((p) => p.partyName.toLowerCase().includes(s));
-  }, [partyTotals, search]);
+    const filtered = s
+      ? partyTotals.filter((p) => p.partyName.toLowerCase().includes(s))
+      : partyTotals;
+
+    const sorted = [...filtered];
+    const direction = sortDir === "asc" ? 1 : -1;
+    if (sortBy === "party") {
+      sorted.sort((a, b) => a.partyName.localeCompare(b.partyName) * direction);
+    } else if (sortBy === "invoices") {
+      sorted.sort((a, b) => (a.invoiceCount - b.invoiceCount) * direction);
+    } else if (sortBy === "total") {
+      sorted.sort((a, b) => (a.totalPending - b.totalPending) * direction);
+    }
+    return sorted;
+  }, [partyTotals, search, sortBy, sortDir]);
 
   const selectedPartyTotal = useMemo(() => {
     if (!selectedParty) return 0;
@@ -167,6 +181,18 @@ export default function Outstanding() {
     return selectedPartyInvoices.filter((inv) => (inv.transaction_date || '').slice(0, 7) === monthDrilldown);
   }, [selectedPartyInvoices, monthDrilldown]);
 
+  const toggleSort = (column: "party" | "invoices" | "total") => {
+    if (sortBy === column) {
+      setSortDir((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setSortBy(column);
+      // Default directions per column
+      if (column === "party") setSortDir("asc");
+      if (column === "invoices") setSortDir("asc");
+      if (column === "total") setSortDir("desc");
+    }
+  };
+
   return (
     <div className="container mx-auto mt-2 sm:mt-4 p-1 sm:p-2 max-w-md bg-white min-h-screen">
       <div className="flex items-center mb-2">
@@ -206,9 +232,22 @@ export default function Outstanding() {
             <table className="min-w-full divide-y divide-gray-300">
               <thead className="bg-white sticky top-0 z-10">
                 <tr>
-                  <th className="px-2 py-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Party</th>
-                  <th className="px-2 py-2 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Invoices</th>
-                  <th className="px-2 py-2 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Total</th>
+                  <th className="px-2 py-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                    <button className="inline-flex items-center gap-1 hover:text-gray-700" onClick={() => toggleSort("party")}
+                      aria-label="Sort by party">
+                      Party {sortBy === 'party' ? (sortDir === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />) : <ArrowUpDown className="h-3 w-3" />}
+                    </button>
+                  </th>
+                  <th className="px-2 py-2 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                    <button className="inline-flex items-center gap-1 hover:text-gray-700" onClick={() => toggleSort("invoices")} aria-label="Sort by invoices">
+                      Invoices {sortBy === 'invoices' ? (sortDir === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />) : <ArrowUpDown className="h-3 w-3" />}
+                    </button>
+                  </th>
+                  <th className="px-2 py-2 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                    <button className="inline-flex items-center gap-1 hover:text-gray-700" onClick={() => toggleSort("total")} aria-label="Sort by total">
+                      Total {sortBy === 'total' ? (sortDir === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />) : <ArrowUpDown className="h-3 w-3" />}
+                    </button>
+                  </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
