@@ -11,6 +11,7 @@ import {
   DrawerTitle,
   DrawerClose,
 } from "@/components/ui/drawer";
+import { Button } from "@/components/ui/button";
 
 interface ReceivableRow {
   id: number;
@@ -193,6 +194,55 @@ export default function Outstanding() {
     }
   };
 
+  // Helper to get last day of month
+  const getLastDayOfMonth = (yyyyMm: string) => {
+    const [year, month] = yyyyMm.split("-").map(Number);
+    return new Date(year, month, 0).getDate();
+  };
+
+  const deleteInvoicesForMonth = async () => {
+    if (!selectedParty || !monthDrilldown) return;
+    const lastDay = getLastDayOfMonth(monthDrilldown);
+    if (!window.confirm(`Delete ALL invoices for ${selectedParty} in ${formatMonth(monthDrilldown)}? This cannot be undone.`)) return;
+    try {
+      setIsLoadingDetails(true);
+      const { error } = await supabase
+        .from("sales_receivables")
+        .delete()
+        .eq("party_name", selectedParty)
+        .gte("transaction_date", `${monthDrilldown}-01`)
+        .lte("transaction_date", `${monthDrilldown}-${String(lastDay).padStart(2, '0')}`);
+      if (error) throw error;
+      toast({ title: "Deleted", description: `All invoices for ${formatMonth(monthDrilldown)} deleted.`, variant: "default" });
+      // Refresh
+      await loadPartyInvoices(selectedParty);
+      setMonthDrilldown(null);
+    } catch (err: any) {
+      toast({ title: "Delete failed", description: err?.message || "Please try again", variant: "destructive" });
+    } finally {
+      setIsLoadingDetails(false);
+    }
+  };
+
+  const deleteInvoiceById = async (id: number) => {
+    if (!window.confirm("Delete this invoice? This cannot be undone.")) return;
+    try {
+      setIsLoadingDetails(true);
+      const { error } = await supabase
+        .from("sales_receivables")
+        .delete()
+        .eq("id", id);
+      if (error) throw error;
+      toast({ title: "Invoice deleted", variant: "default" });
+      // Refresh
+      await loadPartyInvoices(selectedParty);
+    } catch (err: any) {
+      toast({ title: "Delete failed", description: err?.message || "Please try again", variant: "destructive" });
+    } finally {
+      setIsLoadingDetails(false);
+    }
+  };
+
   return (
     <div className="container mx-auto mt-2 sm:mt-4 p-1 sm:p-2 max-w-md bg-white min-h-screen">
       <div className="flex items-center mb-2">
@@ -289,6 +339,15 @@ export default function Outstanding() {
                 <div className="flex items-center mb-2">
                   <button className="mr-2 text-gray-500 hover:text-gray-700 text-lg" onClick={() => setMonthDrilldown(null)}>&larr; Back</button>
                   <span className="font-semibold text-base text-black">{formatMonth(monthDrilldown)}</span>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    className="ml-auto"
+                    onClick={deleteInvoicesForMonth}
+                    disabled={isLoadingDetails || invoicesForMonth.length === 0}
+                  >
+                    Delete All Invoices
+                  </Button>
                 </div>
                 <div className="mb-2 text-right text-sm text-gray-500">
                   Total Pending: <span className="font-bold text-black">{formatCurrency(invoicesForMonth.reduce((sum, inv) => sum + inv.pending_amount, 0))}</span>
@@ -300,6 +359,7 @@ export default function Outstanding() {
                         <th className="px-2 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Date</th>
                         <th className="px-2 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Ref. No.</th>
                         <th className="px-2 py-2 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Pending</th>
+                        <th className="px-2 py-2 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Delete</th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
@@ -308,11 +368,22 @@ export default function Outstanding() {
                           <td className="px-2 py-2 text-base text-gray-900">{inv.transaction_date ? new Date(inv.transaction_date).toLocaleDateString("en-GB") : ""}</td>
                           <td className="px-2 py-2 text-base text-gray-700">{inv.reference_number}</td>
                           <td className="px-2 py-2 text-right text-base font-bold text-black">{formatCurrency(inv.pending_amount)}</td>
+                          <td className="px-2 py-2 text-center">
+                            <Button
+                              variant="destructive"
+                              size="icon"
+                              onClick={() => deleteInvoiceById(inv.id)}
+                              disabled={isLoadingDetails}
+                              title="Delete invoice"
+                            >
+                              🗑️
+                            </Button>
+                          </td>
                         </tr>
                       ))}
                       {invoicesForMonth.length === 0 && (
                         <tr>
-                          <td colSpan={3} className="px-2 py-6 text-center text-sm text-gray-500">
+                          <td colSpan={4} className="px-2 py-6 text-center text-sm text-gray-500">
                             No data
                           </td>
                         </tr>
