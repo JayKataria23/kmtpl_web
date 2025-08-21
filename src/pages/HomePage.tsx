@@ -30,6 +30,7 @@ export default function HomePage() {
       items: [
         { path: "/challan-list", label: "Challan List" },
         { path: "/create-challan", label: "Create Challan" },
+        { path: "/transport-challan-upload", label: "Transport Challan Upload" },
       ],
     },
     {

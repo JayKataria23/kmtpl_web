@@ -31,6 +31,7 @@ import PartyReports from "./pages/PartyReports";
 import DesignReports from "./pages/DesignReports";
 import BhiwandiDesigns from "./pages/BhiwandiDesigns";
 import Outstanding from "./pages/Outstanding";
+import TransportChallanUpload from "./pages/TransportChallanUpload";
 
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
@@ -194,6 +195,14 @@ createRoot(document.getElementById("root")!).render(
             element={
               <ProtectedRoute>
                 <Outstanding />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/transport-challan-upload"
+            element={
+              <ProtectedRoute>
+                <TransportChallanUpload />
               </ProtectedRoute>
             }
           />
