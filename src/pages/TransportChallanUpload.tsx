@@ -1,7 +1,6 @@
 import { useState, useMemo } from "react";
-import { Button, Input, Label, Dialog, DialogContent, DialogHeader, DialogTitle, Toaster } from "@/components/ui";
+import { Button, Input, Label, Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui";
 import * as XLSX from "xlsx";
-import { useToast } from "@/hooks/use-toast";
 
 interface UploadRow {
 	date: string;
@@ -12,6 +11,8 @@ interface UploadRow {
 	totalMeter?: number;
 	transport?: string;
 	gstNo?: string;
+	amount?: number;
+	rate?: number;
 }
 
 interface ChallanDoc {
@@ -24,29 +25,37 @@ interface ChallanDoc {
 	totalMeter?: number;
 	transport?: string;
 	gstNo?: string;
+	amount?: number;
+	rate?: number;
 }
 
 function toIsoDate(value: unknown): string | null {
 	if (value == null || value === "") return null;
 	if (typeof value === "number") {
-		const o = (XLSX.SSF as any).parse_date_code(value);
-		if (!o) return null;
-		const y = String(o.y).padStart(4, "0");
-		const m = String(o.m).padStart(2, "0");
-		const d = String(o.d).padStart(2, "0");
-		return `${y}-${m}-${d}`;
+		try {
+			const o = (XLSX.SSF as any).parse_date_code(value);
+			if (!o) return null;
+			const y = String(o.y).padStart(4, "0");
+			const m = String(o.m).padStart(2, "0");
+			const d = String(o.d).padStart(2, "0");
+			return `${y}-${m}-${d}`;
+		} catch {
+			return null;
+		}
 	}
 	if (typeof value === "string") {
 		const s = value.trim();
 		if (!s) return null;
+		// Handle DD/MM/YYYY or DD-MM-YYYY format
 		if (/^\d{1,2}[-\/]\d{1,2}[-\/]\d{2,4}$/.test(s)) {
-			const [a, b, c] = s.split(/[\/-]/);
-			const d = Number(a);
-			const m = Number(b);
-			const y = c.length === 2 ? Number(c) + 2000 : Number(c);
-			return `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+			const [d, m, y] = s.split(/[\/-]/);
+			const year = y.length === 2 ? Number(y) + 2000 : Number(y);
+			return `${year}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
 		}
-		if (/^\d{4}-\d{1,2}-\d{1,2}$/.test(s)) return s.replace(/-(\d)(?!\d)/g, "-0$1");
+		// Handle YYYY-MM-DD format
+		if (/^\d{4}-\d{1,2}-\d{1,2}$/.test(s)) {
+			return s.replace(/-(\d)(?!\d)/g, "-0$1");
+		}
 	}
 	if (value instanceof Date && !isNaN(value.getTime())) {
 		return `${value.getUTCFullYear()}-${String(value.getUTCMonth() + 1).padStart(2, "0")}-${String(value.getUTCDate()).padStart(2, "0")}`;
@@ -54,36 +63,92 @@ function toIsoDate(value: unknown): string | null {
 	return null;
 }
 
+function safeString(value: unknown): string {
+	if (value == null || value === "") return "";
+	return String(value).trim();
+}
+
+function safeNumber(value: unknown): number | undefined {
+	if (value == null || value === "") return undefined;
+	const num = Number(value);
+	return isNaN(num) ? undefined : num;
+}
+
 export default function TransportChallanUpload() {
-	const { toast } = useToast();
 	const [file, setFile] = useState<File | null>(null);
 	const [docs, setDocs] = useState<ChallanDoc[]>([]);
 	const [showPreview, setShowPreview] = useState(false);
+	const [message, setMessage] = useState("");
 
 	const parseExcel = async () => {
 		if (!file) {
-			toast({ title: "No file", description: "Please select an Excel file" });
+			setMessage("Please select an Excel file");
 			return;
 		}
 		try {
 			const buf = await file.arrayBuffer();
 			const wb = XLSX.read(buf, { type: "array" });
 			const sheet = wb.Sheets[wb.SheetNames[0]];
-			const json: Record<string, any>[] = XLSX.utils.sheet_to_json(sheet, { defval: "", raw: true });
+			const json: Record<string, any>[] = XLSX.utils.sheet_to_json(sheet, { 
+				defval: "", 
+				raw: true,
+				header: 1
+			});
+			
 			if (!json.length) {
-				toast({ title: "Empty sheet", description: "No rows found" });
+				setMessage("No data found in the Excel file");
 				return;
 			}
-			const mapped: UploadRow[] = json.map((r) => ({
-				date: toIsoDate(r["Date"] ?? r["DATE"] ?? r["Invoice Date"]) || new Date().toISOString().slice(0, 10),
-				buyer: String(r["Buyer"] ?? r["Bill To"] ?? r["Party"] ?? "").toString().trim(),
-				consignee: String(r["Consignee"] ?? r["Ship To"] ?? r["To"] ?? "").toString().trim(),
-				baleNo: String(r["Bale No"] ?? r["BALE NO"] ?? r["Bale"] ?? "").toString().trim() || undefined,
-				totalBale: Number(r["Total Bale"] ?? r["TOT BALE"] ?? r["Bales"] ?? "") || undefined,
-				totalMeter: Number(r["Total Mr."] ?? r["Total Mtr"] ?? r["Meters"] ?? "") || undefined,
-				transport: String(r["Transport"] ?? r["TRANSPORT"] ?? "").toString().trim() || undefined,
-				gstNo: String(r["GST No"] ?? r["GSTIN"] ?? "").toString().trim() || undefined,
-			}));
+
+			// Find header row (usually the first row with meaningful data)
+			let headerRowIndex = 0;
+			for (let i = 0; i < Math.min(5, json.length); i++) {
+				const row = json[i];
+				if (Array.isArray(row) && row.some(cell => 
+					String(cell).toLowerCase().includes('date') || 
+					String(cell).toLowerCase().includes('party') ||
+					String(cell).toLowerCase().includes('consignee')
+				)) {
+					headerRowIndex = i;
+					break;
+				}
+			}
+
+			const headers = json[headerRowIndex] as string[];
+			const dataRows = json.slice(headerRowIndex + 1);
+
+			// Create column mapping
+			const columnMap: Record<string, number> = {};
+			headers.forEach((header, index) => {
+				const h = String(header).toLowerCase().trim();
+				if (h.includes('date')) columnMap.date = index;
+				else if (h.includes('party') || h.includes('buyer') || h.includes('bill to')) columnMap.buyer = index;
+				else if (h.includes('consignee') || h.includes('ship to') || h.includes('to')) columnMap.consignee = index;
+				else if (h.includes('bale no') || h.includes('bale')) columnMap.baleNo = index;
+				else if (h.includes('total bale') || h.includes('tot bale') || h.includes('bales')) columnMap.totalBale = index;
+				else if (h.includes('total m') || h.includes('meter') || h.includes('mtr')) columnMap.totalMeter = index;
+				else if (h.includes('transport')) columnMap.transport = index;
+				else if (h.includes('gst') && h.includes('no')) columnMap.gstNo = index;
+				else if (h.includes('amount') || h.includes('value')) columnMap.amount = index;
+				else if (h.includes('rate')) columnMap.rate = index;
+			});
+
+			const mapped: UploadRow[] = dataRows
+				.filter(row => Array.isArray(row) && row.length > 0)
+				.map((row) => ({
+					date: toIsoDate(columnMap.date !== undefined ? row[columnMap.date] : null) || 
+						  new Date().toISOString().slice(0, 10),
+					buyer: safeString(columnMap.buyer !== undefined ? row[columnMap.buyer] : ""),
+					consignee: safeString(columnMap.consignee !== undefined ? row[columnMap.consignee] : ""),
+					baleNo: safeString(columnMap.baleNo !== undefined ? row[columnMap.baleNo] : "") || undefined,
+					totalBale: safeNumber(columnMap.totalBale !== undefined ? row[columnMap.totalBale] : null),
+					totalMeter: safeNumber(columnMap.totalMeter !== undefined ? row[columnMap.totalMeter] : null),
+					transport: safeString(columnMap.transport !== undefined ? row[columnMap.transport] : "") || undefined,
+					gstNo: safeString(columnMap.gstNo !== undefined ? row[columnMap.gstNo] : "") || undefined,
+					amount: safeNumber(columnMap.amount !== undefined ? row[columnMap.amount] : null),
+					rate: safeNumber(columnMap.rate !== undefined ? row[columnMap.rate] : null),
+				}));
+
 			const docsNow: ChallanDoc[] = mapped
 				.filter((r) => r.buyer || r.consignee)
 				.map((r, i) => ({
@@ -96,12 +161,15 @@ export default function TransportChallanUpload() {
 					totalMeter: r.totalMeter,
 					transport: r.transport,
 					gstNo: r.gstNo,
+					amount: r.amount,
+					rate: r.rate,
 				}));
+
 			setDocs(docsNow);
 			setShowPreview(true);
-			toast({ title: "Parsed", description: `${docsNow.length} challans ready` });
+			setMessage(`Successfully parsed ${docsNow.length} challans from Excel file`);
 		} catch (e: any) {
-			toast({ title: "Failed to parse", description: e?.message || "Invalid file", variant: "destructive" });
+			setMessage(`Failed to parse Excel file: ${e?.message || "Invalid file format"}`);
 		}
 	};
 
@@ -112,34 +180,79 @@ export default function TransportChallanUpload() {
 	const preview = useMemo(() => (
 		<div className="space-y-6">
 			{docs.map((d) => (
-				<div key={d.id} className="bg-white p-4 shadow print:shadow-none print:p-0">
-					<div className="border border-gray-400 p-3">
-						<div className="flex justify-between items-start">
-							<div className="text-lg font-semibold">K. M. TEXTILES PVT. LTD.</div>
-							<div className="text-right text-sm">
-								<div>Date: {new Date(d.date).toLocaleDateString("en-GB")}</div>
-							</div>
-						</div>
-						<div className="mt-2 grid grid-cols-2 gap-2 text-sm">
+				<div key={d.id} className="bg-white p-4 shadow print:shadow-none print:p-0 border print:border-black">
+					<div className="border border-gray-400 p-4">
+						{/* Header */}
+						<div className="flex justify-between items-start mb-4">
 							<div>
-								<div className="font-medium">To</div>
-								<div className="font-semibold">{d.consignee || ""}</div>
-								{d.gstNo ? <div>G.S.T No.: {d.gstNo}</div> : null}
+								<div className="text-xl font-bold">K. M. TEXTILES PVT. LTD.</div>
+								<div className="text-sm text-gray-600 mt-1">
+									Plot No. 505, 1st Floor-A, Riddhi Corporate,
+								</div>
+								<div className="text-sm text-gray-600">
+									Aarey Road, Behind Bharatiyamata Hospital, Goregaon (E), Mumbai-400063
+								</div>
+								<div className="text-sm text-gray-600">
+									GST No.: 27AABCK7906B1ZG | Email: kmtextiles.mfg@gmail.com
+								</div>
+							</div>
+							<div className="text-right">
+								<div className="text-lg font-semibold">DELIVERY CHALLAN</div>
+								<div className="text-sm mt-1">Date: {new Date(d.date).toLocaleDateString("en-GB")}</div>
+							</div>
+						</div>
+
+						{/* Party Details */}
+						<div className="grid grid-cols-2 gap-6 mb-4">
+							<div>
+								<div className="font-semibold text-sm mb-1">CONSIGNEE:</div>
+								<div className="font-bold text-lg">{d.consignee || d.buyer}</div>
+								{d.gstNo && (
+									<div className="text-sm mt-1">G.S.T No.: {d.gstNo}</div>
+								)}
 							</div>
 							<div>
-								<div className="font-medium">Transport</div>
-								<div className="font-semibold">{d.transport || ""}</div>
+								<div className="font-semibold text-sm mb-1">TRANSPORT:</div>
+								<div className="font-bold">{d.transport || "By Road"}</div>
 							</div>
 						</div>
-						<div className="mt-3 grid grid-cols-3 gap-2 text-sm">
-							<div>Bale No.: <span className="font-semibold">{d.baleNo || ""}</span></div>
-							<div>Total Bale: <span className="font-semibold">{d.totalBale ?? ""}</span></div>
-							<div>Total Mtr.: <span className="font-semibold">{d.totalMeter ?? ""}</span></div>
+
+						{/* Details Table */}
+						<div className="border border-gray-400 mb-4">
+							<div className="bg-gray-100 px-3 py-2 border-b border-gray-400">
+								<div className="grid grid-cols-4 gap-2 text-sm font-semibold">
+									<div>Bale No.</div>
+									<div>Total Bales</div>
+									<div>Total Meters</div>
+									<div>Amount</div>
+								</div>
+							</div>
+							<div className="px-3 py-4">
+								<div className="grid grid-cols-4 gap-2 text-sm">
+									<div className="font-semibold">{d.baleNo || "-"}</div>
+									<div className="font-semibold">{d.totalBale || "-"}</div>
+									<div className="font-semibold">{d.totalMeter || "-"}</div>
+									<div className="font-semibold">{d.amount ? `₹${d.amount.toLocaleString()}` : "-"}</div>
+								</div>
+							</div>
 						</div>
-						<div className="mt-4 h-40 border border-dashed" />
-						<div className="mt-4 text-xs flex justify-between">
-							<div>Booking:</div>
-							<div>G.S.T No.: {d.gstNo || ""}</div>
+
+						{/* Description Area */}
+						<div className="mb-4">
+							<div className="text-sm font-semibold mb-2">Description of Goods:</div>
+							<div className="border border-dashed border-gray-400 h-20"></div>
+						</div>
+
+						{/* Footer */}
+						<div className="flex justify-between items-end text-xs">
+							<div>
+								<div>Booking: ________________</div>
+								<div className="mt-2">Driver Signature: ________________</div>
+							</div>
+							<div className="text-right">
+								<div>For K. M. TEXTILES PVT. LTD.</div>
+								<div className="mt-8">Authorized Signatory</div>
+							</div>
 						</div>
 					</div>
 				</div>
@@ -148,29 +261,90 @@ export default function TransportChallanUpload() {
 	), [docs]);
 
 	return (
-		<div className="container mx-auto mt-10 p-4">
-			<h1 className="text-2xl font-bold mb-4">Transport Challan Upload</h1>
-			<div className="space-y-2 mb-4">
-				<Label htmlFor="file">Upload Excel</Label>
-				<Input id="file" type="file" accept=".xlsx,.xls" onChange={(e) => setFile(e.target.files?.[0] || null)} />
-				<div className="flex gap-2">
-					<Button onClick={parseExcel}>Parse</Button>
-					{docs.length > 0 ? <Button onClick={() => setShowPreview(true)}>Preview</Button> : null}
-					{docs.length > 0 ? <Button onClick={printAll}>Print</Button> : null}
+		<div className="container mx-auto mt-10 p-4 max-w-4xl">
+			<h1 className="text-3xl font-bold mb-6">Transport Challan Generator</h1>
+			
+			<div className="bg-white p-6 rounded-lg shadow-md mb-6">
+				<div className="space-y-4">
+					<div>
+						<Label htmlFor="file" className="text-sm font-medium">
+							Upload Sales Register Excel File
+						</Label>
+						<Input 
+							id="file" 
+							type="file" 
+							accept=".xlsx,.xls" 
+							onChange={(e) => setFile(e.target.files?.[0] || null)}
+							className="mt-1"
+						/>
+						<div className="text-xs text-gray-500 mt-1">
+							Supports Excel files with columns: Date, Party/Buyer, Consignee, Bale No, Total Bales, Total Meters, etc.
+						</div>
+					</div>
+					
+					<div className="flex gap-3">
+						<Button onClick={parseExcel} className="bg-blue-600 hover:bg-blue-700">
+							Parse Excel & Generate Challans
+						</Button>
+						{docs.length > 0 && (
+							<>
+								<Button 
+									onClick={() => setShowPreview(true)} 
+									variant="outline"
+								>
+									Preview ({docs.length})
+								</Button>
+								<Button 
+									onClick={printAll} 
+									className="bg-green-600 hover:bg-green-700"
+								>
+									Print All
+								</Button>
+							</>
+						)}
+					</div>
+
+					{message && (
+						<div className={`p-3 rounded text-sm ${
+							message.includes('Successfully') 
+								? 'bg-green-100 text-green-700 border border-green-300' 
+								: 'bg-red-100 text-red-700 border border-red-300'
+						}`}>
+							{message}
+						</div>
+					)}
 				</div>
 			</div>
 
 			<Dialog open={showPreview} onOpenChange={setShowPreview}>
-				<DialogContent className="max-w-5xl w-full">
+				<DialogContent className="max-w-6xl w-full h-[90vh]">
 					<DialogHeader>
-						<DialogTitle>Preview ({docs.length})</DialogTitle>
+						<DialogTitle className="text-lg">
+							Preview Delivery Challans ({docs.length} documents)
+						</DialogTitle>
 					</DialogHeader>
-					<div className="max-h-[70vh] overflow-auto p-2 bg-gray-100 print:bg-white">
+					<div className="flex-1 overflow-auto p-4 bg-gray-50 print:bg-white">
 						{preview}
 					</div>
 				</DialogContent>
 			</Dialog>
-			<Toaster />
+
+			{/* Print Styles */}
+			<style jsx>{`
+				@media print {
+					body * { visibility: hidden; }
+					.print\\:shadow-none, .print\\:shadow-none * { visibility: visible; }
+					.print\\:shadow-none { 
+						position: absolute;
+						left: 0;
+						top: 0;
+						width: 100%;
+					}
+					.print\\:border-black { border-color: black !important; }
+					.print\\:bg-white { background: white !important; }
+					.print\\:p-0 { padding: 0 !important; }
+				}
+			`}</style>
 		</div>
 	);
 }
