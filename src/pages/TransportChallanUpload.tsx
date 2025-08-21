@@ -57,7 +57,6 @@ function toIsoDate(value: unknown): string | null {
 export default function TransportChallanUpload() {
 	const { toast } = useToast();
 	const [file, setFile] = useState<File | null>(null);
-	const [rows, setRows] = useState<UploadRow[]>([]);
 	const [docs, setDocs] = useState<ChallanDoc[]>([]);
 	const [showPreview, setShowPreview] = useState(false);
 
@@ -85,7 +84,6 @@ export default function TransportChallanUpload() {
 				transport: String(r["Transport"] ?? r["TRANSPORT"] ?? "").toString().trim() || undefined,
 				gstNo: String(r["GST No"] ?? r["GSTIN"] ?? "").toString().trim() || undefined,
 			}));
-			setRows(mapped);
 			const docsNow: ChallanDoc[] = mapped
 				.filter((r) => r.buyer || r.consignee)
 				.map((r, i) => ({
