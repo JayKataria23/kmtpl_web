@@ -4,15 +4,19 @@ import * as XLSX from "xlsx";
 
 interface UploadRow {
 	date: string;
+	particulars: string;
 	buyer: string;
 	consignee: string;
-	baleNo?: string;
-	totalBale?: number;
-	totalMeter?: number;
-	transport?: string;
-	gstNo?: string;
-	amount?: number;
-	rate?: number;
+	orderNo?: string;
+	paymentTerms?: string;
+	otherReferences?: string;
+	deliveryTerms?: string;
+	grossTotal?: number;
+	salesGst?: number;
+	igst?: number;
+	roundOff?: number;
+	cgst?: number;
+	sgst?: number;
 }
 
 interface ChallanDoc {
@@ -20,13 +24,17 @@ interface ChallanDoc {
 	buyer: string;
 	consignee: string;
 	date: string;
-	baleNo?: string;
-	totalBale?: number;
-	totalMeter?: number;
-	transport?: string;
-	gstNo?: string;
-	amount?: number;
-	rate?: number;
+	particulars: string;
+	orderNo?: string;
+	paymentTerms?: string;
+	otherReferences?: string;
+	deliveryTerms?: string;
+	grossTotal?: number;
+	salesGst?: number;
+	igst?: number;
+	roundOff?: number;
+	cgst?: number;
+	sgst?: number;
 }
 
 function toIsoDate(value: unknown): string | null {
@@ -100,37 +108,64 @@ export default function TransportChallanUpload() {
 				return;
 			}
 
-			// Find header row (usually the first row with meaningful data)
-			let headerRowIndex = 0;
-			for (let i = 0; i < Math.min(5, json.length); i++) {
-				const row = json[i];
-				if (Array.isArray(row) && row.some(cell => 
-					String(cell).toLowerCase().includes('date') || 
-					String(cell).toLowerCase().includes('party') ||
-					String(cell).toLowerCase().includes('consignee')
-				)) {
-					headerRowIndex = i;
-					break;
-				}
+			// Skip first 7 rows (company details) and use row 7 (index 7) as headers
+			if (json.length <= 7) {
+				setMessage("Excel file doesn't have enough rows. Expected at least 8 rows (7 company details + header row)");
+				return;
 			}
 
+			const headerRowIndex = 7; // Row 8 (0-indexed as 7)
 			const headers = json[headerRowIndex] as string[];
 			const dataRows = json.slice(headerRowIndex + 1);
 
-			// Create column mapping
+			// Create column mapping based on exact column names
 			const columnMap: Record<string, number> = {};
 			headers.forEach((header, index) => {
-				const h = String(header).toLowerCase().trim();
-				if (h.includes('date')) columnMap.date = index;
-				else if (h.includes('party') || h.includes('buyer') || h.includes('bill to')) columnMap.buyer = index;
-				else if (h.includes('consignee') || h.includes('ship to') || h.includes('to')) columnMap.consignee = index;
-				else if (h.includes('bale no') || h.includes('bale')) columnMap.baleNo = index;
-				else if (h.includes('total bale') || h.includes('tot bale') || h.includes('bales')) columnMap.totalBale = index;
-				else if (h.includes('total m') || h.includes('meter') || h.includes('mtr')) columnMap.totalMeter = index;
-				else if (h.includes('transport')) columnMap.transport = index;
-				else if (h.includes('gst') && h.includes('no')) columnMap.gstNo = index;
-				else if (h.includes('amount') || h.includes('value')) columnMap.amount = index;
-				else if (h.includes('rate')) columnMap.rate = index;
+				const h = String(header).trim();
+				switch (h) {
+					case 'Date':
+						columnMap.date = index;
+						break;
+					case 'Particulars':
+						columnMap.particulars = index;
+						break;
+					case 'Buyer':
+						columnMap.buyer = index;
+						break;
+					case 'Consignee':
+						columnMap.consignee = index;
+						break;
+					case 'Order No. & Date':
+						columnMap.orderNo = index;
+						break;
+					case 'Terms of Payment':
+						columnMap.paymentTerms = index;
+						break;
+					case 'Other References':
+						columnMap.otherReferences = index;
+						break;
+					case 'Terms of Delivery':
+						columnMap.deliveryTerms = index;
+						break;
+					case 'Gross Total':
+						columnMap.grossTotal = index;
+						break;
+					case 'SALES GST':
+						columnMap.salesGst = index;
+						break;
+					case 'IGST':
+						columnMap.igst = index;
+						break;
+					case 'Round Off':
+						columnMap.roundOff = index;
+						break;
+					case 'CGST':
+						columnMap.cgst = index;
+						break;
+					case 'SGST':
+						columnMap.sgst = index;
+						break;
+				}
 			});
 
 			const mapped: UploadRow[] = dataRows
@@ -138,15 +173,19 @@ export default function TransportChallanUpload() {
 				.map((row) => ({
 					date: toIsoDate(columnMap.date !== undefined ? row[columnMap.date] : null) || 
 						  new Date().toISOString().slice(0, 10),
+					particulars: safeString(columnMap.particulars !== undefined ? row[columnMap.particulars] : ""),
 					buyer: safeString(columnMap.buyer !== undefined ? row[columnMap.buyer] : ""),
 					consignee: safeString(columnMap.consignee !== undefined ? row[columnMap.consignee] : ""),
-					baleNo: safeString(columnMap.baleNo !== undefined ? row[columnMap.baleNo] : "") || undefined,
-					totalBale: safeNumber(columnMap.totalBale !== undefined ? row[columnMap.totalBale] : null),
-					totalMeter: safeNumber(columnMap.totalMeter !== undefined ? row[columnMap.totalMeter] : null),
-					transport: safeString(columnMap.transport !== undefined ? row[columnMap.transport] : "") || undefined,
-					gstNo: safeString(columnMap.gstNo !== undefined ? row[columnMap.gstNo] : "") || undefined,
-					amount: safeNumber(columnMap.amount !== undefined ? row[columnMap.amount] : null),
-					rate: safeNumber(columnMap.rate !== undefined ? row[columnMap.rate] : null),
+					orderNo: safeString(columnMap.orderNo !== undefined ? row[columnMap.orderNo] : "") || undefined,
+					paymentTerms: safeString(columnMap.paymentTerms !== undefined ? row[columnMap.paymentTerms] : "") || undefined,
+					otherReferences: safeString(columnMap.otherReferences !== undefined ? row[columnMap.otherReferences] : "") || undefined,
+					deliveryTerms: safeString(columnMap.deliveryTerms !== undefined ? row[columnMap.deliveryTerms] : "") || undefined,
+					grossTotal: safeNumber(columnMap.grossTotal !== undefined ? row[columnMap.grossTotal] : null),
+					salesGst: safeNumber(columnMap.salesGst !== undefined ? row[columnMap.salesGst] : null),
+					igst: safeNumber(columnMap.igst !== undefined ? row[columnMap.igst] : null),
+					roundOff: safeNumber(columnMap.roundOff !== undefined ? row[columnMap.roundOff] : null),
+					cgst: safeNumber(columnMap.cgst !== undefined ? row[columnMap.cgst] : null),
+					sgst: safeNumber(columnMap.sgst !== undefined ? row[columnMap.sgst] : null),
 				}));
 
 			const docsNow: ChallanDoc[] = mapped
@@ -156,13 +195,17 @@ export default function TransportChallanUpload() {
 					buyer: r.buyer,
 					consignee: r.consignee || r.buyer,
 					date: r.date,
-					baleNo: r.baleNo,
-					totalBale: r.totalBale,
-					totalMeter: r.totalMeter,
-					transport: r.transport,
-					gstNo: r.gstNo,
-					amount: r.amount,
-					rate: r.rate,
+					particulars: r.particulars,
+					orderNo: r.orderNo,
+					paymentTerms: r.paymentTerms,
+					otherReferences: r.otherReferences,
+					deliveryTerms: r.deliveryTerms,
+					grossTotal: r.grossTotal,
+					salesGst: r.salesGst,
+					igst: r.igst,
+					roundOff: r.roundOff,
+					cgst: r.cgst,
+					sgst: r.sgst,
 				}));
 
 			setDocs(docsNow);
@@ -205,37 +248,54 @@ export default function TransportChallanUpload() {
 						{/* Party Details */}
 						<div className="grid grid-cols-2 gap-6 mb-4">
 							<div>
-								<div className="font-semibold text-sm mb-1">CONSIGNEE:</div>
+								<div className="font-semibold text-sm mb-1">TO:</div>
 								<div className="font-bold text-lg">{d.consignee || d.buyer}</div>
-								{d.gstNo && (
-									<div className="text-sm mt-1">G.S.T No.: {d.gstNo}</div>
+								{d.buyer !== d.consignee && d.buyer && (
+									<div className="text-sm mt-1">Buyer: {d.buyer}</div>
 								)}
 							</div>
 							<div>
 								<div className="font-semibold text-sm mb-1">TRANSPORT:</div>
-								<div className="font-bold">{d.transport || "By Road"}</div>
+								<div className="font-bold">{d.deliveryTerms || "By Road"}</div>
+								{d.orderNo && (
+									<div className="text-sm mt-1">Order No.: {d.orderNo}</div>
+								)}
 							</div>
 						</div>
 
 						{/* Details Table */}
 						<div className="border border-gray-400 mb-4">
 							<div className="bg-gray-100 px-3 py-2 border-b border-gray-400">
-								<div className="grid grid-cols-4 gap-2 text-sm font-semibold">
-									<div>Bale No.</div>
-									<div>Total Bales</div>
-									<div>Total Meters</div>
-									<div>Amount</div>
+								<div className="grid grid-cols-5 gap-2 text-sm font-semibold">
+									<div>Particulars</div>
+									<div>Gross Total</div>
+									<div>CGST</div>
+									<div>SGST</div>
+									<div>IGST</div>
 								</div>
 							</div>
 							<div className="px-3 py-4">
-								<div className="grid grid-cols-4 gap-2 text-sm">
-									<div className="font-semibold">{d.baleNo || "-"}</div>
-									<div className="font-semibold">{d.totalBale || "-"}</div>
-									<div className="font-semibold">{d.totalMeter || "-"}</div>
-									<div className="font-semibold">{d.amount ? `₹${d.amount.toLocaleString()}` : "-"}</div>
+								<div className="grid grid-cols-5 gap-2 text-sm">
+									<div className="font-semibold">{d.particulars || "-"}</div>
+									<div className="font-semibold">{d.grossTotal ? `₹${d.grossTotal.toLocaleString()}` : "-"}</div>
+									<div className="font-semibold">{d.cgst ? `₹${d.cgst.toLocaleString()}` : "-"}</div>
+									<div className="font-semibold">{d.sgst ? `₹${d.sgst.toLocaleString()}` : "-"}</div>
+									<div className="font-semibold">{d.igst ? `₹${d.igst.toLocaleString()}` : "-"}</div>
 								</div>
 							</div>
 						</div>
+
+						{/* Additional Details */}
+						{(d.paymentTerms || d.otherReferences) && (
+							<div className="mb-4 text-sm">
+								{d.paymentTerms && (
+									<div><span className="font-semibold">Payment Terms:</span> {d.paymentTerms}</div>
+								)}
+								{d.otherReferences && (
+									<div><span className="font-semibold">Other References:</span> {d.otherReferences}</div>
+								)}
+							</div>
+						)}
 
 						{/* Description Area */}
 						<div className="mb-4">
@@ -278,7 +338,7 @@ export default function TransportChallanUpload() {
 							className="mt-1"
 						/>
 						<div className="text-xs text-gray-500 mt-1">
-							Supports Excel files with columns: Date, Party/Buyer, Consignee, Bale No, Total Bales, Total Meters, etc.
+							Supports Excel files with: 7 rows of company details followed by columns - Date, Particulars, Buyer, Consignee, Order No. & Date, Terms of Payment, Other References, Terms of Delivery, Gross Total, SALES GST, IGST, Round Off, CGST, SGST
 						</div>
 					</div>
 					
@@ -347,4 +407,4 @@ export default function TransportChallanUpload() {
 			`}</style>
 		</div>
 	);
-}
+																				 }
