@@ -3,7 +3,7 @@ import supabase from "@/utils/supabase";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Toaster } from "@/components/ui";
-import { Loader2, ArrowUpDown, ChevronUp, ChevronDown } from "lucide-react";
+import { Loader2, ArrowUpDown, ChevronUp, ChevronDown, Trash } from "lucide-react";
 import {
   Drawer,
   DrawerContent,
@@ -337,22 +337,13 @@ export default function Outstanding() {
             {monthDrilldown ? (
               <>
                 <div className="flex items-center mb-2">
-                  <button className="mr-2 text-gray-500 hover:text-gray-700 text-lg" onClick={() => setMonthDrilldown(null)}>&larr; Back</button>
+                  <Button variant="ghost" className="mr-2 text-gray-500 hover:text-gray-700 text-lg px-2 py-1" onClick={() => setMonthDrilldown(null)}>&larr; Back</Button>
                   <span className="font-semibold text-base text-black">{formatMonth(monthDrilldown)}</span>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    className="ml-auto"
-                    onClick={deleteInvoicesForMonth}
-                    disabled={isLoadingDetails || invoicesForMonth.length === 0}
-                  >
-                    Delete All Invoices
-                  </Button>
                 </div>
                 <div className="mb-2 text-right text-sm text-gray-500">
                   Total Pending: <span className="font-bold text-black">{formatCurrency(invoicesForMonth.reduce((sum, inv) => sum + inv.pending_amount, 0))}</span>
                 </div>
-                <div className="overflow-auto max-h-[60vh] custom-scrollbar">
+                <div className="overflow-auto max-h-[60vh] custom-scrollbar mb-4">
                   <table className="min-w-full divide-y divide-gray-300">
                     <thead className="bg-gray-50 sticky top-0 z-10">
                       <tr>
@@ -370,13 +361,14 @@ export default function Outstanding() {
                           <td className="px-2 py-2 text-right text-base font-bold text-black">{formatCurrency(inv.pending_amount)}</td>
                           <td className="px-2 py-2 text-center">
                             <Button
-                              variant="destructive"
+                              variant="ghost"
                               size="icon"
                               onClick={() => deleteInvoiceById(inv.id)}
                               disabled={isLoadingDetails}
                               title="Delete invoice"
+                              className="text-red-500 hover:bg-red-50 hover:text-red-700"
                             >
-                              🗑️
+                              <Trash className="w-5 h-5" />
                             </Button>
                           </td>
                         </tr>
@@ -391,6 +383,14 @@ export default function Outstanding() {
                     </tbody>
                   </table>
                 </div>
+                <Button
+                  variant="outline"
+                  className="w-full text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 font-semibold flex items-center justify-center gap-2"
+                  onClick={deleteInvoicesForMonth}
+                  disabled={isLoadingDetails || invoicesForMonth.length === 0}
+                >
+                  <Trash className="w-5 h-5 mr-1" /> Delete All Invoices
+                </Button>
               </>
             ) : (
               <>
