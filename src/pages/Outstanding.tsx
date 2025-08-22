@@ -12,7 +12,6 @@ import {
   DrawerClose,
 } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
-import { Button } from "@/components/ui/button";
 
 interface ReceivableRow {
   id: number;
@@ -183,6 +182,19 @@ export default function Outstanding() {
     return selectedPartyInvoices.filter((inv) => (inv.transaction_date || '').slice(0, 7) === monthDrilldown);
   }, [selectedPartyInvoices, monthDrilldown]);
 
+  const toggleSort = (column: "party" | "invoices" | "total") => {
+    if (sortBy === column) {
+      setSortDir((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setSortBy(column);
+      // Default directions per column
+      if (column === "party") setSortDir("asc");
+      if (column === "invoices") setSortDir("asc");
+      if (column === "total") setSortDir("desc");
+    }
+  };
+
+  // Helper to get last day of month
   const getLastDayOfMonth = (yyyyMm: string) => {
     const [year, month] = yyyyMm.split("-").map(Number);
     return new Date(year, month, 0).getDate();
@@ -336,15 +348,6 @@ export default function Outstanding() {
                   >
                     Delete All Invoices
                   </Button>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    className="ml-auto"
-                    onClick={deleteInvoicesForMonth}
-                    disabled={isLoadingDetails || invoicesForMonth.length === 0}
-                  >
-                    Delete All Invoices
-                  </Button>
                 </div>
                 <div className="mb-2 text-right text-sm text-gray-500">
                   Total Pending: <span className="font-bold text-black">{formatCurrency(invoicesForMonth.reduce((sum, inv) => sum + inv.pending_amount, 0))}</span>
@@ -356,7 +359,6 @@ export default function Outstanding() {
                         <th className="px-2 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Date</th>
                         <th className="px-2 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Ref. No.</th>
                         <th className="px-2 py-2 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Pending</th>
-                        <th className="px-2 py-2 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Delete</th>
                         <th className="px-2 py-2 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Delete</th>
                       </tr>
                     </thead>
@@ -377,22 +379,10 @@ export default function Outstanding() {
                               🗑️
                             </Button>
                           </td>
-                          <td className="px-2 py-2 text-center">
-                            <Button
-                              variant="destructive"
-                              size="icon"
-                              onClick={() => deleteInvoiceById(inv.id)}
-                              disabled={isLoadingDetails}
-                              title="Delete invoice"
-                            >
-                              🗑️
-                            </Button>
-                          </td>
                         </tr>
                       ))}
                       {invoicesForMonth.length === 0 && (
                         <tr>
-                          <td colSpan={4} className="px-2 py-6 text-center text-sm text-gray-500">
                           <td colSpan={4} className="px-2 py-6 text-center text-sm text-gray-500">
                             No data
                           </td>
