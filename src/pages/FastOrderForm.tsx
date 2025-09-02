@@ -286,13 +286,21 @@ function FastOrderForm() {
         if (selectedParty.broker_id) {
           setSelectedBroker(selectedParty.broker_id);
         }
-        if (selectedParty.transport_id) {
-          setSelectedTransport(selectedParty.transport_id);
-        }
       }
       handleNextRef.current();
     }
   }, [selectedBillTo, partyOptions]);
+
+  useEffect(() => {
+    if (selectedShipTo !== null) {
+      const shipToParty = partyOptions.find(
+        (party) => party.id === selectedShipTo
+      );
+      if (shipToParty && shipToParty.transport_id) {
+        setSelectedTransport(shipToParty.transport_id);
+      }
+    }
+  }, [selectedShipTo, partyOptions]);
 
   useEffect(() => {
     if (currentSelectedDesign !== null) {
