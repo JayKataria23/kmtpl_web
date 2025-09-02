@@ -30,6 +30,7 @@ interface DesignCount {
 
 interface DesignEntry {
   id: number;
+  design: string;
   bill_to_party: string;
   order_no: number;
   remark: string;
@@ -166,6 +167,7 @@ export default function BhiwandiDesigns() {
       } else if (data) {
         const entries: DesignEntry[] = (data as any[]).map((row) => ({
           id: row.id,
+          design: design,
           bill_to_party: row.orders?.party_profiles?.name || "",
           order_no: row.orders?.order_no || "",
           remark: row.remark,
@@ -219,6 +221,7 @@ export default function BhiwandiDesigns() {
       } else if (data) {
         const entries: DesignEntry[] = (data as any[]).map((row) => ({
           id: row.id,
+          design: design,
           bill_to_party: row.orders?.party_profiles?.name || "",
           order_no: row.orders?.order_no || "",
           remark: row.remark,
@@ -322,6 +325,7 @@ export default function BhiwandiDesigns() {
                       <X className="h-4 w-4" />
                     </Button>
                     <div className="font-medium">{entry.bill_to_party}</div>
+                    <div className="text-xs text-gray-500 mt-1">Design: {entry.design}</div>
                     <div className="text-xs text-gray-500 mt-1">Order No: {entry.order_no}</div>
                     <div className="text-xs text-gray-500 mt-1">Price: ₹{entry.price}</div>
                     <div className="mt-2">
