@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import supabase from "@/utils/supabase";
@@ -33,8 +33,8 @@ interface GroupedByDesign {
 
 interface PartyGroup {
   party_name: string;
-  designs: GroupedByDesign[];
-  total_entries: number;
+  designs: GroupedByDesign[]; // filled lazily when expanded
+  total_entries: number; // summary count for quick display
 }
 
 interface DispatchEntryResponse {
@@ -53,10 +53,13 @@ interface DispatchEntryResponse {
 
 const PartyDispatchList = () => {
   const [partyGroups, setPartyGroups] = useState<PartyGroup[]>([]);
+  const [rawEntries, setRawEntries] = useState<DispatchEntryResponse[]>([]);
+  const [designsCacheByParty, setDesignsCacheByParty] = useState<Record<string, GroupedByDesign[]>>({});
   const [openAccordion, setOpenAccordion] = useState<string | null>(null);
   const [openDesignAccordion, setOpenDesignAccordion] = useState<string | null>(
     null
   );
+  const [partySearch, setPartySearch] = useState<string>("");
   const printFrameRef = useRef<HTMLIFrameElement>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -68,70 +71,20 @@ const PartyDispatchList = () => {
         .order("dispatch_date", { ascending: false });
 
       if (error) throw error;
+      setRawEntries(data);
 
-      // Transform and group the data by party and then by design
-      const groupedByParty: { [key: string]: PartyGroup } = {};
-
+      // Build quick party summaries only (no heavy per-design grouping yet)
+      const partyCounts = new Map<string, number>();
       data.forEach((entry: DispatchEntryResponse) => {
-        const partyName = entry.bill_to_party;
-        const designName = entry.title;
-
-        if (!groupedByParty[partyName]) {
-          groupedByParty[partyName] = {
-            party_name: partyName,
-            designs: [],
-            total_entries: 0,
-          };
-        }
-
-        const party = groupedByParty[partyName];
-        party.total_entries++;
-
-        let designGroup = party.designs.find((d) => d.design === designName);
-        if (!designGroup) {
-          designGroup = {
-            design: designName,
-            entries: [],
-            total_meters: 0,
-          };
-          party.designs.push(designGroup);
-        }
-
-        // Calculate total meters for this entry
-        let entryMeters = 0;
-        if (entry.shades) {
-          entry.shades.forEach((shade: { [key: string]: string }) => {
-            const value = Object.values(shade)[0];
-            entryMeters += value ? parseFloat(value) : 0;
-          });
-        }
-
-        designGroup.total_meters += entryMeters;
-        designGroup.entries.push({
-          id: entry.id,
-          design: entry.title,
-          price: entry.price,
-          remark: entry.design_remark,
-          shades: entry.shades || [],
-          dispatch_date: entry.dispatch_date,
-          order_no: entry.order_no,
-          ship_to_party: entry.ship_to_party,
-          broker_name: entry.broker,
-          transporter_name: entry.transport,
-        });
+        const name = entry.bill_to_party;
+        partyCounts.set(name, (partyCounts.get(name) || 0) + 1);
       });
 
-      // Sort parties alphabetically
-      const sortedParties = Object.values(groupedByParty).sort((a, b) =>
-        a.party_name.localeCompare(b.party_name)
-      );
+      const summaries: PartyGroup[] = Array.from(partyCounts.entries())
+        .map(([party_name, total_entries]) => ({ party_name, total_entries, designs: [] }))
+        .sort((a, b) => a.party_name.localeCompare(b.party_name));
 
-      // Sort designs within each party
-      sortedParties.forEach((party) => {
-        party.designs.sort((a, b) => a.design.localeCompare(b.design));
-      });
-
-      setPartyGroups(sortedParties);
+      setPartyGroups(summaries);
     } catch (error) {
       toast({
         title: "Error",
@@ -173,12 +126,18 @@ const PartyDispatchList = () => {
 
       if (error) throw error;
 
+      // Optimistically update raw entries and invalidate caches/summaries
+      setRawEntries((prev) => prev.filter((e) => e.id !== id));
+      setDesignsCacheByParty({});
+      setPartyGroups((prev) => prev
+        .map((p) => ({ ...p, total_entries: Math.max(0, p.total_entries - 1) }))
+        .filter((p) => p.total_entries > 0)
+      );
+
       toast({
         title: "Success",
         description: "Entry removed from dispatch list",
       });
-
-      fetchDispatchEntries(); // Refresh the data
     } catch (error) {
       toast({
         title: "Error",
@@ -189,6 +148,54 @@ const PartyDispatchList = () => {
       });
     }
   };
+
+  const computeDesignsForParty = useCallback((partyName: string): GroupedByDesign[] => {
+    // Use cache if present
+    if (designsCacheByParty[partyName]) return designsCacheByParty[partyName];
+
+    const entries = rawEntries.filter((e) => e.bill_to_party === partyName);
+    const designsMap = new Map<string, GroupedByDesign>();
+
+    entries.forEach((entry) => {
+      const designName = entry.title;
+      if (!designsMap.has(designName)) {
+        designsMap.set(designName, { design: designName, entries: [], total_meters: 0 });
+      }
+      const group = designsMap.get(designName)!;
+
+      let entryMeters = 0;
+      if (entry.shades) {
+        entry.shades.forEach((shade) => {
+          const value = Object.values(shade)[0];
+          entryMeters += value ? parseFloat(value) : 0;
+        });
+      }
+
+      group.total_meters += entryMeters;
+      group.entries.push({
+        id: entry.id,
+        design: entry.title,
+        price: entry.price,
+        remark: entry.design_remark,
+        shades: entry.shades || [],
+        dispatch_date: entry.dispatch_date,
+        order_no: entry.order_no,
+        ship_to_party: entry.ship_to_party,
+        broker_name: entry.broker,
+        transporter_name: entry.transport,
+      });
+    });
+
+    const grouped = Array.from(designsMap.values()).sort((a, b) => a.design.localeCompare(b.design));
+    setDesignsCacheByParty((prev) => ({ ...prev, [partyName]: grouped }));
+    return grouped;
+  }, [rawEntries, designsCacheByParty]);
+
+  const filteredPartyGroups = useMemo(() => {
+    if (!partySearch.trim()) return partyGroups;
+    const term = partySearch.toLowerCase();
+    return partyGroups.filter((p) => p.party_name.toLowerCase().includes(term));
+  }, [partyGroups, partySearch]);
 
   const handlePrintParty = (party: PartyGroup) => {
     const printContent = generatePrintContentForParty(party);
@@ -381,6 +388,14 @@ const PartyDispatchList = () => {
         </Button>
         <h1 className="text-3xl font-bold text-center flex-1">Party Dispatch List</h1>
       </div>
+      <div className="flex items-center gap-2 mb-4">
+        <input
+          value={partySearch}
+          onChange={(e) => setPartySearch(e.target.value)}
+          placeholder="Search party..."
+          className="w-full border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+      </div>
       <div className="border-b mb-6" />
       <div className="mt-6">
         <Accordion
@@ -390,29 +405,27 @@ const PartyDispatchList = () => {
           value={openAccordion as string | undefined}
           onValueChange={setOpenAccordion}
         >
-          {partyGroups.length === 0 ? (
+          {filteredPartyGroups.length === 0 ? (
             <div className="text-center text-gray-500 py-12">No party dispatches found.</div>
           ) : (
-            partyGroups.map((party, partyIndex) => (
+            filteredPartyGroups.map((party, partyIndex) => (
               <AccordionItem key={partyIndex} value={`party-${partyIndex}`} className="rounded-lg border mb-4 shadow-sm bg-white">
                 <div className="flex items-center justify-between px-4 py-2">
                   <AccordionTrigger className="text-lg flex items-center w-full hover:bg-gray-50 font-semibold">
                     <span className="text-left flex-grow">{party.party_name}</span>
-                    <div className="flex items-center gap-4">
-                      <Button 
-                        size="icon" 
-                        variant="outline"
-                        className="flex items-center justify-center"
-                        onClick={e => { e.stopPropagation(); handlePrintParty(party); }}
-                        title="Print Party Dispatch"
-                      >
-                        <Printer size={18} />
-                      </Button>
-                      <span className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded-full">
-                        {party.total_entries} entr{party.total_entries === 1 ? "y" : "ies"}
-                      </span>
-                    </div>
+                    <span className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded-full">
+                      {party.total_entries} entr{party.total_entries === 1 ? "y" : "ies"}
+                    </span>
                   </AccordionTrigger>
+                  <Button 
+                    size="icon" 
+                    variant="outline"
+                    className="ml-3 flex items-center justify-center"
+                    onClick={() => handlePrintParty(party)}
+                    title="Print Party Dispatch"
+                  >
+                    <Printer size={18} />
+                  </Button>
                 </div>
                 <AccordionContent className="p-4">
                   <Accordion
@@ -422,10 +435,10 @@ const PartyDispatchList = () => {
                     value={openDesignAccordion as string | undefined}
                     onValueChange={setOpenDesignAccordion}
                   >
-                    {party.designs.length === 0 ? (
+                    {(computeDesignsForParty(party.party_name).length === 0) ? (
                       <div className="text-center text-gray-400 py-4">No designs for this party.</div>
                     ) : (
-                      party.designs.map((design, designIndex) => (
+                      computeDesignsForParty(party.party_name).map((design, designIndex) => (
                         <AccordionItem
                           key={designIndex}
                           value={`design-${partyIndex}-${designIndex}`}

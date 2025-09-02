@@ -18,6 +18,7 @@ interface PartyOrderTableProps {
   setIsAddPartOrderOpen: (open: boolean) => void;
   setSelectedOrder: (order: DesignDetail | null) => void;
   setPartyCounts: (counts: PartyCount[]) => void;
+  refreshPartyOrders: (parties: string[]) => Promise<void>;
 }
 
 export function PartyOrderTable({
@@ -30,6 +31,7 @@ export function PartyOrderTable({
   selectedEntries,
   selectedBhiwandiEntries,
   setPartyCounts,
+  refreshPartyOrders,
 }: PartyOrderTableProps) {
   const { toast } = useToast();
   return (
@@ -143,6 +145,7 @@ export function PartyOrderTable({
                                   });
                                   const counts = await fetchPartyCounts();
                                   setPartyCounts(counts);
+                                  await refreshPartyOrders([partyName]);
                                 } catch (error) {
                                   console.error(
                                     "Error deleting Bhiwandi date:",
@@ -211,6 +214,7 @@ export function PartyOrderTable({
                                 });
                                 const counts = await fetchPartyCounts();
                                 setPartyCounts(counts);
+                                await refreshPartyOrders([partyName]);
                               } catch (error) {
                                 console.error("Error cancelling entry:", error);
                                 toast({

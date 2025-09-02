@@ -28,6 +28,7 @@ interface PartyAccordionProps {
   setIsAddPartOrderOpen: (open: boolean) => void;
   setSelectedOrder: (order: DesignDetail | null) => void;
   setPartyCounts: (counts: PartyCount[]) => void;
+  refreshPartyOrders: (parties: string[]) => Promise<void>;
 }
 
 export const PartyAccordion = memo(
@@ -46,6 +47,7 @@ export const PartyAccordion = memo(
     setIsAddPartOrderOpen,
     setSelectedOrder,
     setPartyCounts,
+    refreshPartyOrders,
   }: PartyAccordionProps) => {
     const handleAccordionClick = useCallback(
       (partyName: string) => {
@@ -94,6 +96,7 @@ export const PartyAccordion = memo(
                     setIsAddPartOrderOpen={setIsAddPartOrderOpen}
                     setSelectedOrder={setSelectedOrder}
                     setPartyCounts={setPartyCounts}
+                    refreshPartyOrders={refreshPartyOrders}
                   />
                 ) : (
                   <div className="flex items-center justify-center p-4">
