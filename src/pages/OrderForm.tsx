@@ -113,6 +113,17 @@ export default function OrderForm() {
     fetchAllOptions();
   }, [isOpen]);
 
+  useEffect(() => {
+    if (selectedShipTo) {
+      const selectedParty = partyOptions.find(
+        (party) => party.id === selectedShipTo
+      );
+      if (selectedParty && selectedParty.transport_id) {
+        setSelectedTransport(selectedParty.transport_id);
+      }
+    }
+  }, [selectedShipTo, partyOptions]);
+
   const generateUniqueOrderNo = async () => {
     try {
       const { data, error } = await supabase
@@ -483,9 +494,6 @@ export default function OrderForm() {
       if (selectedParty.broker_id) {
         setSelectedBroker(selectedParty.broker_id);
       }
-      if (selectedParty.transport_id) {
-        setSelectedTransport(selectedParty.transport_id);
-      }
     }
   };
 
@@ -511,9 +519,17 @@ export default function OrderForm() {
     );
     if (option) {
       if (field === "Bill To") handleBillToChange(option.id);
-      else if (field === "Ship To") setSelectedShipTo(option.id);
+      else if (field === "Ship To") handleShipToChange(option.id);
       else if (field === "Broker") setSelectedBroker(option.id);
       else if (field === "Transport") setSelectedTransport(option.id);
+    }
+  };
+
+  const handleShipToChange = (partyId: number) => {
+    setSelectedShipTo(partyId);
+    const selectedParty = partyOptions.find((party) => party.id === partyId);
+    if (selectedParty && selectedParty.transport_id) {
+      setSelectedTransport(selectedParty.transport_id);
     }
   };
 
