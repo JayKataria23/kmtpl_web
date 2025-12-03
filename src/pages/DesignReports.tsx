@@ -18,6 +18,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { X, Printer } from "lucide-react";
 import {
@@ -62,6 +63,7 @@ function DesignReports() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<OrderDetail | null>(null);
   const [editedShades, setEditedShades] = useState<{ [key: string]: string }[]>([]);
+  const [editedEntryRemark, setEditedEntryRemark] = useState<string>("");
   const [newShadeName, setNewShadeName] = useState("");
   const [newShadeValue, setNewShadeValue] = useState("");
   const { toast } = useToast();
@@ -241,6 +243,7 @@ function DesignReports() {
   const handleEditShades = async (order: OrderDetail) => {
     setSelectedOrder(order);
     setEditedShades([...order.shades]);
+    setEditedEntryRemark(order.entry_remark || "");
     setIsEditDialogOpen(true);
     // Fetch total_shades from designs table
     const { data, error } = await supabase
@@ -261,7 +264,7 @@ function DesignReports() {
     try {
       const { error } = await supabase
         .from("design_entries")
-        .update({ shades: editedShades })
+        .update({ shades: editedShades, remark: editedEntryRemark })
         .eq("id", selectedOrder.id);
 
       if (error) throw error;
@@ -271,7 +274,7 @@ function DesignReports() {
         ...prev,
         [selectedOrder.design]: prev[selectedOrder.design].map((order) =>
           order.id === selectedOrder.id
-            ? { ...order, shades: editedShades }
+            ? { ...order, shades: editedShades, entry_remark: editedEntryRemark }
             : order
         ),
       }));
@@ -1294,6 +1297,16 @@ function DesignReports() {
             <DialogTitle>Edit Shades</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
+            <div>
+              <h4 className="text-sm font-medium mb-2">Entry Remark</h4>
+              <Textarea
+                value={editedEntryRemark}
+                onChange={(e) => setEditedEntryRemark(e.target.value)}
+                placeholder="Enter remark for this design entry"
+                rows={3}
+                className="text-sm"
+              />
+            </div>
             <div className="flex items-center gap-2">
               <div className="text-sm text-blue-700 font-medium bg-blue-50 rounded p-2 flex items-center gap-2">
                 Total Shades for this design:
