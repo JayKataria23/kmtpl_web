@@ -44,6 +44,11 @@ interface DesignEntry {
   shades: { [key: string]: string }[];
 }
 
+interface PriceEntry {
+  design: string;
+  price: string;
+}
+
 export function EditOrderModal({
   isOpen,
   onClose,
@@ -72,6 +77,8 @@ export function EditOrderModal({
   const [remarkOptions, setRemarkOptions] = useState<string[]>([]);
   const [newCustomShade, setNewCustomShade] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [totalShades, setTotalShades] = useState<string>("");
+  const [priceList, setPriceList] = useState<PriceEntry[]>([]);
 
   const fetchOrderDetails = useCallback(async () => {
     if (!orderId) return;
@@ -103,6 +110,11 @@ export function EditOrderModal({
         transport_id: data.transport?.id || null,
         canceled: data.canceled || false,
       });
+
+      // Fetch price list if bill_to_id exists
+      if (data.bill_to?.id) {
+        fetchPriceList(data.bill_to.id);
+      }
     } catch (error) {
       console.error("Error fetching order details:", error);
       toast({
@@ -157,23 +169,111 @@ export function EditOrderModal({
   }, [toast]);
 
   const handleAddDesignToDB = async (newDesign: string) => {
-    if (newDesign.trim()) {
-      const { data, error } = await supabase
-        .from("designs")
-        .insert({ title: newDesign.trim().toUpperCase() }) // Convert to uppercase
-        .select();
-      if (error) {
-        toast({
-          title: "Error",
-          description: "Failed to add design",
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Success",
-          description: `Design "${data[0].title}" added successfully`,
-        });
-        fetchDesigns();
+    if (!newDesign.trim()) {
+      toast({
+        title: "Error",
+        description: "Design name is required",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate total shades
+    const shadesNumber = parseInt(totalShades);
+    if (!totalShades.trim() || isNaN(shadesNumber) || shadesNumber <= 0) {
+      toast({
+        title: "Error",
+        description: "Please enter a valid total shades number (must be greater than 0)",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Check if the design is a 3 or 4 digit number
+    const designNumber = parseInt(newDesign);
+    if (
+      !isNaN(designNumber) &&
+      (newDesign.length === 3 || newDesign.length === 4)
+    ) {
+      // Check if a design with the same number exists
+      const existingDesigns = designs.filter((d) => {
+        const num = parseInt(d);
+        return !isNaN(num) && num === designNumber;
+      });
+
+      if (existingDesigns.length > 0) {
+        const confirmAdd = window.confirm(
+          `A design with number ${designNumber} already exists. Do you want to add this design anyway?`
+        );
+        if (!confirmAdd) {
+          return;
+        }
+      }
+    }
+    // Check for similar designs using string similarity
+    const similarDesigns = designs.filter(design => {
+      // Convert both strings to uppercase for case-insensitive comparison
+      const str1 = design.toUpperCase();
+      const str2 = newDesign.trim().toUpperCase();
+      
+      // Calculate Levenshtein distance
+      const m = str1.length;
+      const n = str2.length;
+      const dp: number[][] = Array(m + 1).fill(null).map(() => Array(n + 1).fill(0));
+      
+      for (let i = 0; i <= m; i++) dp[i][0] = i;
+      for (let j = 0; j <= n; j++) dp[0][j] = j;
+      
+      for (let i = 1; i <= m; i++) {
+        for (let j = 1; j <= n; j++) {
+          if (str1[i-1] === str2[j-1]) {
+            dp[i][j] = dp[i-1][j-1];
+          } else {
+            dp[i][j] = 1 + Math.min(dp[i-1][j], dp[i-1][j-1], dp[i][j-1]);
+          }
+        }
+      }
+
+      // Calculate similarity percentage
+      const maxLength = Math.max(m, n);
+      const similarity = ((maxLength - dp[m][n]) / maxLength) * 100;
+      
+      return similarity > 80 && design !== newDesign;
+    });
+
+    if (similarDesigns.length > 0) {
+      const confirmAdd = window.confirm(
+        `Similar designs found (>80% match):\n${similarDesigns.join(", ")}\n\nDo you want to add this design anyway?`
+      );
+      if (!confirmAdd) {
+        return;
+      }
+    }
+
+    const { data, error } = await supabase
+      .from("designs")
+      .insert({ 
+        title: newDesign.trim().toUpperCase(),
+        total_shades: shadesNumber
+      })
+      .select();
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to add design",
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Success",
+        description: `Design "${data[0].title}" added successfully`,
+      });
+      setTotalShades("");
+      await fetchDesigns();
+      if (currentEntry) {
+        const updatedDesign = newDesign.trim().toUpperCase();
+        handleDesignSelect(updatedDesign);
       }
     }
   };
@@ -187,6 +287,23 @@ export function EditOrderModal({
       setRemarkOptions(data.map((remark) => remark.content));
     } catch (error) {
       console.error("Error fetching remark options:", error);
+    }
+  };
+
+  const fetchPriceList = async (partyId: number) => {
+    try {
+      const { data, error } = await supabase.rpc(
+        "get_latest_design_prices_by_party",
+        {
+          partyid: partyId,
+        }
+      );
+
+      if (error) throw error;
+
+      setPriceList(data);
+    } catch (error) {
+      console.error("Error fetching price list:", error);
     }
   };
 
@@ -251,6 +368,10 @@ export function EditOrderModal({
     );
     if (option) {
       setOrderDetails((prev) => ({ ...prev, [field]: option.id }));
+      // Fetch price list when bill_to_id changes
+      if (field === "bill_to_id") {
+        fetchPriceList(option.id);
+      }
     }
   };
 
@@ -499,6 +620,7 @@ export function EditOrderModal({
         ...Array.from({ length: 30 }, (_, i) => ({ [`${i + 1}`]: "" })),
       ],
     });
+    setTotalShades("");
     setIsDesignDialogOpen(true);
   };
 
@@ -656,13 +778,44 @@ export function EditOrderModal({
                     </datalist>
                   </div>
                   {currentEntry && !designs.includes(currentEntry.design) && (
-                    <Button
-                      onClick={() =>
-                        handleAddDesignToDB(currentEntry.design.toUpperCase())
-                      }
-                    >
-                      Add Design
-                    </Button>
+                    <>
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="totalShades" className="text-right">
+                          Total Shades *
+                        </Label>
+                        <Input
+                          id="totalShades"
+                          type="number"
+                          value={totalShades}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            // Only allow positive integers
+                            if (value === "" || /^\d+$/.test(value)) {
+                              setTotalShades(value);
+                            }
+                          }}
+                          placeholder="Enter total shades..."
+                          className="col-span-3"
+                          min="1"
+                          required
+                        />
+                      </div>
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            setTotalShades("");
+                            setCurrentEntry(null);
+                            setIsDesignDialogOpen(false);
+                          }}
+                        >
+                          Cancel
+                        </Button>
+                        <Button onClick={() => handleAddDesignToDB(currentEntry.design)}>
+                          Add Design
+                        </Button>
+                      </div>
+                    </>
                   )}
                   {currentEntry && designs.includes(currentEntry.design) && (
                     <>
@@ -675,7 +828,20 @@ export function EditOrderModal({
                           value={currentEntry.price}
                           onChange={(e) => handlePriceChange(e.target.value)}
                           className="col-span-3"
-                          placeholder="Enter price"
+                          placeholder={
+                            priceList.find(
+                              (price) =>
+                                price.design.split("-")[0] ===
+                                currentEntry.design.split("-")[0]
+                            )?.price
+                              ? "Old Price " +
+                                priceList.find(
+                                  (price) =>
+                                    price.design.split("-")[0] ===
+                                    currentEntry.design.split("-")[0]
+                                )?.price
+                              : "Enter Price"
+                          }
                           type="number"
                         />
                       </div>
