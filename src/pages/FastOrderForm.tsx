@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import supabase from "@/utils/supabase";
-import { Button } from "@/components/ui";
+import { Button, Toaster } from "@/components/ui";
 import PartySelectorFast from "@/components/custom/PartySelectorFast";
 import DesignSelectorFast from "@/components/custom/DesignSelectorFast";
 import ShadeSelectorFast from "@/components/custom/ShadeSelectorFast";
@@ -397,6 +397,7 @@ function FastOrderForm() {
           Next
         </Button>
       )}
+      <Toaster />
     </div>
   );
 }
