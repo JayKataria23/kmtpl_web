@@ -360,15 +360,23 @@ function shadesRow(design: Design): string {
 }
 
 /**
- * Count non-empty shades in a design
- * @param design The design to count shades for
- * @returns Number of non-empty shades
+ * Calculate total meters for a design
+ * @param design The design to calculate meters for
+ * @returns Total meters as a number
  */
-function countNonEmptyShades(design: Design): number {
-  return design.shades.filter((s) => {
-    const key = Object.keys(s)[0];
-    return s[key] && s[key].trim() !== "";
-  }).length;
+function calculateTotalMeters(design: Design): number {
+  let totalMeters = 0;
+  design.shades.forEach((shade) => {
+    const key = Object.keys(shade)[0];
+    const value = shade[key];
+    if (value && value.trim() !== "") {
+      const meters = parseFloat(value);
+      if (!isNaN(meters)) {
+        totalMeters += meters;
+      }
+    }
+  });
+  return totalMeters;
 }
 
 /**
@@ -386,7 +394,7 @@ function generatePartHTML(
   const designsHTML = part.designs
     .map((design, index) => {
       const currentIndex = startIndex + index;
-      const nonEmptyShadeCount = countNonEmptyShades(design);
+      const totalMeters = calculateTotalMeters(design);
       const hasRemark = design.remark && design.remark.trim() !== "";
 
       // Calculate optimal row height based on content
@@ -401,7 +409,7 @@ function generatePartHTML(
           <div style="width: 12%; border-right: 1px solid #000; text-align: center; display: flex; align-items: center; justify-content: center; font-weight: bold; padding: 2px; word-break: break-word; font-size: 15px; min-height: ${minHeight};">
             ${design.design}
           </div>
-          <div style="width: 71%; border-right: 1px solid #000; text-align: center;">
+          <div style="width: 69%; border-right: 1px solid #000; text-align: center;">
             <div style="width: 100%; font-size: 15px; text-align: center; display: flex; flex-direction: row; flex-wrap: wrap; padding: 1px; padding-left: 6px; justify-content: start;">
               ${shadesRow(design)}
             </div>
@@ -411,8 +419,8 @@ function generatePartHTML(
                 : ""
             }
           </div>
-          <div style="width: 4%; border-right: 1px solid #000; text-align: center; display: flex; align-items: center; justify-content: center; min-height: ${minHeight};">
-            ${nonEmptyShadeCount}
+          <div style="width: 6%; border-right: 1px solid #000; text-align: center; display: flex; align-items: center; justify-content: center; min-height: ${minHeight}; padding: 0 4px;">
+            ${Math.round(totalMeters)}
           </div>
           <div style="width: 8%; text-align: center; display: flex; align-items: center; justify-content: center; font-weight: bold; min-height: ${minHeight};">
             ${design.price}
@@ -422,9 +430,9 @@ function generatePartHTML(
     })
     .join("");
 
-  // Calculate total shades for this page
-  const totalShades = part.designs.reduce(
-    (total, design) => total + countNonEmptyShades(design),
+  // Calculate total meters for this page
+  const totalMeters = part.designs.reduce(
+    (total, design) => total + calculateTotalMeters(design),
     0
   );
 
@@ -526,8 +534,8 @@ function generatePartHTML(
             <div style="border-bottom: 1px solid #000; display: flex; flex-direction: row;">
               <div style="width: 5%; border-right: 1px solid #000; font-weight: bold; text-align: center; font-size: small; padding: 2px;">S/n.</div>
               <div style="width: 12%; border-right: 1px solid #000; font-weight: bold; text-align: center; font-size: small; padding: 2px;">Design</div>
-              <div style="width: 71%; border-right: 1px solid #000; font-weight: bold; text-align: center; font-size: small; padding: 2px;">Shades</div>
-              <div style="width: 4%; border-right: 1px solid #000; font-weight: bold; text-align: center; font-size: small; padding: 2px;">Pc</div>
+              <div style="width: 69%; border-right: 1px solid #000; font-weight: bold; text-align: center; font-size: small; padding: 2px;">Shades</div>
+              <div style="width: 6%; border-right: 1px solid #000; font-weight: bold; text-align: center; font-size: small; padding: 2px;">Meter</div>
               <div style="width: 8%; font-weight: bold; text-align: center; font-size: small; padding: 2px;">Price</div>
             </div>
             ${designsHTML}
@@ -537,14 +545,14 @@ function generatePartHTML(
           <div style="display: flex; flex-direction: row;">
             <div style="width: 5%; border-right: 1px solid #000; text-align: center"></div>
             <div style="width: 12%; border-right: 1px solid #000; text-align: center; font-size: 0.875rem; display: flex; align-items: center; padding-left: 2px;"></div>
-            <div style="width: 71%; border-right: 1px solid #000; display: flex; justify-content: space-between; padding-right: 2px; padding-left: 2px;">
+            <div style="width: 69%; border-right: 1px solid #000; display: flex; justify-content: space-between; padding-right: 2px; padding-left: 2px;">
               <span style="font-weight: normal; font-size: medium; align-items: center; display: flex;">Prepared By: ${
                 part.created_by || ""
               }</span>
               <span style="font-weight: bold; font-size: x-large">Total</span>
             </div>
-            <div style="width: 4%; border-right: 1px solid #000; font-weight: bold; text-align: center; display: flex; align-items: center; justify-content: center; font-size: large;">
-              ${totalShades}
+            <div style="width: 6%; border-right: 1px solid #000; font-weight: bold; text-align: center; display: flex; align-items: center; justify-content: center; font-size: large; padding: 0 4px;">
+              ${Math.round(totalMeters)}
             </div>
             <div style="width: 8%; text-align: center"></div>
           </div>
