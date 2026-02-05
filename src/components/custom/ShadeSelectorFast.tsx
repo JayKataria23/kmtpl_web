@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo } from "react";
-import { Button } from "../ui";
+import { Button, Input, Label } from "../ui";
 import { X, Plus, Edit } from "lucide-react";
+import supabase from "@/utils/supabase";
 
 interface ShadeItem {
   [key: string]: string;
@@ -20,6 +21,8 @@ function ShadeSelectorFast({
   const [newCustomShade, setNewCustomShade] = useState<string>("");
   const [newValue, setNewValue] = useState<string>("");
   const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
+  const [totalShades, setTotalShades] = useState<number | null>(null);
+  const [isSavingTotalShades, setIsSavingTotalShades] = useState(false);
 
   // Initialize with default shades if empty
   useEffect(() => {
@@ -30,6 +33,36 @@ function ShadeSelectorFast({
       ]);
     }
   }, [currentJSON, setCurrentJSON]);
+
+  // Fetch total shades for the currently selected design
+  useEffect(() => {
+    const fetchTotalShadesForDesign = async () => {
+      if (!currentSelectedDesign) {
+        setTotalShades(null);
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from("designs")
+          .select("total_shades")
+          .eq("title", currentSelectedDesign)
+          .single();
+
+        if (error || !data || typeof data.total_shades !== "number") {
+          setTotalShades(null);
+          return;
+        }
+
+        setTotalShades(data.total_shades);
+      } catch (err) {
+        console.error("Error fetching total shades for design:", err);
+        setTotalShades(null);
+      }
+    };
+
+    fetchTotalShadesForDesign();
+  }, [currentSelectedDesign]);
 
   // Memoized grouped entries to reduce unnecessary re-computations
   const groupedEntries = useMemo(() => {
@@ -104,11 +137,25 @@ function ShadeSelectorFast({
     setNewValue(""); // Clear the input field
   };
 
-  // Unique keys for selection buttons
-  const uniqueKeys = useMemo(
-    () => Array.from(new Set(currentJSON.map((item) => Object.keys(item)[0]))),
-    [currentJSON]
-  );
+  // Unique keys for selection buttons, ordered:
+  // 1) "All Colours"
+  // 2) any non-numeric/text shades
+  // 3) numeric shades in increasing order
+  const uniqueKeys = useMemo(() => {
+    const keys = Array.from(
+      new Set(currentJSON.map((item) => Object.keys(item)[0]))
+    );
+
+    const allColours = keys.filter((k) => k === "All Colours");
+    const textKeys = keys.filter(
+      (k) => k !== "All Colours" && isNaN(Number(k))
+    );
+    const numericKeys = keys
+      .filter((k) => !isNaN(Number(k)))
+      .sort((a, b) => Number(a) - Number(b));
+
+    return [...allColours, ...textKeys, ...numericKeys];
+  }, [currentJSON]);
 
   // Clear keys
   const handleClearKeys = (keys: string[]) => {
@@ -120,9 +167,107 @@ function ShadeSelectorFast({
     );
   };
 
+  const allColoursValue = useMemo(() => {
+    const item = currentJSON.find(
+      (shade) => Object.keys(shade)[0] === "All Colours"
+    );
+    if (!item) return "";
+    return item["All Colours"];
+  }, [currentJSON]);
+
+  const handleApplyAllColours = () => {
+    if (!totalShades || totalShades < 1) return;
+    const value = allColoursValue;
+    if (!value || isNaN(Number(value))) return;
+
+    setCurrentJSON((prev) => {
+      const maxTotal = totalShades ?? 0;
+
+      // Remove existing numeric shades in range 1..totalShades
+      const filtered = prev.filter((item) => {
+        const key = Object.keys(item)[0];
+        const n = Number(key);
+        return isNaN(n) || n < 1 || n > maxTotal;
+      });
+
+      const newShades = [...filtered];
+      for (let i = 1; i <= maxTotal; i++) {
+        newShades.push({ [i.toString()]: value });
+      }
+
+      // Clear All Colours value after applying
+      return newShades.map((item) =>
+        Object.keys(item)[0] === "All Colours" ? { "All Colours": "" } : item
+      );
+    });
+  };
+
   return (
     <div className="w-full max-w-md mx-auto p-4 space-y-4 bg-white shadow-sm rounded-lg">
-      <h1 className="text-xl font-semibold mb-4 text-center">Select Shades</h1>
+      <div className="mb-2 text-center">
+        <h1 className="text-xl font-semibold">Select Shades for {currentSelectedDesign}</h1>
+        
+      </div>
+
+      {/* Total Colours and Apply-to-All (uses existing "All Colours" shade) */}
+      {currentSelectedDesign && (
+        <div className="rounded-lg bg-gray-50 p-3">
+            <div className="flex items-center gap-2">
+              <Label className="text-sm font-medium text-gray-800 whitespace-nowrap">
+                Total Colours
+              </Label>
+              <Input
+                type="number"
+                min={0}
+                value={totalShades ?? 0}
+                onChange={(e) =>
+                  setTotalShades(parseInt(e.target.value, 10) || 0)
+                }
+                className="w-20 h-8 text-sm"
+              />
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={isSavingTotalShades || !currentSelectedDesign}
+                onClick={async () => {
+                  if (!currentSelectedDesign) return;
+                  try {
+                    setIsSavingTotalShades(true);
+                    const { error } = await supabase
+                      .from("designs")
+                      .update({ total_shades: totalShades ?? 0 })
+                      .eq("title", currentSelectedDesign);
+                    setIsSavingTotalShades(false);
+                    if (error) {
+                      console.error("Error updating total shades:", error);
+                      return;
+                    }
+                  } catch (err) {
+                    console.error("Error updating total shades:", err);
+                    setIsSavingTotalShades(false);
+                  }
+                }}
+              >
+                Save
+              </Button>
+              <Button
+              size="sm"
+              variant="outline"
+              className="ml-auto"
+              onClick={handleApplyAllColours}
+              disabled={
+                !totalShades ||
+                totalShades < 1 ||
+                !allColoursValue ||
+                isNaN(Number(allColoursValue))
+              }
+            >
+              Apply to All
+            </Button>
+            </div>
+            
+        </div>
+      )}
 
       {/* Custom Shade Addition */}
       <div className="space-y-3">
@@ -193,9 +338,6 @@ function ShadeSelectorFast({
 
       {/* Shade Selection Buttons */}
       <div className="bg-gray-50 rounded-lg p-3 h-[35vh] overflow-y-auto">
-        <h3 className="text-lg font-semibold mb-2">
-          Select Shades for {currentSelectedDesign}
-        </h3>
         <div className="grid grid-cols-4 gap-2">
           {uniqueKeys.map((key) => (
             <Button
