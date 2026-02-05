@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useToast } from "@/hooks/use-toast";
 import {
   Dialog,
@@ -57,6 +57,8 @@ export default function NewOrderDialog({
     ...Array.from({ length: 30 }, (_, i) => ({ [`${i + 1}`]: "" })),
   ]);
   const [priceList, setPriceList] = useState<PriceEntry[]>([]);
+  const [totalShadesCount, setTotalShadesCount] = useState<number | null>(null);
+  const [isSavingTotalShades, setIsSavingTotalShades] = useState(false);
 
   const fetchParties = useCallback(async () => {
     try {
@@ -106,6 +108,29 @@ export default function NewOrderDialog({
     }
   }, [toast]);
 
+  const fetchTotalShadesForDesign = useCallback(
+    async (design: string) => {
+      try {
+        const { data, error } = await supabase
+          .from("designs")
+          .select("total_shades")
+          .eq("title", design)
+          .single();
+
+        if (error || !data || typeof data.total_shades !== "number") {
+          setTotalShadesCount(null);
+          return;
+        }
+
+        setTotalShadesCount(data.total_shades);
+      } catch (error) {
+        console.error("Error fetching total shades for design:", error);
+        setTotalShadesCount(null);
+      }
+    },
+    []
+  );
+
   const handleShadeIncrement = (index: number) => {
     setCurrentShades(
       currentShades.map((shade, i) => {
@@ -124,6 +149,41 @@ export default function NewOrderDialog({
         i === index ? { [Object.keys(shade)[0]]: value } : shade
       )
     );
+  };
+
+  const allColoursValue = useMemo(() => {
+    const item = currentShades.find(
+      (shade) => Object.keys(shade)[0] === "All Colours"
+    );
+    if (!item) return "";
+    return item["All Colours"];
+  }, [currentShades]);
+
+  const handleApplyAllColours = () => {
+    if (!totalShadesCount || totalShadesCount < 1) return;
+    const value = allColoursValue;
+    if (!value || isNaN(Number(value))) return;
+
+    setCurrentShades((prev) => {
+      const maxTotal = totalShadesCount ?? 0;
+
+      // Remove existing numeric shades in range 1..totalShadesCount
+      const filtered = prev.filter((item) => {
+        const key = Object.keys(item)[0];
+        const n = Number(key);
+        return isNaN(n) || n < 1 || n > maxTotal;
+      });
+
+      const newShades = [...filtered];
+      for (let i = 1; i <= maxTotal; i++) {
+        newShades.push({ [i.toString()]: value });
+      }
+
+      // Clear All Colours value after applying
+      return newShades.map((item) =>
+        Object.keys(item)[0] === "All Colours" ? { "All Colours": "" } : item
+      );
+    });
   };
 
   const fetchPriceList = async (partyId: number) => {
@@ -351,6 +411,11 @@ export default function NewOrderDialog({
                     } else {
                       setPrice("");
                     }
+                    if (e.target.value && designs.includes(e.target.value)) {
+                      fetchTotalShadesForDesign(e.target.value);
+                    } else {
+                      setTotalShadesCount(null);
+                    }
                   }}
                   className="col-span-3"
                   placeholder="Search for a design"
@@ -398,27 +463,93 @@ export default function NewOrderDialog({
                 />
               </div>
 
-              <ScrollArea className="h-[200px] w-full rounded-md border p-4">
-                <div className="grid gap-4">
-                  <div className="grid grid-cols-5 items-center gap-2">
-                    <Label className="text-right col-span-1">Custom</Label>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label className="text-right">Total Colours</Label>
+                <div className="col-span-3 flex flex-row flex-wrap items-center gap-2">
+                  <Input
+                    type="number"
+                    min={0}
+                    value={totalShadesCount ?? 0}
+                    onChange={(e) =>
+                      setTotalShadesCount(parseInt(e.target.value, 10) || 0)
+                    }
+                    className="w-20 h-8 text-sm"
+                  />
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={isSavingTotalShades || !selectedDesign}
+                    onClick={async () => {
+                      if (!selectedDesign) return;
+                      try {
+                        setIsSavingTotalShades(true);
+                        const { error } = await supabase
+                          .from("designs")
+                          .update({ total_shades: totalShadesCount ?? 0 })
+                          .eq("title", selectedDesign);
+                        setIsSavingTotalShades(false);
+                        if (error) {
+                          console.error("Error updating total shades:", error);
+                          return;
+                        }
+                        toast({
+                          title: "Success",
+                          description: "Total colours updated for this design.",
+                        });
+                      } catch (err) {
+                        console.error("Error updating total shades:", err);
+                        setIsSavingTotalShades(false);
+                        toast({
+                          title: "Error",
+                          description:
+                            "Failed to update total colours for this design.",
+                          variant: "destructive",
+                        });
+                      }
+                    }}
+                  >
+                    Save
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="ml-auto"
+                    onClick={handleApplyAllColours}
+                    disabled={
+                      !totalShadesCount ||
+                      totalShadesCount < 1 ||
+                      !allColoursValue ||
+                      isNaN(Number(allColoursValue))
+                    }
+                  >
+                    Apply to All
+                  </Button>
+                </div>
+              </div>
+
+              <ScrollArea className="h-[240px] w-full rounded-md border bg-gray-50 px-3 py-2">
+                <div className="grid gap-3">
+                  <div className="grid grid-cols-[90px,minmax(0,1fr),auto] items-center gap-2">
+                    <Label className="text-right text-sm font-medium text-gray-800">
+                      Custom
+                    </Label>
                     <Input
                       value={newCustomShade}
                       onChange={(e) =>
                         setNewCustomShade(e.target.value.toUpperCase())
                       }
-                      className="col-span-3"
+                      className="w-full"
+                      placeholder="Shade name (e.g. 101A)"
                     />
                     <Button
                       variant="outline"
                       size="sm"
-                      className="col-span-1"
                       onClick={() => {
-                        if (newCustomShade) {
-                          setCurrentShades([
-                            currentShades[0],
+                        if (newCustomShade.trim() !== "") {
+                          setCurrentShades((prev) => [
+                            prev[0],
                             { [newCustomShade]: "" },
-                            ...currentShades.slice(1),
+                            ...prev.slice(1),
                           ]);
                           setNewCustomShade("");
                         }
@@ -428,51 +559,111 @@ export default function NewOrderDialog({
                     </Button>
                   </div>
 
-                  {currentShades.map((shade, index) => (
-                    <div
-                      key={index}
-                      className="grid grid-cols-5 items-center gap-2"
-                    >
-                      <Label className="text-right col-span-1">
-                        {Object.keys(shade)[0]}
-                      </Label>
-                      <Input
-                        value={shade[Object.keys(shade)[0]]}
-                        onChange={(e) =>
-                          handleShadeChange(index, e.target.value)
-                        }
-                        type="number"
-                        className="col-span-3"
-                      />
-                      <Button
-                        onClick={() => handleShadeIncrement(index)}
-                        variant="outline"
-                        size="sm"
-                        className="col-span-1"
-                      >
-                        +50
-                      </Button>
-                    </div>
-                  ))}
-
-                  <Button
-                    onClick={() => {
-                      // Find the maximum shade number from existing shades
-                      const maxShadeNumber = Math.max(
-                        ...currentShades.map(
-                          (shade) => parseInt(Object.keys(shade)[0]) || 0
-                        )
-                      );
-
-                      const newShades = Array.from({ length: 10 }, (_, i) => ({
-                        [`${maxShadeNumber + i + 1}`]: "",
+                  {currentShades.length > 0 &&
+                    (() => {
+                      const indexed = currentShades.map((shade, idx) => ({
+                        shade,
+                        index: idx,
                       }));
-                      setCurrentShades([...currentShades, ...newShades]);
-                    }}
-                    className="mt-4"
-                  >
-                    + 10
-                  </Button>
+
+                      const allColours = indexed.filter(
+                        ({ shade }) =>
+                          Object.keys(shade)[0] === "All Colours"
+                      );
+                      const textShades = indexed.filter(({ shade }) => {
+                        const key = Object.keys(shade)[0];
+                        return key !== "All Colours" && isNaN(Number(key));
+                      });
+                      const numericShades = indexed
+                        .filter(({ shade }) => {
+                          const key = Object.keys(shade)[0];
+                          return !isNaN(Number(key));
+                        })
+                        .sort((a, b) => {
+                          const aKey = Object.keys(a.shade)[0];
+                          const bKey = Object.keys(b.shade)[0];
+                          return Number(aKey) - Number(bKey);
+                        });
+
+                      const ordered = [
+                        ...allColours,
+                        ...textShades,
+                        ...numericShades,
+                      ];
+
+                      return ordered.map(({ shade, index }) => {
+                        const shadeName = Object.keys(shade)[0];
+                        const isAllColours = shadeName === "All Colours";
+                        return (
+                          <div
+                            key={index}
+                            className="grid grid-cols-[90px,minmax(0,1fr),auto,auto] items-center gap-2"
+                          >
+                            <Label
+                              className={`text-right text-sm ${
+                                isAllColours
+                                  ? "font-semibold text-blue-700"
+                                  : "text-gray-800"
+                              }`}
+                            >
+                              {shadeName}
+                            </Label>
+                            <Input
+                              value={shade[shadeName]}
+                              onChange={(e) =>
+                                handleShadeChange(index, e.target.value)
+                              }
+                              type="number"
+                              className="w-full"
+                            />
+                            <Button
+                              onClick={() => handleShadeIncrement(index)}
+                              variant="outline"
+                              size="sm"
+                            >
+                              +50
+                            </Button>
+                            {isAllColours && (
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="ghost"
+                                className="text-xs font-medium text-blue-700"
+                                onClick={handleApplyAllColours}
+                              >
+                                Apply to All
+                              </Button>
+                            )}
+                          </div>
+                        );
+                      });
+                    })()}
+
+                  <div className="flex justify-center pt-1">
+                    <Button
+                      onClick={() => {
+                        // Find the maximum shade number from existing shades
+                        const maxShadeNumber = Math.max(
+                          ...currentShades.map((shade) => {
+                            const key = Object.keys(shade)[0];
+                            return parseInt(key) || 0;
+                          })
+                        );
+
+                        const newShades = Array.from(
+                          { length: 10 },
+                          (_, i) => ({
+                            [`${maxShadeNumber + i + 1}`]: "",
+                          })
+                        );
+                        setCurrentShades((prev) => [...prev, ...newShades]);
+                      }}
+                      variant="outline"
+                      size="sm"
+                    >
+                      + 10 Shades
+                    </Button>
+                  </div>
                 </div>
               </ScrollArea>
             </>

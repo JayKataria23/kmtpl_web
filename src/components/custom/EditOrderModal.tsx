@@ -79,6 +79,8 @@ export function EditOrderModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [totalShades, setTotalShades] = useState<string>("");
   const [priceList, setPriceList] = useState<PriceEntry[]>([]);
+  const [editTotalShades, setEditTotalShades] = useState<number | null>(null);
+  const [isSavingTotalShades, setIsSavingTotalShades] = useState(false);
 
   const fetchOrderDetails = useCallback(async () => {
     if (!orderId) return;
@@ -394,7 +396,27 @@ export function EditOrderModal({
     return options.find((opt) => opt.id === orderDetails[field])?.name || "";
   };
 
-  const handleDesignSelect = (design: string) => {
+  const fetchTotalShadesForDesign = async (design: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("designs")
+        .select("total_shades")
+        .eq("title", design)
+        .single();
+
+      if (error || !data || typeof data.total_shades !== "number") {
+        setEditTotalShades(null);
+        return;
+      }
+
+      setEditTotalShades(data.total_shades);
+    } catch (error) {
+      console.error("Error fetching total shades for design:", error);
+      setEditTotalShades(null);
+    }
+  };
+
+  const handleDesignSelect = async (design: string) => {
     setCurrentEntry({
       id: Date.now().toString(),
       design,
@@ -405,6 +427,12 @@ export function EditOrderModal({
         ...Array.from({ length: 30 }, (_, i) => ({ [`${i + 1}`]: "" })),
       ],
     });
+
+    if (design && designs.includes(design)) {
+      await fetchTotalShadesForDesign(design);
+    } else {
+      setEditTotalShades(null);
+    }
   };
 
   const handleShadeChange = (index: number, value: string) => {
@@ -492,6 +520,7 @@ export function EditOrderModal({
     const entryToEdit = designEntries.find((entry) => entry.id === id);
     if (entryToEdit) {
       setCurrentEntry({ ...entryToEdit });
+      fetchTotalShadesForDesign(entryToEdit.design);
       setIsDesignDialogOpen(true);
     }
   };
@@ -846,6 +875,64 @@ export function EditOrderModal({
                         />
                       </div>
                       <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="edit-total-shades" className="text-right">
+                          Total Colours
+                        </Label>
+                        <div className="col-span-3 flex items-center gap-2">
+                          <Input
+                            id="edit-total-shades"
+                            type="number"
+                            min={0}
+                            value={editTotalShades ?? 0}
+                            onChange={(e) =>
+                              setEditTotalShades(
+                                parseInt(e.target.value, 10) || 0
+                              )
+                            }
+                            className="w-24"
+                          />
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            disabled={isSavingTotalShades || !currentEntry}
+                            onClick={async () => {
+                              if (!currentEntry) return;
+                              try {
+                                setIsSavingTotalShades(true);
+                                const { error } = await supabase
+                                  .from("designs")
+                                  .update({ total_shades: editTotalShades ?? 0 })
+                                  .eq("title", currentEntry.design);
+                                setIsSavingTotalShades(false);
+                                if (error) {
+                                  throw error;
+                                }
+                                toast({
+                                  title: "Success",
+                                  description:
+                                    "Total colours updated for this design.",
+                                });
+                              } catch (error) {
+                                console.error(
+                                  "Error updating total colours:",
+                                  error
+                                );
+                                setIsSavingTotalShades(false);
+                                toast({
+                                  title: "Error",
+                                  description:
+                                    "Failed to update total colours for this design.",
+                                  variant: "destructive",
+                                });
+                              }
+                            }}
+                          >
+                            Save
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-4 items-center gap-4">
                         <Label htmlFor="remark" className="text-right">
                           Remark
                         </Label>
@@ -874,106 +961,215 @@ export function EditOrderModal({
                           </datalist>
                         </div>
                       </div>
-                      <ScrollArea className="h-[200px] w-full rounded-md border p-4">
-                        <div className="grid gap-4">
-                          <div className="grid grid-cols-5 items-center gap-2">
+                      <ScrollArea className="h-[240px] w-full rounded-md border bg-gray-50 px-3 py-2">
+                        <div className="grid gap-3">
+                          <div className="grid grid-cols-[90px,minmax(0,1fr),auto] items-center gap-2">
                             <Label
                               htmlFor={`shade-custom`}
-                              className="text-right col-span-1"
+                              className="text-right text-sm font-medium text-gray-800"
                             >
                               Custom
                             </Label>
                             <Input
-                              value={newCustomShade} // Use the value of the shade object
+                              value={newCustomShade}
                               onChange={(e) =>
                                 setNewCustomShade(e.target.value.toUpperCase())
                               }
-                              className="col-span-3"
+                              className="w-full"
+                              placeholder="Shade name (e.g. 101A)"
                             />
                             <Button
                               variant="outline"
                               size="sm"
-                              className="col-span-1"
                               onClick={() => {
-                                if (currentEntry) {
-                                  const newShade = { [newCustomShade]: "" }; // Create new shade object
+                                if (
+                                  currentEntry &&
+                                  newCustomShade.trim() !== ""
+                                ) {
+                                  const newShade = { [newCustomShade]: "" };
                                   setCurrentEntry({
                                     ...currentEntry,
                                     shades: [
-                                      currentEntry.shades[0], // Keep the first shade
-                                      newShade, // Add the new shade at index 1
-                                      ...currentEntry.shades.slice(1), // Spread the rest of the shades
+                                      currentEntry.shades[0],
+                                      newShade,
+                                      ...currentEntry.shades.slice(1),
                                     ],
                                   });
-                                  setNewCustomShade(""); // Clear the input after adding
+                                  setNewCustomShade("");
                                 }
                               }}
                             >
                               Add
                             </Button>
                           </div>
-                          {currentEntry.shades.length > 0 && // Check if there are shades
-                            currentEntry.shades.map((shade, index) => (
-                              <div
-                                key={index}
-                                className="grid grid-cols-5 items-center gap-2"
-                              >
-                                <Label
-                                  htmlFor={`shade-${index}`}
-                                  className="text-right col-span-1"
-                                >
-                                  {Object.keys(shade)[0]}{" "}
-                                  {/* Use the key of the shade object */}
-                                </Label>
-                                <Input
-                                  id={`shade-${index}`}
-                                  value={shade[Object.keys(shade)[0]]} // Use the value of the shade object
-                                  onChange={(e) =>
-                                    handleShadeChange(index, e.target.value)
-                                  }
-                                  type="number"
-                                  className="col-span-3"
-                                />
-                                <Button
-                                  onClick={() => handleShadeIncrement(index)}
-                                  variant="outline"
-                                  size="sm"
-                                  className="col-span-1"
-                                >
-                                  +50
-                                </Button>
-                              </div>
-                            ))}
-                          <Button
-                            onClick={() => {
-                              if (currentEntry) {
-                                // Find the maximum shade number from existing shades
-                                const maxShadeNumber = Math.max(
-                                  ...currentEntry.shades.map(
-                                    (shade) =>
-                                      parseInt(Object.keys(shade)[0]) || 0
-                                  )
-                                );
+                          {currentEntry.shades.length > 0 &&
+                            (() => {
+                              const indexed = currentEntry.shades.map(
+                                (shade, idx) => ({ shade, index: idx })
+                              );
 
-                                const newShades = Array.from(
-                                  { length: 10 },
-                                  (_, i) => ({
-                                    [`${maxShadeNumber + i + 1}`]: "",
-                                  })
+                              const allColours = indexed.filter(
+                                ({ shade }) =>
+                                  Object.keys(shade)[0] === "All Colours"
+                              );
+                              const textShades = indexed.filter(({ shade }) => {
+                                const key = Object.keys(shade)[0];
+                                return (
+                                  key !== "All Colours" && isNaN(Number(key))
                                 );
-                                setCurrentEntry({
-                                  ...currentEntry,
-                                  shades: [
-                                    ...currentEntry.shades,
-                                    ...newShades,
-                                  ],
+                              });
+                              const numericShades = indexed
+                                .filter(({ shade }) => {
+                                  const key = Object.keys(shade)[0];
+                                  return !isNaN(Number(key));
+                                })
+                                .sort((a, b) => {
+                                  const aKey = Object.keys(a.shade)[0];
+                                  const bKey = Object.keys(b.shade)[0];
+                                  return Number(aKey) - Number(bKey);
                                 });
-                              }
-                            }}
-                            className="mt-4"
-                          >
-                            + 10
-                          </Button>
+
+                              const ordered = [
+                                ...allColours,
+                                ...textShades,
+                                ...numericShades,
+                              ];
+
+                              return ordered.map(({ shade, index }) => {
+                                const shadeName = Object.keys(shade)[0];
+                                const isAllColours =
+                                  shadeName === "All Colours";
+                                return (
+                                  <div
+                                    key={index}
+                                    className="grid grid-cols-[90px,minmax(0,1fr),auto,auto] items-center gap-2"
+                                  >
+                                    <Label
+                                      htmlFor={`shade-${index}`}
+                                      className={`text-right text-sm ${
+                                        isAllColours
+                                          ? "font-semibold text-blue-700"
+                                          : "text-gray-800"
+                                      }`}
+                                    >
+                                      {shadeName}
+                                    </Label>
+                                    <Input
+                                      id={`shade-${index}`}
+                                      value={shade[shadeName]}
+                                      onChange={(e) =>
+                                        handleShadeChange(index, e.target.value)
+                                      }
+                                      type="number"
+                                      className="w-full"
+                                    />
+                                    <Button
+                                      onClick={() =>
+                                        handleShadeIncrement(index)
+                                      }
+                                      variant="outline"
+                                      size="sm"
+                                    >
+                                      +50
+                                    </Button>
+                                    {isAllColours && (
+                                      <Button
+                                        type="button"
+                                        size="sm"
+                                        variant="ghost"
+                                        className="text-xs font-medium text-blue-700"
+                                        onClick={() => {
+                                          if (!currentEntry) return;
+                                          if (
+                                            !editTotalShades ||
+                                            editTotalShades < 1
+                                          )
+                                            return;
+                                          const allColoursValue =
+                                            shade[shadeName];
+                                          if (
+                                            !allColoursValue ||
+                                            isNaN(Number(allColoursValue))
+                                          )
+                                            return;
+                                          setCurrentEntry((prev) => {
+                                            if (!prev) return prev;
+                                            const maxTotal =
+                                              editTotalShades ?? 0;
+                                            const filtered = prev.shades.filter(
+                                              (s) => {
+                                                const n = Number(
+                                                  Object.keys(s)[0]
+                                                );
+                                                return (
+                                                  isNaN(n) ||
+                                                  n < 1 ||
+                                                  n > maxTotal
+                                                );
+                                              }
+                                            );
+                                            const newShades = [...filtered];
+                                            for (
+                                              let i = 1;
+                                              i <= maxTotal;
+                                              i++
+                                            ) {
+                                              newShades.push({
+                                                [i.toString()]:
+                                                  allColoursValue,
+                                              });
+                                            }
+                                            return {
+                                              ...prev,
+                                              shades: newShades.map((s) =>
+                                                Object.keys(s)[0] ===
+                                                "All Colours"
+                                                  ? { "All Colours": "" }
+                                                  : s
+                                              ),
+                                            };
+                                          });
+                                        }}
+                                      >
+                                        Apply to All
+                                      </Button>
+                                    )}
+                                  </div>
+                                );
+                              });
+                            })()}
+                          <div className="flex justify-center pt-1">
+                            <Button
+                              onClick={() => {
+                                if (currentEntry) {
+                                  const maxShadeNumber = Math.max(
+                                    ...currentEntry.shades.map((shade) => {
+                                      const key = Object.keys(shade)[0];
+                                      return parseInt(key) || 0;
+                                    })
+                                  );
+
+                                  const newShades = Array.from(
+                                    { length: 10 },
+                                    (_, i) => ({
+                                      [`${maxShadeNumber + i + 1}`]: "",
+                                    })
+                                  );
+                                  setCurrentEntry({
+                                    ...currentEntry,
+                                    shades: [
+                                      ...currentEntry.shades,
+                                      ...newShades,
+                                    ],
+                                  });
+                                }
+                              }}
+                              variant="outline"
+                              size="sm"
+                            >
+                              + 10 Shades
+                            </Button>
+                          </div>
                         </div>
                       </ScrollArea>
                       <Button onClick={handleSaveDesign} className="mt-4">
