@@ -80,6 +80,7 @@ function DesignReports() {
   const [programEntryNo, setProgramEntryNo] = useState("");
   const [programLotNo, setProgramLotNo] = useState("");
   const [showPartyColumn, setShowPartyColumn] = useState(true);
+  const [useOrderNoInReport, setUseOrderNoInReport] = useState(false);
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
   const [shareOrder, setShareOrder] = useState<OrderDetail | null>(null);
   const [shareImageUrl, setShareImageUrl] = useState<string | null>(null);
@@ -415,7 +416,7 @@ function DesignReports() {
             <tr>
               <th class="shade-column">Shade</th>
               ${sectionEntries.map(entry => `
-                <th>${entry.partyName}${!isSingleDesign ? ` (${entry.design})` : ''}</th>
+                <th>${useOrderNoInReport ? `Order ${entry.order_no}` : entry.partyName}${!isSingleDesign ? ` (${entry.design})` : ''}</th>
               `).join('')}
               ${isLastSection ? `
                 <th>Total</th>
@@ -941,6 +942,17 @@ function DesignReports() {
               <SheetHeader>
                 <SheetTitle>Selected Entries</SheetTitle>
               </SheetHeader>
+              <div className="px-1 py-2">
+                <label className="flex items-center gap-2 text-xs sm:text-sm">
+                  <input
+                    type="checkbox"
+                    className="accent-blue-500 w-4 h-4"
+                    checked={useOrderNoInReport}
+                    onChange={(e) => setUseOrderNoInReport(e.target.checked)}
+                  />
+                  Hide party names and show Order No. in report
+                </label>
+              </div>
               <div className="flex justify-center mb-4">
                 <ToggleGroup
                   type="single"
