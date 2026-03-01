@@ -206,51 +206,51 @@ function ShadeSelectorFast({
     <div className="w-full max-w-md mx-auto p-4 space-y-4 bg-white shadow-sm rounded-lg">
       <div className="mb-2 text-center">
         <h1 className="text-xl font-semibold">Select Shades for {currentSelectedDesign}</h1>
-        
+
       </div>
 
       {/* Total Colours and Apply-to-All (uses existing "All Colours" shade) */}
       {currentSelectedDesign && (
         <div className="rounded-lg bg-gray-50 p-3">
-            <div className="flex items-center gap-2">
-              <Label className="text-sm font-medium text-gray-800 whitespace-nowrap">
-                Total Colours
-              </Label>
-              <Input
-                type="number"
-                min={0}
-                value={totalShades ?? 0}
-                onChange={(e) =>
-                  setTotalShades(parseInt(e.target.value, 10) || 0)
-                }
-                className="w-20 h-8 text-sm"
-              />
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={isSavingTotalShades || !currentSelectedDesign}
-                onClick={async () => {
-                  if (!currentSelectedDesign) return;
-                  try {
-                    setIsSavingTotalShades(true);
-                    const { error } = await supabase
-                      .from("designs")
-                      .update({ total_shades: totalShades ?? 0 })
-                      .eq("title", currentSelectedDesign);
-                    setIsSavingTotalShades(false);
-                    if (error) {
-                      console.error("Error updating total shades:", error);
-                      return;
-                    }
-                  } catch (err) {
-                    console.error("Error updating total shades:", err);
-                    setIsSavingTotalShades(false);
+          <div className="flex items-center gap-2">
+            <Label className="text-sm font-medium text-gray-800 whitespace-nowrap">
+              Total Colours
+            </Label>
+            <Input
+              type="number"
+              min={0}
+              value={totalShades ?? 0}
+              onChange={(e) =>
+                setTotalShades(parseInt(e.target.value, 10) || 0)
+              }
+              className="w-20 h-8 text-sm"
+            />
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={isSavingTotalShades || !currentSelectedDesign}
+              onClick={async () => {
+                if (!currentSelectedDesign) return;
+                try {
+                  setIsSavingTotalShades(true);
+                  const { error } = await supabase
+                    .from("designs")
+                    .update({ total_shades: totalShades ?? 0 })
+                    .eq("title", currentSelectedDesign);
+                  setIsSavingTotalShades(false);
+                  if (error) {
+                    console.error("Error updating total shades:", error);
+                    return;
                   }
-                }}
-              >
-                Save
-              </Button>
-              <Button
+                } catch (err) {
+                  console.error("Error updating total shades:", err);
+                  setIsSavingTotalShades(false);
+                }
+              }}
+            >
+              Save
+            </Button>
+            <Button
               size="sm"
               variant="outline"
               className="ml-auto"
@@ -264,8 +264,8 @@ function ShadeSelectorFast({
             >
               Apply to All
             </Button>
-            </div>
-            
+          </div>
+
         </div>
       )}
 
@@ -299,7 +299,7 @@ function ShadeSelectorFast({
       <div className="space-y-3">
         <div className="flex flex-wrap items-center gap-2">
           <input
-            type="text"
+            type="number"
             value={newValue}
             onChange={(e) => setNewValue(e.target.value)}
             placeholder="New value for selected keys"
