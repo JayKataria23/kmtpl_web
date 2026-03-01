@@ -217,21 +217,21 @@ export function EditOrderModal({
       // Convert both strings to uppercase for case-insensitive comparison
       const str1 = design.toUpperCase();
       const str2 = newDesign.trim().toUpperCase();
-      
+
       // Calculate Levenshtein distance
       const m = str1.length;
       const n = str2.length;
       const dp: number[][] = Array(m + 1).fill(null).map(() => Array(n + 1).fill(0));
-      
+
       for (let i = 0; i <= m; i++) dp[i][0] = i;
       for (let j = 0; j <= n; j++) dp[0][j] = j;
-      
+
       for (let i = 1; i <= m; i++) {
         for (let j = 1; j <= n; j++) {
-          if (str1[i-1] === str2[j-1]) {
-            dp[i][j] = dp[i-1][j-1];
+          if (str1[i - 1] === str2[j - 1]) {
+            dp[i][j] = dp[i - 1][j - 1];
           } else {
-            dp[i][j] = 1 + Math.min(dp[i-1][j], dp[i-1][j-1], dp[i][j-1]);
+            dp[i][j] = 1 + Math.min(dp[i - 1][j], dp[i - 1][j - 1], dp[i][j - 1]);
           }
         }
       }
@@ -239,7 +239,7 @@ export function EditOrderModal({
       // Calculate similarity percentage
       const maxLength = Math.max(m, n);
       const similarity = ((maxLength - dp[m][n]) / maxLength) * 100;
-      
+
       return similarity > 80 && design !== newDesign;
     });
 
@@ -254,7 +254,7 @@ export function EditOrderModal({
 
     const { data, error } = await supabase
       .from("designs")
-      .insert({ 
+      .insert({
         title: newDesign.trim().toUpperCase(),
         total_shades: shadesNumber
       })
@@ -564,7 +564,7 @@ export function EditOrderModal({
       // Determine which entries to update and which to insert
       const designEntriesToUpdate: DesignEntry[] = []; // Explicitly define the type
       const designEntriesToInsert: DesignEntry[] = []; // Explicitly define the type
-      const designEntriesToDelete = existingEntries.filter(entry => 
+      const designEntriesToDelete = existingEntries.filter(entry =>
         !designEntries.some(currentEntry => currentEntry.id === entry.id)
       );
 
@@ -670,9 +670,8 @@ export function EditOrderModal({
       console.error("Error deleting order:", error);
       toast({
         title: "Error",
-        description: `Failed to cancel order: ${
-          error instanceof Error ? error.message : "Unknown error"
-        }`,
+        description: `Failed to cancel order: ${error instanceof Error ? error.message : "Unknown error"
+          }`,
         variant: "destructive",
       });
     }
@@ -695,9 +694,8 @@ export function EditOrderModal({
       console.error("Error restoring order:", error);
       toast({
         title: "Error",
-        description: `Failed to restore order: ${
-          error instanceof Error ? error.message : "Unknown error"
-        }`,
+        description: `Failed to restore order: ${error instanceof Error ? error.message : "Unknown error"
+          }`,
         variant: "destructive",
       });
     }
@@ -864,11 +862,11 @@ export function EditOrderModal({
                                 currentEntry.design.split("-")[0]
                             )?.price
                               ? "Old Price " +
-                                priceList.find(
-                                  (price) =>
-                                    price.design.split("-")[0] ===
-                                    currentEntry.design.split("-")[0]
-                                )?.price
+                              priceList.find(
+                                (price) =>
+                                  price.design.split("-")[0] ===
+                                  currentEntry.design.split("-")[0]
+                              )?.price
                               : "Enter Price"
                           }
                           type="number"
@@ -1046,11 +1044,10 @@ export function EditOrderModal({
                                   >
                                     <Label
                                       htmlFor={`shade-${index}`}
-                                      className={`text-right text-sm ${
-                                        isAllColours
+                                      className={`text-right text-sm ${isAllColours
                                           ? "font-semibold text-blue-700"
                                           : "text-gray-800"
-                                      }`}
+                                        }`}
                                     >
                                       {shadeName}
                                     </Label>
@@ -1123,7 +1120,7 @@ export function EditOrderModal({
                                               ...prev,
                                               shades: newShades.map((s) =>
                                                 Object.keys(s)[0] ===
-                                                "All Colours"
+                                                  "All Colours"
                                                   ? { "All Colours": "" }
                                                   : s
                                               ),
