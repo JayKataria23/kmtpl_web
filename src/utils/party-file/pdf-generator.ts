@@ -33,8 +33,8 @@ const formatShades = (shades: Record<string, string>[]): string => {
       ([meters, { shadeNames }]) => `
       <div style="display: inline-block; margin: 2px;">
         <div style="border-bottom: 1px solid #000; text-align: center;">${shadeNames.join(
-          " - "
-        )}</div>
+        " - "
+      )}</div>
         <div style="border-top: 1px solid #000; text-align: center;">${meters} mtr</div>
       </div>
     `
@@ -55,6 +55,17 @@ const formatDate = (dateStr: string): string => {
     year: "2-digit",
   };
   return date.toLocaleDateString("en-GB", options).replace(/ /g, "-");
+};
+
+/**
+ * Format meters for display: use 'k' suffix for values >= 1000 (e.g., 2390 -> 2.4k)
+ * Otherwise round to nearest whole number.
+ */
+const formatMeters = (meters: number): string => {
+  if (meters >= 1000) {
+    return (meters / 1000).toFixed(1) + "k";
+  }
+  return Math.round(meters).toString();
 };
 
 /**
@@ -85,7 +96,7 @@ const generateTableHeader = (): string => `
     <div style="width: 9%; border-right: 1px solid #000; font-weight: bold; text-align: center; font-size: small; padding: 2px;">Order Date</div>
     <div style="width: 12%; border-right: 1px solid #000; font-weight: bold; text-align: center; font-size: small; padding: 2px;">Design</div>
     <div style="width: 66%; border-right: 1px solid #000; font-weight: bold; text-align: center; font-size: small; padding: 2px;">Shades</div>
-    <div style="width: 4%; border-right: 1px solid #000; font-weight: bold; text-align: center; font-size: small; padding: 2px;">Pc</div>
+    <div style="width: 4%; border-right: 1px solid #000; font-weight: bold; text-align: center; font-size: small; padding: 2px;">Mtr</div>
     <div style="width: 5%; font-weight: bold; text-align: center; font-size: small; padding: 2px;">Price</div>
   </div>
 `;
@@ -94,42 +105,35 @@ const generateTableHeader = (): string => `
  * Generate a single order row
  */
 const generateOrderRow = (order: DesignDetail, index: number): string => {
-  const nonEmptyShades = order.shades.filter(
-    (shade) => shade[Object.keys(shade)[0]] !== ""
-  );
+  const totalMeters = order.shades.reduce((total, shadeObj) => {
+    const meterValue = shadeObj[Object.keys(shadeObj)[0]];
+    return total + (parseFloat(meterValue) || 0);
+  }, 0);
 
   return `
-    <div class="order-row" style="border-bottom: 1px solid #000; display: flex; flex-direction: row; ${
-      order.bhiwandi_date ? "background-color: #fef9c3;" : ""
+    <div class="order-row" style="border-bottom: 1px solid #000; display: flex; flex-direction: row; ${order.bhiwandi_date ? "background-color: #fef9c3;" : ""
     }">
-      <div style="width: 5%; border-right: 1px solid #000; text-align: center; font-size: small; padding: 2px;">${
-        index + 1
-      }</div>
-      <div style="width: 7%; border-right: 1px solid #000; text-align: center; font-size: small; padding: 2px;">${
-        order.order_no || "-"
-      }</div>
-      <div style="width: 9%; border-right: 1px solid #000; text-align: center; font-size: small; padding: 2px;">${
-        order.order_date ? formatDate(order.order_date) : "-"
-      }</div>
-      <div style="width: 12%; border-right: 1px solid #000; text-align: center; font-size: small; padding: 2px; font-weight: bold; word-break: break-word;">${
-        order.design
-      }</div>
+      <div style="width: 5%; border-right: 1px solid #000; text-align: center; font-size: small; padding: 2px;">${index + 1
+    }</div>
+      <div style="width: 7%; border-right: 1px solid #000; text-align: center; font-size: small; padding: 2px;">${order.order_no || "-"
+    }</div>
+      <div style="width: 9%; border-right: 1px solid #000; text-align: center; font-size: small; padding: 2px;">${order.order_date ? formatDate(order.order_date) : "-"
+    }</div>
+      <div style="width: 12%; border-right: 1px solid #000; text-align: center; font-size: small; padding: 2px; font-weight: bold; word-break: break-word;">${order.design
+    }</div>
       <div style="width: 66%; border-right: 1px solid #000; font-size: small; padding: 2px;">
         <div style="display: flex; flex-wrap: wrap; gap: 4px; ">
           ${formatShades(order.shades)}
         </div>
-        ${
-          order.remark
-            ? `<div style="color: red; margin-top: 4px;">Remark: ${order.remark}</div>`
-            : ""
-        }
+        ${order.remark
+      ? `<div style="color: red; margin-top: 4px;">Remark: ${order.remark}</div>`
+      : ""
+    }
       </div>
-      <div style="width: 4%; border-right: 1px solid #000; text-align: center; font-size: small; padding: 2px;">${
-        nonEmptyShades.length
-      }</div>
-      <div style="width: 5%; text-align: center; font-size: small; padding: 2px;">${
-        order.price || "-"
-      }</div>
+      <div style="width: 4%; border-right: 1px solid #000; text-align: center; font-size: small; padding: 2px;">${formatMeters(totalMeters)
+    }</div>
+      <div style="width: 5%; text-align: center; font-size: small; padding: 2px;">${order.price || "-"
+    }</div>
     </div>
   `;
 };
@@ -137,11 +141,11 @@ const generateOrderRow = (order: DesignDetail, index: number): string => {
 /**
  * Generate the footer with totals
  */
-const generateFooter = (totalPieces: number): string => `
+const generateFooter = (totalMeters: number): string => `
   <div style="display: flex; flex-direction: row; border-top: 1px solid #000;">
     <div style="width: 91%; border-right: 1px solid #000; text-align: right; padding: 2px; font-weight: bold;">Total</div>
     <div style="width: 4%; border-right: 1px solid #000; text-align: center; font-weight: bold; padding: 2px;">
-      ${totalPieces}
+      ${formatMeters(totalMeters)}
     </div>
     <div style="width: 5%;"></div>
   </div>
@@ -167,14 +171,14 @@ export const generatePartyReport = (
     a.design.localeCompare(b.design)
   );
 
-  // Calculate total pieces once instead of in template
-  const totalPieces = sortedOrders.reduce(
-    (total, order) =>
-      total +
-      order.shades.filter((shade) => shade[Object.keys(shade)[0]] !== "")
-        .length,
-    0
-  );
+  // Calculate total meters once instead of in template
+  const totalMeters = sortedOrders.reduce((total, order) => {
+    const orderMeters = order.shades.reduce((sum, shadeObj) => {
+      const meterValue = shadeObj[Object.keys(shadeObj)[0]];
+      return sum + (parseFloat(meterValue) || 0);
+    }, 0);
+    return total + orderMeters;
+  }, 0);
 
   // Get unique order numbers
   const uniqueOrderNumbers = [
@@ -260,15 +264,15 @@ export const generatePartyReport = (
             <div class="order-numbers">
               <strong>Order Numbers:</strong><br/>
               ${orderNumberGroups
-                .map((group) => group.join(", "))
-                .join("<br/>")}
+      .map((group) => group.join(", "))
+      .join("<br/>")}
             </div>
           </div>
           ${generateTableHeader()}
             ${sortedOrders
-              .map((order, index) => generateOrderRow(order, index))
-              .join("")}
-          ${generateFooter(totalPieces)}
+      .map((order, index) => generateOrderRow(order, index))
+      .join("")}
+          ${generateFooter(totalMeters)}
         </div>
       </body>
     </html>
