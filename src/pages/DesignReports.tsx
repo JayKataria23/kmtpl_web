@@ -50,6 +50,20 @@ interface OrderDetail {
   program?: string;
 }
 
+interface DuplicateOrderPayload {
+  billTo: number | null;
+  shipTo: number | null;
+  broker: number | null;
+  transport: number | null;
+  remark: string;
+  designs: {
+    design: string;
+    price: string;
+    remark: string;
+    shades: { [key: string]: string }[];
+  }[];
+}
+
 function DesignReports() {
   const [designCounts, setDesignCounts] = useState<DesignCount[]>([]);
   const [designOrders, setDesignOrders] = useState<{
@@ -255,6 +269,56 @@ function DesignReports() {
       setTotalShades(data.total_shades);
     } else {
       setTotalShades(null);
+    }
+  };
+
+  const handleDuplicateOrder = async (order: OrderDetail) => {
+    try {
+      const { data: orderData, error: orderError } = await supabase
+        .from("orders")
+        .select("id, bill_to_id, ship_to_id, broker_id, transport_id, remark")
+        .eq("order_no", order.order_no)
+        .single();
+
+      if (orderError || !orderData) {
+        throw orderError || new Error("Order not found");
+      }
+
+      const { data: designEntries, error: designError } = await supabase
+        .from("design_entries")
+        .select("design, price, remark, shades")
+        .eq("order_id", orderData.id)
+        .order("id", { ascending: true });
+
+      if (designError || !designEntries) {
+        throw designError || new Error("Design entries not found");
+      }
+
+      const duplicatePayload: DuplicateOrderPayload = {
+        billTo: orderData.bill_to_id,
+        shipTo: orderData.ship_to_id,
+        broker: orderData.broker_id,
+        transport: orderData.transport_id,
+        remark: orderData.remark || "",
+        designs: designEntries.map((entry) => ({
+          design: entry.design,
+          price: entry.price ? String(entry.price) : "",
+          remark: entry.remark || "",
+          shades: Array.isArray(entry.shades)
+            ? (entry.shades as { [key: string]: string }[])
+            : [],
+        })),
+      };
+
+      sessionStorage.setItem("duplicateOrderDraft", JSON.stringify(duplicatePayload));
+      navigate("/order-form");
+    } catch (error) {
+      console.error("Error duplicating order:", error);
+      toast({
+        title: "Error",
+        description: "Failed to duplicate this order",
+        variant: "destructive",
+      });
     }
   };
 
@@ -1252,12 +1316,18 @@ function DesignReports() {
                               </div>
                             </div>
                           </div>
-                          <div className="flex gap-2 mt-4">
+                          <div className="flex flex-wrap gap-2 mt-4">
                             <Button
                               onClick={() => handleEditShades(order)}
                               className="flex-1 bg-blue-500 hover:bg-blue-600 text-white"
                             >
                               Edit Shades
+                            </Button>
+                            <Button
+                              onClick={() => handleDuplicateOrder(order)}
+                              className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white"
+                            >
+                              Duplicate Order
                             </Button>
                             {isEntrySelected(order.id) ? (
                               <Button
