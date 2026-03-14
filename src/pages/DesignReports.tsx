@@ -50,19 +50,6 @@ interface OrderDetail {
   program?: string;
 }
 
-interface DuplicateOrderPayload {
-  billTo: number | null;
-  shipTo: number | null;
-  broker: number | null;
-  transport: number | null;
-  remark: string;
-  designs: {
-    design: string;
-    price: string;
-    remark: string;
-    shades: { [key: string]: string }[];
-  }[];
-}
 
 function DesignReports() {
   const [designCounts, setDesignCounts] = useState<DesignCount[]>([]);
@@ -274,49 +261,45 @@ function DesignReports() {
 
   const handleDuplicateOrder = async (order: OrderDetail) => {
     try {
-      const { data: orderData, error: orderError } = await supabase
-        .from("orders")
-        .select("id, bill_to_id, ship_to_id, broker_id, transport_id, remark")
-        .eq("order_no", order.order_no)
+      const { data: sourceEntry, error: sourceEntryError } = await supabase
+        .from("design_entries")
+        .select("design, price, remark, shades, order_id, bhiwandi_date, dispatch_date, part, program")
+        .eq("id", order.id)
         .single();
 
-      if (orderError || !orderData) {
-        throw orderError || new Error("Order not found");
+      if (sourceEntryError || !sourceEntry) {
+        throw sourceEntryError || new Error("Design entry not found");
       }
 
-      const { data: designEntries, error: designError } = await supabase
+      const { error: insertError } = await supabase
         .from("design_entries")
-        .select("design, price, remark, shades")
-        .eq("order_id", orderData.id)
-        .order("id", { ascending: true });
+        .insert([{
+          design: sourceEntry.design,
+          price: sourceEntry.price,
+          remark: sourceEntry.remark,
+          shades: sourceEntry.shades,
+          order_id: sourceEntry.order_id,
+          bhiwandi_date: sourceEntry.bhiwandi_date,
+          dispatch_date: sourceEntry.dispatch_date,
+          part: sourceEntry.part,
+          program: sourceEntry.program,
+        }]);
 
-      if (designError || !designEntries) {
-        throw designError || new Error("Design entries not found");
+      if (insertError) {
+        throw insertError;
       }
 
-      const duplicatePayload: DuplicateOrderPayload = {
-        billTo: orderData.bill_to_id,
-        shipTo: orderData.ship_to_id,
-        broker: orderData.broker_id,
-        transport: orderData.transport_id,
-        remark: orderData.remark || "",
-        designs: designEntries.map((entry) => ({
-          design: entry.design,
-          price: entry.price ? String(entry.price) : "",
-          remark: entry.remark || "",
-          shades: Array.isArray(entry.shades)
-            ? (entry.shades as { [key: string]: string }[])
-            : [],
-        })),
-      };
+      await Promise.all([fetchOrderDetails(order.design), fetchDesignCounts()]);
 
-      sessionStorage.setItem("duplicateOrderDraft", JSON.stringify(duplicatePayload));
-      navigate("/order-form");
+      toast({
+        title: "Success",
+        description: "Design entry duplicated in the same order",
+      });
     } catch (error) {
-      console.error("Error duplicating order:", error);
+      console.error("Error duplicating order entry:", error);
       toast({
         title: "Error",
-        description: "Failed to duplicate this order",
+        description: "Failed to duplicate this design entry",
         variant: "destructive",
       });
     }
@@ -1327,7 +1310,7 @@ function DesignReports() {
                               onClick={() => handleDuplicateOrder(order)}
                               className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white"
                             >
-                              Duplicate Order
+                              Duplicate Entry
                             </Button>
                             {isEntrySelected(order.id) ? (
                               <Button

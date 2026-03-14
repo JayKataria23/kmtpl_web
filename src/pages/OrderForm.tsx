@@ -1,5 +1,5 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import {
   Printer,
   Save,
@@ -55,20 +55,6 @@ interface OrderDetails {
   shipToAddress?: string;
 }
 
-interface DuplicateOrderDraft {
-  billTo: number | null;
-  shipTo: number | null;
-  broker: number | null;
-  transport: number | null;
-  remark: string;
-  designs: {
-    design: string;
-    price: string;
-    remark: string;
-    shades: { [key: string]: string }[];
-  }[];
-}
-
 export default function OrderForm() {
   const [date, setDate] = useState(new Date());
   const [designEntries, setDesignEntries] = useState<DesignEntry[]>([]);
@@ -110,8 +96,6 @@ export default function OrderForm() {
   const [isAddDesignOpen, setIsAddDesignOpen] = useState(false);
   const [totalShades, setTotalShades] = useState<number | null>(null);
   const [isSavingTotalShades, setIsSavingTotalShades] = useState(false);
-  const [orderRemark, setOrderRemark] = useState("");
-  const hasAppliedDuplicateDraft = useRef(false);
 
   const fetchAllOptions = async () => {
     await Promise.all([
@@ -126,44 +110,6 @@ export default function OrderForm() {
     fetchAllOptions();
     generateUniqueOrderNo();
   }, []);
-
-  useEffect(() => {
-    if (hasAppliedDuplicateDraft.current || partyOptions.length === 0) return;
-
-    const draftRaw = sessionStorage.getItem("duplicateOrderDraft");
-    if (!draftRaw) {
-      hasAppliedDuplicateDraft.current = true;
-      return;
-    }
-
-    try {
-      const draft: DuplicateOrderDraft = JSON.parse(draftRaw);
-      setSelectedBillTo(draft.billTo ?? null);
-      setSelectedShipTo(draft.shipTo ?? null);
-      setSelectedBroker(draft.broker ?? null);
-      setSelectedTransport(draft.transport ?? null);
-      setOrderRemark((draft.remark || "").toUpperCase());
-
-      const mappedEntries: DesignEntry[] = (draft.designs || []).map((entry, index) => ({
-        id: `${Date.now()}-${index}`,
-        design: entry.design || "",
-        price: entry.price || "",
-        remark: (entry.remark || "").toUpperCase(),
-        shades: Array.isArray(entry.shades) ? entry.shades : [],
-      }));
-
-      setDesignEntries(mappedEntries);
-      toast({
-        title: "Order duplicated",
-        description: "The selected order has been loaded into this order form.",
-      });
-    } catch (error) {
-      console.error("Failed to parse duplicate order draft:", error);
-    } finally {
-      sessionStorage.removeItem("duplicateOrderDraft");
-      hasAppliedDuplicateDraft.current = true;
-    }
-  }, [partyOptions, toast]);
 
   useEffect(() => {
     fetchAllOptions();
@@ -451,7 +397,9 @@ export default function OrderForm() {
       broker: selectedBroker,
       transport: selectedTransport,
       designs: designEntries,
-      remark: orderRemark.toUpperCase(),
+      remark: (
+        document.getElementById("remark") as HTMLInputElement
+      )?.value.toUpperCase(),
     };
 
     try {
@@ -1113,11 +1061,7 @@ export default function OrderForm() {
         )}
         <div>
           <Label htmlFor="remark">Remark</Label>
-          <Input
-            id="remark"
-            value={orderRemark}
-            onChange={(e) => setOrderRemark(e.target.value.toUpperCase())}
-          />
+          <Input id="remark" />
         </div>
         <div className="flex justify-between pt-4">
           <Button
