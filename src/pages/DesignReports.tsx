@@ -50,6 +50,7 @@ interface OrderDetail {
   program?: string;
 }
 
+
 function DesignReports() {
   const [designCounts, setDesignCounts] = useState<DesignCount[]>([]);
   const [designOrders, setDesignOrders] = useState<{
@@ -255,6 +256,52 @@ function DesignReports() {
       setTotalShades(data.total_shades);
     } else {
       setTotalShades(null);
+    }
+  };
+
+  const handleDuplicateOrder = async (order: OrderDetail) => {
+    try {
+      const { data: sourceEntry, error: sourceEntryError } = await supabase
+        .from("design_entries")
+        .select("design, price, remark, shades, order_id, bhiwandi_date, dispatch_date, part, program")
+        .eq("id", order.id)
+        .single();
+
+      if (sourceEntryError || !sourceEntry) {
+        throw sourceEntryError || new Error("Design entry not found");
+      }
+
+      const { error: insertError } = await supabase
+        .from("design_entries")
+        .insert([{
+          design: sourceEntry.design,
+          price: sourceEntry.price,
+          remark: sourceEntry.remark,
+          shades: sourceEntry.shades,
+          order_id: sourceEntry.order_id,
+          bhiwandi_date: sourceEntry.bhiwandi_date,
+          dispatch_date: sourceEntry.dispatch_date,
+          part: sourceEntry.part,
+          program: sourceEntry.program,
+        }]);
+
+      if (insertError) {
+        throw insertError;
+      }
+
+      await Promise.all([fetchOrderDetails(order.design), fetchDesignCounts()]);
+
+      toast({
+        title: "Success",
+        description: "Design entry duplicated in the same order",
+      });
+    } catch (error) {
+      console.error("Error duplicating order entry:", error);
+      toast({
+        title: "Error",
+        description: "Failed to duplicate this design entry",
+        variant: "destructive",
+      });
     }
   };
 
@@ -1252,12 +1299,18 @@ function DesignReports() {
                               </div>
                             </div>
                           </div>
-                          <div className="flex gap-2 mt-4">
+                          <div className="flex flex-wrap gap-2 mt-4">
                             <Button
                               onClick={() => handleEditShades(order)}
                               className="flex-1 bg-blue-500 hover:bg-blue-600 text-white"
                             >
                               Edit Shades
+                            </Button>
+                            <Button
+                              onClick={() => handleDuplicateOrder(order)}
+                              className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white"
+                            >
+                              Duplicate Entry
                             </Button>
                             {isEntrySelected(order.id) ? (
                               <Button
