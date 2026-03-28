@@ -12,6 +12,7 @@ import { Input, Label, ScrollArea } from "@/components/ui";
 import InputWithAutocomplete from "@/components/custom/InputWithAutocomplete";
 import { Button } from "@/components/ui/button";
 import supabase from "@/utils/supabase";
+import { fetchLatestPriceList } from "@/utils/rate-fetching";
 
 interface Party {
   id: number;
@@ -187,14 +188,7 @@ export default function NewOrderDialog({
   };
 
   const fetchPriceList = async (partyId: number) => {
-    const { data, error } = await supabase.rpc(
-      "get_latest_design_prices_by_party",
-      {
-        partyid: partyId,
-      }
-    );
-
-    if (error) throw error;
+    const data = await fetchLatestPriceList(partyId);
     setPriceList(data);
   };
 
@@ -400,16 +394,22 @@ export default function NewOrderDialog({
                   value={selectedDesign}
                   onChange={(e) => {
                     setSelectedDesign(e.target.value);
-                    // Set the old price if available
-                    const oldPrice = priceList.find(
-                      (price) =>
-                        price.design.split("-")[0] ===
-                        e.target.value.split("-")[0]
-                    )?.price;
-                    if (oldPrice) {
-                      setPrice(oldPrice);
+                    const exactMatch = priceList.find(
+                      (p) => p.design === e.target.value
+                    );
+                    if (exactMatch) {
+                      setPrice(exactMatch.price);
                     } else {
-                      setPrice("");
+                      const variantMatch = priceList.find(
+                        (p) =>
+                          p.design.split("-")[0] ===
+                          e.target.value.split("-")[0]
+                      );
+                      if (variantMatch) {
+                        setPrice(variantMatch.price);
+                      } else {
+                        setPrice("");
+                      }
                     }
                     if (e.target.value && designs.includes(e.target.value)) {
                       fetchTotalShadesForDesign(e.target.value);
@@ -437,18 +437,22 @@ export default function NewOrderDialog({
                   onChange={(e) => setPrice(e.target.value)}
                   className="col-span-3"
                   placeholder={
-                    priceList.find(
-                      (price) =>
-                        price.design.split("-")[0] ===
-                        selectedDesign.split("-")[0]
-                    )?.price
-                      ? "Old Price: " +
-                        priceList.find(
-                          (price) =>
-                            price.design.split("-")[0] ===
-                            selectedDesign.split("-")[0]
-                        )?.price
-                      : "Enter Price"
+                    (() => {
+                      const exactMatch = priceList.find(
+                        (price) => price.design === selectedDesign
+                      );
+                      if (exactMatch) return "Old Price: " + exactMatch.price;
+
+                      const variantMatch = priceList.find(
+                        (price) =>
+                          price.design.split("-")[0] ===
+                          selectedDesign.split("-")[0]
+                      );
+                      if (variantMatch)
+                        return "Old Price: " + variantMatch.price;
+
+                      return "Enter Price";
+                    })()
                   }
                   type="number"
                 />

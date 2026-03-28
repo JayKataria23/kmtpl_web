@@ -12,6 +12,7 @@ import {
   Toaster,
 } from "@/components/ui";
 import supabase from "@/utils/supabase";
+import { fetchLatestPriceList } from "@/utils/rate-fetching";
 import InputWithAutocomplete from "@/components/custom/InputWithAutocomplete";
 import { ChevronLeft, ChevronRight, Printer, Save } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -238,18 +239,8 @@ function EditChallan() {
   };
 
   const fetchPriceList = async (partyId: number) => {
-    try {
-      const { data, error } = await supabase.rpc(
-        "get_latest_design_prices_by_party",
-        {
-          partyid: partyId,
-        }
-      );
-      if (error) throw error;
-      setPriceList(data);
-    } catch (error) {
-      console.error("Error fetching price list:", error);
-    }
+    const data = await fetchLatestPriceList(partyId);
+    setPriceList(data);
   };
 
   const getSelectedValue = (field: string) => {
@@ -509,14 +500,22 @@ function EditChallan() {
                   <Input
                     type="number"
                     placeholder={
-                      priceList.find(
-                        (price) => price.design === currentEntry.design
-                      )?.price
-                        ? "Old Price " +
-                          priceList.find(
-                            (price) => price.design === currentEntry.design
-                          )?.price
-                        : "Enter Price"
+                      (() => {
+                        const exactMatch = priceList.find(
+                          (price) => price.design === currentEntry.design
+                        );
+                        if (exactMatch) return "Old Price " + exactMatch.price;
+
+                        const variantMatch = priceList.find(
+                          (price) =>
+                            price.design.split("-")[0] ===
+                            currentEntry.design.split("-")[0]
+                        );
+                        if (variantMatch)
+                          return "Old Price " + variantMatch.price;
+
+                        return "Enter Price";
+                      })()
                     }
                     value={currentEntry.price}
                     onChange={(e) =>

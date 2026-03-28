@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import supabase from "@/utils/supabase";
+import { fetchLatestPriceList } from "@/utils/rate-fetching";
 import { Button, Toaster } from "@/components/ui";
 import PartySelectorFast from "@/components/custom/PartySelectorFast";
 import DesignSelectorFast from "@/components/custom/DesignSelectorFast";
@@ -119,14 +120,7 @@ function FastOrderForm() {
   };
 
   const fetchPriceList = async (partyId: number) => {
-    const { data, error } = await supabase.rpc(
-      "get_latest_design_prices_by_party",
-      {
-        partyid: partyId,
-      }
-    );
-
-    if (error) throw error;
+    const data = await fetchLatestPriceList(partyId);
     setPriceList(data);
   };
 
@@ -232,12 +226,19 @@ function FastOrderForm() {
       const newEntry: DesignEntry = {
         id: Math.random().toString(36).substr(2, 9),
         design: currentSelectedDesign || "",
-        price:
-          priceList.find(
-        (price) =>
-          price.design.split("-")[0] ===
-          currentSelectedDesign?.split("-")[0]
-          )?.price || "0",
+        price: (() => {
+          const exactMatch = priceList.find(
+            (price) => price.design === currentSelectedDesign
+          );
+          if (exactMatch) return exactMatch.price;
+
+          const variantMatch = priceList.find(
+            (price) =>
+              price.design.split("-")[0] ===
+              currentSelectedDesign?.split("-")[0]
+          );
+          return variantMatch ? variantMatch.price : "0";
+        })(),
         remark: "",
         shades: currentJSON,
       };

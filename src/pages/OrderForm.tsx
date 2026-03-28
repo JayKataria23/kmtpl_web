@@ -21,6 +21,7 @@ import {
   Toaster,
 } from "@/components/ui";
 import supabase from "@/utils/supabase";
+import { fetchLatestPriceList } from "@/utils/rate-fetching";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import InputWithAutocomplete from "@/components/custom/InputWithAutocomplete";
@@ -227,15 +228,7 @@ export default function OrderForm() {
   };
 
   const fetchPriceList = async (partyId: number) => {
-    const { data, error } = await supabase.rpc(
-      "get_latest_design_prices_by_party",
-      {
-        partyid: partyId,
-      }
-    );
-
-    if (error) throw error;
-
+    const data = await fetchLatestPriceList(partyId);
     setPriceList(data);
   };
 
@@ -704,18 +697,22 @@ export default function OrderForm() {
                         onChange={(e) => handlePriceChange(e.target.value)}
                         className="col-span-3"
                         placeholder={
-                          priceList.find(
-                            (price) =>
-                              price.design.split("-")[0] ===
-                              currentEntry.design.split("-")[0]
-                          )?.price
-                            ? "Old Price " +
-                              priceList.find(
-                                (price) =>
-                                  price.design.split("-")[0] ===
-                                  currentEntry.design.split("-")[0]
-                              )?.price
-                            : "Enter Price"
+                          (() => {
+                            const exactMatch = priceList.find(
+                              (price) => price.design === currentEntry.design
+                            );
+                            if (exactMatch) return "Old Price " + exactMatch.price;
+
+                            const variantMatch = priceList.find(
+                              (price) =>
+                                price.design.split("-")[0] ===
+                                currentEntry.design.split("-")[0]
+                            );
+                            if (variantMatch)
+                              return "Old Price " + variantMatch.price;
+
+                            return "Enter Price";
+                          })()
                         }
                         type="number"
                       />

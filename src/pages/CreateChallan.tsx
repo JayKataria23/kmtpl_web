@@ -12,6 +12,7 @@ import {
   Toaster,
 } from "@/components/ui";
 import supabase from "@/utils/supabase";
+import { fetchLatestPriceList } from "@/utils/rate-fetching";
 import { useUser } from "@clerk/clerk-react"; // Import useUser
 import InputWithAutocomplete from "@/components/custom/InputWithAutocomplete";
 import { ChevronLeft, ChevronRight, Printer, Save } from "lucide-react";
@@ -202,15 +203,7 @@ function CreateChallan() {
   };
 
   const fetchPriceList = async (partyId: number) => {
-    const { data, error } = await supabase.rpc(
-      "get_latest_design_prices_by_party",
-      {
-        partyid: partyId,
-      }
-    );
-
-    if (error) throw error;
-
+    const data = await fetchLatestPriceList(partyId);
     setPriceList(data);
   };
 
@@ -513,14 +506,22 @@ function CreateChallan() {
                   <Input
                     type="number"
                     placeholder={
-                      priceList.find(
-                        (price) => price.design === currentEntry.design
-                      )?.price
-                        ? "Old Price " +
-                          priceList.find(
-                            (price) => price.design === currentEntry.design
-                          )?.price
-                        : "Enter Price"
+                      (() => {
+                        const exactMatch = priceList.find(
+                          (price) => price.design === currentEntry.design
+                        );
+                        if (exactMatch) return "Old Price " + exactMatch.price;
+
+                        const variantMatch = priceList.find(
+                          (price) =>
+                            price.design.split("-")[0] ===
+                            currentEntry.design.split("-")[0]
+                        );
+                        if (variantMatch)
+                          return "Old Price " + variantMatch.price;
+
+                        return "Enter Price";
+                      })()
                     }
                     value={currentEntry.price}
                     onChange={(e) => {
