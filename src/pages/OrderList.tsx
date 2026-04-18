@@ -177,6 +177,22 @@ export default function OrderList() {
     return matchingOrderIds[currentMatchIdx] === orderId;
   };
 
+  const formatMeters = (meters: number) => `${Math.round(meters)} mtrs`;
+
+  const groupedOrdersByDate = useMemo(() => {
+    return Object.entries(
+      orders.reduce((groups, order) => {
+        const date = format(new Date(order.date), "dd/MM/yyyy");
+        if (!groups[date]) {
+          groups[date] = { orders: [], totalMeters: 0 };
+        }
+        groups[date].orders.push(order);
+        groups[date].totalMeters += order.total_meters || 0;
+        return groups;
+      }, {} as Record<string, { orders: Order[]; totalMeters: number }>)
+    );
+  }, [orders]);
+
 
 
   return (
@@ -208,21 +224,17 @@ export default function OrderList() {
         </span>
       </div>
       <div className="space-y-8">
-        {Object.entries(
-          orders.reduce((groups, order) => {
-            const date = format(new Date(order.date), "dd/MM/yyyy");
-            if (!groups[date]) groups[date] = [];
-            groups[date].push(order);
-            return groups;
-          }, {} as Record<string, Order[]>)
-        ).map(([date, dateOrders]) => (
+        {groupedOrdersByDate.map(([date, dateGroup]) => (
           <div key={date} className="space-y-4">
             <div className="flex items-center gap-4 px-2">
-              <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wider">{date}</h2>
+              <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wider">
+                {date}
+                <span className="ml-2 text-blue-600 normal-case">({formatMeters(dateGroup.totalMeters)})</span>
+              </h2>
               <div className="h-px bg-gray-100 flex-1" />
             </div>
             <div className="space-y-3">
-              {dateOrders.map((order) => (
+              {dateGroup.orders.map((order) => (
                 <div
                   key={order.id}
                   ref={(el) => (itemRefs.current[order.id] = el)}
@@ -237,9 +249,7 @@ export default function OrderList() {
                         {highlightText(`#${String(order.order_no)}`)}
                       </span>
                       <span className="text-sm px-2.5 py-1 bg-blue-50 text-blue-700 rounded-lg font-semibold border border-blue-100">
-                        {order.total_meters >= 1000
-                          ? `${(order.total_meters / 1000).toFixed(1)}k`
-                          : Math.round(order.total_meters)} mtr
+                        {formatMeters(order.total_meters)}
                       </span>
                     </div>
                     <div className="flex gap-2">
