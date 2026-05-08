@@ -39,6 +39,7 @@ export default function HomePage() {
         { path: "/party-reports", label: "Party Reports" },
         { path: "/design-reports", label: "Design Reports" },
         { path: "/outstanding", label: "Outstanding" },
+        { path: "/outstanding-month-wise", label: "Outstanding Month Wise" },
       ],
     },
     {
