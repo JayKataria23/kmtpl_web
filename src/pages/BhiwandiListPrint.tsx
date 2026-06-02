@@ -42,6 +42,9 @@ interface GroupedOrder {
   order_remark: string;
 }
 
+const PRINT_REMARK_STYLE =
+  "color: #008000; border: 1px solid #000; padding: 1px 6px; font-weight: bold; display: inline-block; line-height: 1.2; print-color-adjust: exact; -webkit-print-color-adjust: exact;";
+
 function BhiwandiListPrint() {
   const { date } = useParams<{ date: string }>();
   const [designEntries, setDesignEntries] = useState<GroupedOrder[]>([]);
@@ -111,11 +114,11 @@ function BhiwandiListPrint() {
             <p style="font-size: 18px; line-height: 0.5;">
             <span><strong>Order No.:</strong> ${entry.order_no}
             </span>
-            <span><strong style="color: red; margin:5px; margin-left:40px; line-height:1">${
+            <span style="margin:5px; margin-left:40px;">${
               entry.order_remark && entry.order_remark !== "N/A"
-                ? entry.order_remark
+                ? `<strong style="${PRINT_REMARK_STYLE}">${entry.order_remark}</strong>`
                 : ""
-            }</strong></span>
+            }</span>
             <span></p>
             ${!hideDetails ? `<p style="font-size: 18px; line-height: 0.5"><strong>Transport:</strong> ${entry.transporter_name}</p>` : ''}
           </div>
@@ -142,9 +145,11 @@ function BhiwandiListPrint() {
               <td style="border: 1px solid #ccc; padding-left: 8px; width: ${hideDetails ? '68%' : '55%'}; ">
               <div style="width: 100%; text-align: center; display: flex; flex-direction: row; flex-wrap: wrap;">
               ${formatShades(order.shades)}
-              </div>  <strong style="color: red;">${
-                order.remark && order.remark !== "N/A" ? order.remark : ""
-              }</strong>
+              </div>  ${
+                order.remark && order.remark !== "N/A"
+                  ? `<strong style="${PRINT_REMARK_STYLE}">${order.remark}</strong>`
+                  : ""
+              }
               </td>
             </tr>`;
           });
