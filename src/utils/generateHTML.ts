@@ -5,6 +5,9 @@ interface Design {
   remark: string;
 }
 
+const PRINT_REMARK_STYLE =
+  "color: #008000; border: 1px solid #000; padding: 1px 6px; font-weight: bold; display: inline-block; line-height: 1.2; print-color-adjust: exact; -webkit-print-color-adjust: exact;";
+
 interface Order {
   designs: Design[];
   orderNo: string;
@@ -415,7 +418,7 @@ function generatePartHTML(
             </div>
             ${
               hasRemark
-                ? `<div style="text-align: center; width: 100%; color: #f00; font-weight: bold; font-size: 14px;">${design.remark}</div>`
+                ? `<div style="text-align: center; width: 100%; font-size: 14px;"><span style="${PRINT_REMARK_STYLE}">${design.remark}</span></div>`
                 : ""
             }
           </div>
@@ -525,8 +528,8 @@ function generatePartHTML(
         </div>
         <div style="border-bottom: 1px solid #000; display: flex; flex-direction: row; min-height: 22px;">
           <div style="width: 10%; text-align: center; align-content: center; display: flex; align-items: center; justify-content: center;">Remark:</div>
-          <div style="width: 90%; word-wrap: break-word; font-weight: bold; color: red; align-content: center; display: flex; align-items: center;">
-            ${part.remark || "N/A"}
+          <div style="width: 90%; word-wrap: break-word; align-content: center; display: flex; align-items: center; padding: 1px;">
+            <span style="${PRINT_REMARK_STYLE}">${part.remark || "N/A"}</span>
           </div>
         </div>
         <div class="designs-container">
