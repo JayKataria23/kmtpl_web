@@ -10,6 +10,7 @@ import PartyProfilePage from "./pages/PartyProfilePage";
 import BrokerTransportPage from "./pages/BrokerTransportPage";
 import OrderList from "./pages/OrderList";
 import BhiwandiList from "./pages/BhiwandiList"; // Import the new page
+import PendingOrders from "./pages/PendingOrders";
 import {
   AuthenticateWithRedirectCallback,
   ClerkProvider,
@@ -130,6 +131,14 @@ createRoot(document.getElementById("root")!).render(
             element={
               <ProtectedRoute>
                 <OrderList />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/pending-orders"
+            element={
+              <ProtectedRoute>
+                <PendingOrders />
               </ProtectedRoute>
             }
           />
