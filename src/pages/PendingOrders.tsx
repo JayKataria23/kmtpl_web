@@ -48,10 +48,10 @@ export default function PendingOrders() {
   const [todaysDispatchMeters, setTodaysDispatchMeters] = useState(0);
 
   // Collapse states
-  const [isPendingCollapsed, setIsPendingCollapsed] = useState(false);
-  const [isTodaysOrdersCollapsed, setIsTodaysOrdersCollapsed] = useState(false);
-  const [isBhiwandiCollapsed, setIsBhiwandiCollapsed] = useState(false);
-  const [isDispatchCollapsed, setIsDispatchCollapsed] = useState(false);
+  const [isPendingCollapsed, setIsPendingCollapsed] = useState(true);
+  const [isTodaysOrdersCollapsed, setIsTodaysOrdersCollapsed] = useState(true);
+  const [isBhiwandiCollapsed, setIsBhiwandiCollapsed] = useState(true);
+  const [isDispatchCollapsed, setIsDispatchCollapsed] = useState(true);
 
   // Order preview state
   const [previewOrder, setPreviewOrder] = useState<OrderDetail | null>(null);

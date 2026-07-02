@@ -53,6 +53,9 @@ export default function BhiwandiDesigns() {
   const [loadingEntries, setLoadingEntries] = useState<Record<string, boolean>>({});
   const [isDispatchDrawerOpen, setIsDispatchDrawerOpen] = useState(false);
   const [dispatchEntries, setDispatchEntries] = useState<DispatchEntry[]>([]);
+  const [selectedDispatchDate, setSelectedDispatchDate] = useState<string>(
+    new Date().toISOString().split("T")[0]
+  );
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -253,11 +256,13 @@ export default function BhiwandiDesigns() {
   // Set dispatch date for all selected entries
   const handleDispatch = async () => {
     if (dispatchEntries.length === 0) return;
-    const today = new Date().toISOString();
+    
+    const selectedDateISO = new Date(selectedDispatchDate).toISOString();
     const idsToUpdate = dispatchEntries.map((entry) => entry.id);
+    
     const { error } = await supabase
       .from("design_entries")
-      .update({ dispatch_date: today })
+      .update({ dispatch_date: selectedDateISO })
       .in("id", idsToUpdate);
     if (error) {
       toast({
@@ -302,13 +307,24 @@ export default function BhiwandiDesigns() {
                 <SheetTitle>Dispatch List</SheetTitle>
               </SheetHeader>
               {dispatchEntries.length > 0 && (
-                <Button
-                  onClick={handleDispatch}
-                  className="w-full mt-4"
-                  variant="default"
-                >
-                  Set Dispatch Date
-                </Button>
+                <div className="flex flex-col gap-3 mt-4">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-sm font-medium text-gray-700">Dispatch Date</label>
+                    <Input
+                      type="date"
+                      value={selectedDispatchDate}
+                      onChange={(e) => setSelectedDispatchDate(e.target.value)}
+                      className="w-full"
+                    />
+                  </div>
+                  <Button
+                    onClick={handleDispatch}
+                    className="w-full"
+                    variant="default"
+                  >
+                    Set Dispatch Date
+                  </Button>
+                </div>
               )}
               <div className="mt-4 space-y-4 overflow-y-auto max-h-[calc(100vh-180px)] [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                 {dispatchEntries.length === 0 && (

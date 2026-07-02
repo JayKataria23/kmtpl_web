@@ -21,6 +21,7 @@ import SignUpPage from "./pages/sign-up";
 import OrderPreviewPage from "./pages/OrderPreviewPage";
 import BhiwandiListPrint from "./pages/BhiwandiListPrint";
 import DispatchList from "./pages/DispatchList";
+import DateWiseDispatchList from "./pages/DateWiseDispatchList";
 import CreateChallan from "./pages/CreateChallan";
 import ChallanView from "./pages/ChallanView";
 import ChallanList from "./pages/ChallanList";
@@ -155,6 +156,14 @@ createRoot(document.getElementById("root")!).render(
             element={
               <ProtectedRoute>
                 <DispatchList />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/date-dispatch-list"
+            element={
+              <ProtectedRoute>
+                <DateWiseDispatchList />
               </ProtectedRoute>
             }
           />

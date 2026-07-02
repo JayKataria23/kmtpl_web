@@ -25,6 +25,10 @@ interface DesignEntry {
   order_remark: string;
   price: string;
   dispatch_date: string;
+  order_no: number;
+  part: boolean;
+  bhiwandi_date: string | null;
+  order_date: string;
 }
 
 function DispatchList() {
@@ -50,16 +54,28 @@ function DispatchList() {
   useEffect(() => {
     const fetchDesignCounts = async () => {
       try {
-        const { data, error } = await supabase.rpc(
-          "get_design_counts_with_dispatch"
-        );
+        const { data, error } = await supabase
+          .from("design_entries")
+          .select("design")
+          .not("dispatch_date", "is", null);
+
         if (error) throw error;
-        const formattedData: DesignCount[] = data.map(
-          (item: { design_name: string; entry_count: bigint }) => ({
-            design: item.design_name,
-            count: Number(item.entry_count),
+
+        // Group by design name
+        const countsMap = new Map<string, number>();
+        data.forEach((entry) => {
+          if (entry.design) {
+            countsMap.set(entry.design, (countsMap.get(entry.design) || 0) + 1);
+          }
+        });
+
+        const formattedData: DesignCount[] = Array.from(countsMap.entries()).map(
+          ([design, count]) => ({
+            design,
+            count,
           })
         );
+
         // Pre-sort just once alphabetically for stable UX when filter === 'all'
         formattedData.sort((a, b) => a.design.localeCompare(b.design));
         setDesignCounts(formattedData);
@@ -78,14 +94,43 @@ function DispatchList() {
   const fetchDesignEntries = useCallback(async (design: string) => {
     try {
       setLoadingByDesign((prev) => ({ ...prev, [design]: true }));
-      const { data, error } = await supabase.rpc(
-        "get_design_entries_by_name_dispatched",
-        {
-          design_input: design,
-        }
-      );
+      const { data, error } = await supabase
+        .from("design_entries")
+        .select(`
+          id,
+          price,
+          remark,
+          shades,
+          dispatch_date,
+          bhiwandi_date,
+          part,
+          orders!inner(
+            order_no,
+            date,
+            remark,
+            party_profiles!orders_bill_to_id_fkey(name)
+          )
+        `)
+        .eq("design", design)
+        .not("dispatch_date", "is", null)
+        .order("dispatch_date", { ascending: false });
+
       if (error) throw error;
-      setEntriesByDesign((prev) => ({ ...prev, [design]: data || [] }));
+      
+      const formattedData: DesignEntry[] = (data || []).map((row: any) => ({
+        id: row.id,
+        party_name: row.orders?.party_profiles?.name || "Unknown Party",
+        shades: row.shades || [],
+        order_remark: row.orders?.remark || row.remark || "",
+        price: row.price?.toString() || "0",
+        dispatch_date: row.dispatch_date,
+        order_no: row.orders?.order_no || 0,
+        part: row.part || false,
+        bhiwandi_date: row.bhiwandi_date,
+        order_date: row.orders?.date
+      }));
+      
+      setEntriesByDesign((prev) => ({ ...prev, [design]: formattedData }));
     } catch (error) {
       console.error("Error fetching design entries:", error);
       toast({
@@ -246,18 +291,46 @@ function DispatchList() {
                     (entriesByDesign[item.design] || []).map((entry) => (
                       <div
                         key={entry.id}
-                        className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 p-4 border rounded-lg bg-gray-50 shadow-sm relative"
+                        className="flex flex-col lg:flex-row gap-4 p-4 border border-gray-200 rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow relative pr-12"
                       >
-                        <div className="flex-1 min-w-0">
-                          <div className="flex flex-col gap-1">
-                            <h3 className="font-semibold text-base">{entry.party_name}</h3>
-                            <p className="text-sm text-gray-600 font-semibold">Price: {entry.price}</p>
-                            <p className="text-xs text-gray-500">Dispatch Date: {formatDate(entry.dispatch_date)}</p>
+                        {/* Column 1: Core Details */}
+                        <div className="flex-1 min-w-[200px]">
+                          <div className="flex flex-col gap-2">
+                            <div className="flex items-start justify-between gap-2">
+                              <h3 className="font-bold text-gray-900 leading-tight">{entry.party_name}</h3>
+                              {entry.part && (
+                                <span className="shrink-0 px-2 py-0.5 bg-amber-100 text-amber-800 text-[10px] font-bold rounded border border-amber-200 uppercase tracking-wider">
+                                  Part Order
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-3 text-sm">
+                              <span className="font-bold text-blue-700 bg-blue-50 px-2.5 py-1 rounded-md border border-blue-100">Order #{entry.order_no}</span>
+                              <span className="font-semibold text-gray-700 bg-gray-50 px-2.5 py-1 rounded-md border border-gray-100">₹{entry.price}/m</span>
+                            </div>
                           </div>
                         </div>
-                        <div className="flex flex-col gap-1 min-w-[120px]">
-                          <span className="font-semibold text-sm mb-1">Shades:</span>
-                          <div className="flex flex-wrap gap-1">
+
+                        {/* Column 2: Dates */}
+                        <div className="flex-[0.8] min-w-[180px] flex flex-col justify-center gap-1.5 text-xs text-gray-600 lg:border-l lg:border-gray-100 lg:pl-5">
+                          <div className="flex items-center justify-between">
+                            <span className="font-medium text-gray-400 uppercase tracking-wider text-[10px]">Order Date</span>
+                            <span className="font-semibold text-gray-800">{entry.order_date ? formatDate(entry.order_date) : "-"}</span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="font-medium text-gray-400 uppercase tracking-wider text-[10px]">Bhiwandi Date</span>
+                            <span className="font-semibold text-gray-800">{entry.bhiwandi_date ? formatDate(entry.bhiwandi_date) : "-"}</span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="font-medium text-gray-400 uppercase tracking-wider text-[10px]">Dispatch Date</span>
+                            <span className="font-semibold text-emerald-600">{entry.dispatch_date ? formatDate(entry.dispatch_date) : "-"}</span>
+                          </div>
+                        </div>
+
+                        {/* Column 3: Shades */}
+                        <div className="flex-[1.2] min-w-[200px] lg:border-l lg:border-gray-100 lg:pl-5">
+                          <span className="text-[10px] uppercase tracking-wider font-bold text-gray-400 mb-2 block">Shades Breakdown</span>
+                          <div className="flex flex-wrap gap-1.5">
                             {entry.shades && entry.shades.length > 0 ? (
                               entry.shades.map((shade, idx) => {
                                 const shadeName = Object.keys(shade)[0];
@@ -266,25 +339,26 @@ function DispatchList() {
                                 return (
                                   <span
                                     key={idx}
-                                    className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full text-xs font-medium"
+                                    className="bg-gray-50 text-gray-700 border border-gray-200 px-2 py-1 rounded-md text-[11px] font-bold flex items-center gap-1"
                                   >
-                                    {shadeName}: {shadeValue}m
+                                    {shadeName}: <span className="text-blue-600">{shadeValue}m</span>
                                   </span>
                                 );
                               })
                             ) : (
-                              <span className="text-gray-400">No shades</span>
+                              <span className="text-gray-400 text-xs italic">No shades</span>
                             )}
                           </div>
                         </div>
+
                         <Button
-                          variant="destructive"
+                          variant="ghost"
                           size="icon"
-                          className="absolute top-2 right-2"
+                          className="absolute top-3 right-3 h-8 w-8 rounded-full text-red-500 hover:text-red-600 hover:bg-red-50 transition-colors"
                           onClick={() => handleRemoveDispatchDate(entry.id, item.design)}
                           title="Remove from Dispatch"
                         >
-                          <X className="h-4 w-4" />
+                          <X className="h-5 w-5" />
                         </Button>
                       </div>
                     ))

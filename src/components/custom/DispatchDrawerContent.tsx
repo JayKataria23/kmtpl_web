@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { DesignDetail, SelectedDesignDetail } from "@/types/party-file";
 
@@ -16,8 +17,37 @@ export function DispatchDrawerContent({
   setSelectedOrder,
   handleRemoveFromDrawer,
 }: DispatchDrawerContentProps) {
+  const [commonDate, setCommonDate] = useState<string>(
+    new Date().toISOString().split("T")[0]
+  );
+
+  const handleCommonDateChange = (date: string) => {
+    setCommonDate(date);
+    setSelectedEntries(
+      selectedEntries.map((item) => ({ ...item, date }))
+    );
+  };
+
   return (
     <div className="p-4 overflow-y-auto max-h-[60vh]">
+      {selectedEntries.length > 0 && (
+        <div className="mb-6 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+          <label
+            htmlFor="common-date"
+            className="block text-sm font-medium text-gray-700 mb-2"
+          >
+            Set Dispatch Date for All Entries
+          </label>
+          <input
+            id="common-date"
+            type="date"
+            className="border border-gray-300 rounded-md p-2 w-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            value={commonDate}
+            onChange={(e) => handleCommonDateChange(e.target.value)}
+          />
+        </div>
+      )}
+
       {selectedEntries.length === 0 ? (
         <div className="text-center text-gray-500 py-8">
           No entries selected
@@ -45,30 +75,6 @@ export function DispatchDrawerContent({
                         {entry.price}
                       </p>
                     )}
-                    <div className="mt-3">
-                      <label
-                        htmlFor={`date-${entry.design_entry_id}`}
-                        className="block text-sm font-medium text-gray-700 mb-1"
-                      >
-                        Date
-                      </label>
-                      <input
-                        id={`date-${entry.design_entry_id}`}
-                        type="date"
-                        className="border rounded p-1 w-full"
-                        value={entry.date || ""}
-                        onChange={(e) => {
-                          const updatedDate = e.target.value;
-                          setSelectedEntries(
-                            selectedEntries.map((item) =>
-                              item.design_entry_id === entry.design_entry_id
-                                ? { ...item, date: updatedDate }
-                                : item
-                            )
-                          );
-                        }}
-                      />
-                    </div>
                   </div>
                 </div>
 

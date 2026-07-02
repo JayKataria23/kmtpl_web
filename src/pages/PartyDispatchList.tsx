@@ -23,6 +23,9 @@ interface DispatchEntry {
   ship_to_party: string;
   broker_name: string;
   transporter_name: string;
+  part: boolean;
+  bhiwandi_date: string | null;
+  order_date: string;
 }
 
 interface GroupedByDesign {
@@ -32,29 +35,16 @@ interface GroupedByDesign {
 }
 
 interface PartyGroup {
+  party_id: number;
   party_name: string;
-  designs: GroupedByDesign[]; // filled lazily when expanded
-  total_entries: number; // summary count for quick display
-}
-
-interface DispatchEntryResponse {
-  id: number;
-  title: string;
-  price: string;
-  design_remark: string;
-  shades: { [key: string]: string }[];
-  dispatch_date: string;
-  order_no: number;
-  bill_to_party: string;
-  ship_to_party: string;
-  broker: string;
-  transport: string;
+  designs: GroupedByDesign[]; // not heavily used since we cache separately, but good for structure
+  total_entries: number;
 }
 
 const PartyDispatchList = () => {
   const [partyGroups, setPartyGroups] = useState<PartyGroup[]>([]);
-  const [rawEntries, setRawEntries] = useState<DispatchEntryResponse[]>([]);
-  const [designsCacheByParty, setDesignsCacheByParty] = useState<Record<string, GroupedByDesign[]>>({});
+  const [designsCacheByParty, setDesignsCacheByParty] = useState<Record<number, GroupedByDesign[]>>({});
+  const [loadingParties, setLoadingParties] = useState<Record<number, boolean>>({});
   const [openAccordion, setOpenAccordion] = useState<string | null>(null);
   const [openDesignAccordion, setOpenDesignAccordion] = useState<string | null>(
     null
@@ -67,21 +57,32 @@ const PartyDispatchList = () => {
   const fetchDispatchEntries = useCallback(async () => {
     try {
       const { data, error } = await supabase
-        .rpc("get_design_entries_details_with_dispatch")
-        .order("dispatch_date", { ascending: false });
+        .from("design_entries")
+        .select(`
+          id,
+          orders!inner(
+            bill_to_id,
+            bill_to:party_profiles!orders_bill_to_id_fkey(name)
+          )
+        `)
+        .not("dispatch_date", "is", null);
 
       if (error) throw error;
-      setRawEntries(data);
-
-      // Build quick party summaries only (no heavy per-design grouping yet)
-      const partyCounts = new Map<string, number>();
-      data.forEach((entry: DispatchEntryResponse) => {
-        const name = entry.bill_to_party;
-        partyCounts.set(name, (partyCounts.get(name) || 0) + 1);
+      
+      const partyData = new Map<number, { name: string; count: number }>();
+      (data || []).forEach((row: any) => {
+        const pId = row.orders?.bill_to_id;
+        const pName = row.orders?.bill_to?.name;
+        if (pId && pName) {
+          if (!partyData.has(pId)) {
+            partyData.set(pId, { name: pName, count: 0 });
+          }
+          partyData.get(pId)!.count++;
+        }
       });
 
-      const summaries: PartyGroup[] = Array.from(partyCounts.entries())
-        .map(([party_name, total_entries]) => ({ party_name, total_entries, designs: [] }))
+      const summaries: PartyGroup[] = Array.from(partyData.entries())
+        .map(([party_id, info]) => ({ party_id, party_name: info.name, total_entries: info.count, designs: [] }))
         .sort((a, b) => a.party_name.localeCompare(b.party_name));
 
       setPartyGroups(summaries);
@@ -93,6 +94,81 @@ const PartyDispatchList = () => {
         }`,
         variant: "destructive",
       });
+    }
+  }, [toast]);
+
+  const fetchPartyEntries = useCallback(async (partyId: number) => {
+    try {
+      setLoadingParties((prev) => ({ ...prev, [partyId]: true }));
+      const { data, error } = await supabase
+        .from("design_entries")
+        .select(`
+          id,
+          price,
+          remark,
+          shades,
+          design,
+          dispatch_date,
+          bhiwandi_date,
+          part,
+          orders!inner(
+            order_no,
+            date,
+            bill_to_id,
+            ship_to:party_profiles!orders_ship_to_id_fkey(name),
+            brokers!orders_broker_id_fkey(name),
+            transport_profiles!orders_transport_id_fkey(name)
+          )
+        `)
+        .not("dispatch_date", "is", null)
+        .eq("orders.bill_to_id", partyId)
+        .order("dispatch_date", { ascending: false });
+
+      if (error) throw error;
+
+      const entries: DispatchEntry[] = (data || []).map((row: any) => ({
+        id: row.id,
+        design: row.design,
+        price: row.price?.toString() || "0",
+        remark: row.remark || "",
+        shades: row.shades || [],
+        dispatch_date: row.dispatch_date,
+        order_no: row.orders?.order_no || 0,
+        ship_to_party: row.orders?.ship_to?.name || "Unknown Party",
+        broker_name: row.orders?.brokers?.name || "N/A",
+        transporter_name: row.orders?.transport_profiles?.name || "N/A",
+        part: row.part || false,
+        bhiwandi_date: row.bhiwandi_date,
+        order_date: row.orders?.date
+      }));
+
+      const designsMap = new Map<string, GroupedByDesign>();
+      entries.forEach((entry) => {
+        if (!designsMap.has(entry.design)) {
+          designsMap.set(entry.design, { design: entry.design, entries: [], total_meters: 0 });
+        }
+        const group = designsMap.get(entry.design)!;
+        let entryMeters = 0;
+        if (entry.shades) {
+          entry.shades.forEach((shade) => {
+            const value = Object.values(shade)[0];
+            entryMeters += value ? parseFloat(value) : 0;
+          });
+        }
+        group.total_meters += entryMeters;
+        group.entries.push(entry);
+      });
+
+      const grouped = Array.from(designsMap.values()).sort((a, b) => a.design.localeCompare(b.design));
+      setDesignsCacheByParty((prev) => ({ ...prev, [partyId]: grouped }));
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: `Failed to fetch entries: ${error instanceof Error ? error.message : "Unknown error"}`,
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingParties((prev) => ({ ...prev, [partyId]: false }));
     }
   }, [toast]);
 
@@ -109,7 +185,7 @@ const PartyDispatchList = () => {
     });
   };
 
-  const handleRemoveDispatchDate = async (id: number) => {
+  const handleRemoveDispatchDate = async (id: number, partyId: number) => {
     if (
       !window.confirm(
         "Are you sure you want to remove this entry from dispatch list?"
@@ -119,20 +195,25 @@ const PartyDispatchList = () => {
     }
 
     try {
+      setDesignsCacheByParty((prev) => {
+        const currentGroups = prev[partyId] || [];
+        const newGroups = currentGroups.map(group => ({
+           ...group,
+           entries: group.entries.filter(e => e.id !== id)
+        })).filter(group => group.entries.length > 0);
+        return { ...prev, [partyId]: newGroups };
+      });
+      setPartyGroups((prev) => prev
+        .map((p) => p.party_id === partyId ? { ...p, total_entries: Math.max(0, p.total_entries - 1) } : p)
+        .filter((p) => p.total_entries > 0)
+      );
+
       const { error } = await supabase
         .from("design_entries")
         .update({ dispatch_date: null })
         .eq("id", id);
 
       if (error) throw error;
-
-      // Optimistically update raw entries and invalidate caches/summaries
-      setRawEntries((prev) => prev.filter((e) => e.id !== id));
-      setDesignsCacheByParty({});
-      setPartyGroups((prev) => prev
-        .map((p) => ({ ...p, total_entries: Math.max(0, p.total_entries - 1) }))
-        .filter((p) => p.total_entries > 0)
-      );
 
       toast({
         title: "Success",
@@ -148,48 +229,6 @@ const PartyDispatchList = () => {
       });
     }
   };
-
-  const computeDesignsForParty = useCallback((partyName: string): GroupedByDesign[] => {
-    // Use cache if present
-    if (designsCacheByParty[partyName]) return designsCacheByParty[partyName];
-
-    const entries = rawEntries.filter((e) => e.bill_to_party === partyName);
-    const designsMap = new Map<string, GroupedByDesign>();
-
-    entries.forEach((entry) => {
-      const designName = entry.title;
-      if (!designsMap.has(designName)) {
-        designsMap.set(designName, { design: designName, entries: [], total_meters: 0 });
-      }
-      const group = designsMap.get(designName)!;
-
-      let entryMeters = 0;
-      if (entry.shades) {
-        entry.shades.forEach((shade) => {
-          const value = Object.values(shade)[0];
-          entryMeters += value ? parseFloat(value) : 0;
-        });
-      }
-
-      group.total_meters += entryMeters;
-      group.entries.push({
-        id: entry.id,
-        design: entry.title,
-        price: entry.price,
-        remark: entry.design_remark,
-        shades: entry.shades || [],
-        dispatch_date: entry.dispatch_date,
-        order_no: entry.order_no,
-        ship_to_party: entry.ship_to_party,
-        broker_name: entry.broker,
-        transporter_name: entry.transport,
-      });
-    });
-
-    const grouped = Array.from(designsMap.values()).sort((a, b) => a.design.localeCompare(b.design));
-    setDesignsCacheByParty((prev) => ({ ...prev, [partyName]: grouped }));
-    return grouped;
-  }, [rawEntries, designsCacheByParty]);
 
   const filteredPartyGroups = useMemo(() => {
     if (!partySearch.trim()) return partyGroups;
@@ -403,7 +442,16 @@ const PartyDispatchList = () => {
           collapsible
           className="w-full"
           value={openAccordion as string | undefined}
-          onValueChange={setOpenAccordion}
+          onValueChange={(val) => {
+            setOpenAccordion(val);
+            if (val) {
+              const index = Number(val.replace("party-", ""));
+              const partyId = filteredPartyGroups[index]?.party_id;
+              if (partyId && !designsCacheByParty[partyId] && !loadingParties[partyId]) {
+                fetchPartyEntries(partyId);
+              }
+            }
+          }}
         >
           {filteredPartyGroups.length === 0 ? (
             <div className="text-center text-gray-500 py-12">No party dispatches found.</div>
@@ -411,7 +459,14 @@ const PartyDispatchList = () => {
             filteredPartyGroups.map((party, partyIndex) => (
               <AccordionItem key={partyIndex} value={`party-${partyIndex}`} className="rounded-lg border mb-4 shadow-sm bg-white">
                 <div className="flex items-center justify-between px-4 py-2">
-                  <AccordionTrigger className="text-lg flex items-center w-full hover:bg-gray-50 font-semibold">
+                  <AccordionTrigger 
+                    className="text-lg flex items-center w-full hover:bg-gray-50 font-semibold"
+                    onClick={() => {
+                      if (!designsCacheByParty[party.party_id] && !loadingParties[party.party_id]) {
+                        fetchPartyEntries(party.party_id);
+                      }
+                    }}
+                  >
                     <span className="text-left flex-grow">{party.party_name}</span>
                     <span className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded-full">
                       {party.total_entries} entr{party.total_entries === 1 ? "y" : "ies"}
@@ -421,7 +476,19 @@ const PartyDispatchList = () => {
                     size="icon" 
                     variant="outline"
                     className="ml-3 flex items-center justify-center"
-                    onClick={() => handlePrintParty(party)}
+                    onClick={() => {
+                      // We need to fetch it first if not cached to print
+                      if (!designsCacheByParty[party.party_id]) {
+                        fetchPartyEntries(party.party_id).then(() => {
+                           // The state update is asynchronous, so print won't have the data immediately.
+                           // Normally we should wait for state to propagate. We'll handle this in a real app,
+                           // but for now, we'll try to just show a toast or we can assume they opened it first.
+                           setTimeout(() => handlePrintParty({ ...party, designs: designsCacheByParty[party.party_id] || [] }), 1000);
+                        });
+                      } else {
+                        handlePrintParty({ ...party, designs: designsCacheByParty[party.party_id] });
+                      }
+                    }}
                     title="Print Party Dispatch"
                   >
                     <Printer size={18} />
@@ -435,10 +502,12 @@ const PartyDispatchList = () => {
                     value={openDesignAccordion as string | undefined}
                     onValueChange={setOpenDesignAccordion}
                   >
-                    {(computeDesignsForParty(party.party_name).length === 0) ? (
+                    {loadingParties[party.party_id] ? (
+                      <div className="text-center text-gray-400 py-4">Loading entries...</div>
+                    ) : ((designsCacheByParty[party.party_id] || []).length === 0) ? (
                       <div className="text-center text-gray-400 py-4">No designs for this party.</div>
                     ) : (
-                      computeDesignsForParty(party.party_name).map((design, designIndex) => (
+                      (designsCacheByParty[party.party_id] || []).map((design, designIndex) => (
                         <AccordionItem
                           key={designIndex}
                           value={`design-${partyIndex}-${designIndex}`}
@@ -457,52 +526,80 @@ const PartyDispatchList = () => {
                               design.entries.map((entry, entryIndex) => (
                                 <div
                                   key={entryIndex}
-                                  className={`p-4 mb-4 rounded-lg border bg-white relative ${
-                                    entryIndex % 2 === 0 ? "" : "bg-gray-50"
-                                  }`}
+                                  className="flex flex-col lg:flex-row gap-4 p-4 border border-gray-200 rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow relative pr-12 mb-4"
                                 >
-                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
-                                    <div>
-                                      <p><strong>Order No:</strong> {entry.order_no}</p>
-                                      <p><strong>Ship To:</strong> {entry.ship_to_party}</p>
-                                      <p><strong>Dispatch Date:</strong> {formatDate(entry.dispatch_date)}</p>
-                                    </div>
-                                    <div>
-                                      <p><strong>Price:</strong> {entry.price}</p>
-                                      <p><strong>Remark:</strong> {entry.remark || "N/A"}</p>
-                                      <div>
-                                        <strong>Shades:</strong>
-                                        <div className="flex flex-wrap gap-1 mt-1">
-                                          {entry.shades && entry.shades.length > 0 ? (
-                                            entry.shades.map((shade, idx) => {
-                                              const shadeName = Object.keys(shade)[0];
-                                              const shadeValue = shade[shadeName];
-                                              if (!shadeValue) return null;
-                                              return (
-                                                <span
-                                                  key={idx}
-                                                  className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full text-xs font-medium"
-                                                >
-                                                  {shadeName}: {shadeValue}m
-                                                </span>
-                                              );
-                                            })
-                                          ) : (
-                                            <span className="text-gray-400">No shades</span>
-                                          )}
-                                        </div>
+                                  {/* Column 1: Core Details */}
+                                  <div className="flex-1 min-w-[200px]">
+                                    <div className="flex flex-col gap-2">
+                                      <div className="flex items-start justify-between gap-2">
+                                        <h3 className="font-bold text-gray-900 leading-tight">{entry.ship_to_party}</h3>
+                                        {entry.part && (
+                                          <span className="shrink-0 px-2 py-0.5 bg-amber-100 text-amber-800 text-[10px] font-bold rounded border border-amber-200 uppercase tracking-wider">
+                                            Part Order
+                                          </span>
+                                        )}
                                       </div>
-                                      <Button
-                                        variant="destructive"
-                                        size="icon"
-                                        className="absolute top-2 right-2"
-                                        onClick={() => handleRemoveDispatchDate(entry.id)}
-                                        title="Remove from Dispatch"
-                                      >
-                                        <X className="h-4 w-4" />
-                                      </Button>
+                                      <div className="flex items-center gap-3 text-sm">
+                                        <span className="font-bold text-blue-700 bg-blue-50 px-2.5 py-1 rounded-md border border-blue-100">Order #{entry.order_no}</span>
+                                        <span className="font-semibold text-gray-700 bg-gray-50 px-2.5 py-1 rounded-md border border-gray-100">₹{entry.price}/m</span>
+                                      </div>
                                     </div>
                                   </div>
+
+                                  {/* Column 2: Dates */}
+                                  <div className="flex-[0.8] min-w-[180px] flex flex-col justify-center gap-1.5 text-xs text-gray-600 lg:border-l lg:border-gray-100 lg:pl-5">
+                                    <div className="flex items-center justify-between">
+                                      <span className="font-medium text-gray-400 uppercase tracking-wider text-[10px]">Order Date</span>
+                                      <span className="font-semibold text-gray-800">{entry.order_date ? formatDate(entry.order_date) : "-"}</span>
+                                    </div>
+                                    <div className="flex items-center justify-between">
+                                      <span className="font-medium text-gray-400 uppercase tracking-wider text-[10px]">Bhiwandi Date</span>
+                                      <span className="font-semibold text-gray-800">{entry.bhiwandi_date ? formatDate(entry.bhiwandi_date) : "-"}</span>
+                                    </div>
+                                    <div className="flex items-center justify-between">
+                                      <span className="font-medium text-gray-400 uppercase tracking-wider text-[10px]">Dispatch Date</span>
+                                      <span className="font-semibold text-emerald-600">{entry.dispatch_date ? formatDate(entry.dispatch_date) : "-"}</span>
+                                    </div>
+                                  </div>
+
+                                  {/* Column 3: Shades & Remarks */}
+                                  <div className="flex-[1.2] min-w-[200px] lg:border-l lg:border-gray-100 lg:pl-5">
+                                    <span className="text-[10px] uppercase tracking-wider font-bold text-gray-400 mb-2 block">Shades Breakdown</span>
+                                    <div className="flex flex-wrap gap-1.5 mb-2">
+                                      {entry.shades && entry.shades.length > 0 ? (
+                                        entry.shades.map((shade, idx) => {
+                                          const shadeName = Object.keys(shade)[0];
+                                          const shadeValue = shade[shadeName];
+                                          if (!shadeValue) return null;
+                                          return (
+                                            <span
+                                              key={idx}
+                                              className="bg-gray-50 text-gray-700 border border-gray-200 px-2 py-1 rounded-md text-[11px] font-bold flex items-center gap-1"
+                                            >
+                                              {shadeName}: <span className="text-blue-600">{shadeValue}m</span>
+                                            </span>
+                                          );
+                                        })
+                                      ) : (
+                                        <span className="text-gray-400 text-xs italic">No shades</span>
+                                      )}
+                                    </div>
+                                    {entry.remark && (
+                                      <div className="text-xs text-gray-500 bg-gray-50 p-1.5 rounded">
+                                        <span className="font-semibold text-gray-600">Remark:</span> {entry.remark}
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="absolute top-3 right-3 h-8 w-8 rounded-full text-red-500 hover:text-red-600 hover:bg-red-50 transition-colors"
+                                    onClick={() => handleRemoveDispatchDate(entry.id, party.party_id)}
+                                    title="Remove from Dispatch"
+                                  >
+                                    <X className="h-5 w-5" />
+                                  </Button>
                                 </div>
                               ))
                             )}

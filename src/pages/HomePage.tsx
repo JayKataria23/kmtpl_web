@@ -54,6 +54,7 @@ export default function HomePage() {
       title: "Dispatch",
       items: [
         { path: "/dispatch-list", label: "Dispatch List" },
+        { path: "/date-dispatch-list", label: "Date Dispatch List" },
         { path: "/party-dispatch-list", label: "Party Dispatch List" },
       ],
     },
