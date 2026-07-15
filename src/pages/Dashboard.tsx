@@ -363,6 +363,25 @@ export default function Dashboard() {
             Global Active Pipeline
             {loadingGlobal && <span className="w-4 h-4 border-2 border-slate-300 border-t-slate-600 rounded-full animate-spin" />}
           </h2>
+          <div className="grid grid-cols-1 gap-4 mb-4">
+            {/* Total Pending (No Dispatch Date) */}
+            <Card className="border border-indigo-100 bg-slate-50 shadow-sm overflow-hidden">
+              <div className="px-4 py-4 sm:px-5 sm:py-5 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="h-3 w-3 rounded-full bg-indigo-500 shadow-sm" />
+                  <div>
+                    <h3 className="font-bold text-indigo-900 text-sm sm:text-base md:text-lg">Total Pending Orders</h3>
+                  </div>
+                </div>
+                <div className="text-right flex-shrink-0 ml-2">
+                  <span className="text-lg sm:text-xl md:text-2xl font-black text-indigo-800 bg-white/60 px-3 py-1 sm:px-4 sm:py-1.5 rounded-full border border-indigo-200/50 shadow-sm whitespace-nowrap">
+                    {formatMeters(pendingMetersCount + pendingDispatchMetersCount)}
+                  </span>
+                </div>
+              </div>
+            </Card>
+          </div>
+          
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Global KPI 1: Pending Production */}
             <Card className="border border-slate-200 shadow-sm bg-white overflow-hidden">
@@ -378,8 +397,8 @@ export default function Dashboard() {
                   <div className="h-2.5 w-2.5 rounded-full bg-amber-500 shadow-sm" />
                   <h3 className="font-bold text-slate-700 text-sm md:text-base">Pending Production</h3>
                 </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-sm font-black text-amber-700 bg-amber-100 px-3 py-1 rounded-full border border-amber-200">
+                <div className="flex items-center gap-3 flex-shrink-0 ml-2">
+                  <span className="text-sm font-black text-amber-700 bg-amber-100 px-3 py-1 rounded-full border border-amber-200 shadow-sm whitespace-nowrap">
                     {formatMeters(pendingMetersCount)}
                   </span>
                   {isPendingCollapsed ? <ChevronDown className="h-4 w-4 text-slate-500" /> : <ChevronUp className="h-4 w-4 text-slate-500" />}
@@ -430,8 +449,8 @@ export default function Dashboard() {
                   <div className="h-2.5 w-2.5 rounded-full bg-orange-500 shadow-sm" />
                   <h3 className="font-bold text-slate-700 text-sm md:text-base">Pending Dispatch (In Bhiwandi)</h3>
                 </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-sm font-black text-orange-700 bg-orange-100 px-3 py-1 rounded-full border border-orange-200">
+                <div className="flex items-center gap-3 flex-shrink-0 ml-2">
+                  <span className="text-sm font-black text-orange-700 bg-orange-100 px-3 py-1 rounded-full border border-orange-200 shadow-sm whitespace-nowrap">
                     {formatMeters(pendingDispatchMetersCount)}
                   </span>
                   {isPendingDispatchCollapsed ? <ChevronDown className="h-4 w-4 text-slate-500" /> : <ChevronUp className="h-4 w-4 text-slate-500" />}
@@ -508,8 +527,8 @@ export default function Dashboard() {
                   <div className="h-2 w-2 rounded-full bg-blue-600" />
                   <h3 className="font-bold text-blue-900 text-sm">New Orders Created</h3>
                 </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-xs font-bold text-blue-700 bg-white px-2.5 py-1 rounded-full border border-blue-100 shadow-sm">
+                <div className="flex items-center gap-3 flex-shrink-0 ml-2">
+                  <span className="text-xs font-bold text-blue-700 bg-white px-2.5 py-1 rounded-full border border-blue-100 shadow-sm whitespace-nowrap">
                     {formatMeters(todaysOrdersMeters)}
                   </span>
                   {isTodaysOrdersCollapsed ? <ChevronDown className="h-4 w-4 text-blue-500" /> : <ChevronUp className="h-4 w-4 text-blue-500" />}
@@ -555,8 +574,8 @@ export default function Dashboard() {
                     <div className="h-2 w-2 rounded-full bg-indigo-500" />
                     <h3 className="font-bold text-indigo-900 text-sm">Sent to Bhiwandi</h3>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-xs font-bold text-indigo-700 bg-white px-2.5 py-1 rounded-full border border-indigo-100 shadow-sm">
+                  <div className="flex items-center gap-3 flex-shrink-0 ml-2">
+                    <span className="text-xs font-bold text-indigo-700 bg-white px-2.5 py-1 rounded-full border border-indigo-100 shadow-sm whitespace-nowrap">
                       {formatMeters(todaysBhiwandiMeters)}
                     </span>
                     {isBhiwandiCollapsed ? <ChevronDown className="h-4 w-4 text-indigo-500" /> : <ChevronUp className="h-4 w-4 text-indigo-500" />}
@@ -599,8 +618,8 @@ export default function Dashboard() {
                     <div className="h-2 w-2 rounded-full bg-emerald-500" />
                     <h3 className="font-bold text-emerald-900 text-sm">Dispatched</h3>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-xs font-bold text-emerald-700 bg-white px-2.5 py-1 rounded-full border border-emerald-100 shadow-sm">
+                  <div className="flex items-center gap-3 flex-shrink-0 ml-2">
+                    <span className="text-xs font-bold text-emerald-700 bg-white px-2.5 py-1 rounded-full border border-emerald-100 shadow-sm whitespace-nowrap">
                       {formatMeters(todaysDispatchMeters)}
                     </span>
                     {isDispatchCollapsed ? <ChevronDown className="h-4 w-4 text-emerald-500" /> : <ChevronUp className="h-4 w-4 text-emerald-500" />}
