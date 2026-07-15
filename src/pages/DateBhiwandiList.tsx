@@ -49,9 +49,10 @@ const DateBhiwandiList = () => {
     try {
       const { data, error } = await supabase
         .from("design_entries")
-        .select(`id, bhiwandi_date, shades`)
+        .select(`id, bhiwandi_date, shades, orders!inner(canceled)`)
         .not("bhiwandi_date", "is", null)
         .is("dispatch_date", null)
+        .eq("orders.canceled", false)
         .order("bhiwandi_date", { ascending: false });
 
       if (error) throw error;
@@ -109,6 +110,7 @@ const DateBhiwandiList = () => {
           orders!inner(
             order_no,
             date,
+            canceled,
             bill_to:party_profiles!orders_bill_to_id_fkey(name),
             ship_to:party_profiles!orders_ship_to_id_fkey(name),
             brokers!orders_broker_id_fkey(name),
@@ -116,7 +118,8 @@ const DateBhiwandiList = () => {
           )
         `)
         .eq("bhiwandi_date", dateStr)
-        .is("dispatch_date", null);
+        .is("dispatch_date", null)
+        .eq("orders.canceled", false);
 
       if (error) throw error;
       
@@ -175,10 +178,10 @@ const DateBhiwandiList = () => {
     });
   };
 
-  const handleRemoveBhiwandiDate = async (id: number, dateStr: string) => {
+  const handleCancelEntry = async (id: number, dateStr: string) => {
     if (
       !window.confirm(
-        "Are you sure you want to remove this entry from the bhiwandi list?"
+        "Are you sure you want to cancel this entry?"
       )
     ) {
       return;
@@ -191,21 +194,22 @@ const DateBhiwandiList = () => {
       }));
       setDateGroups(prev => prev.map(g => g.bhiwandi_date === dateStr ? { ...g, total_entries: Math.max(0, g.total_entries - 1) } : g).filter(g => g.total_entries > 0));
 
+      const today = new Date(new Date().getTime() + 5.5 * 60 * 60 * 1000).toISOString().split("T")[0];
       const { error } = await supabase
         .from("design_entries")
-        .update({ bhiwandi_date: null })
+        .update({ dispatch_date: today, remark: "Entry Cancelled" })
         .eq("id", id);
 
       if (error) throw error;
 
       toast({
         title: "Success",
-        description: "Entry removed from bhiwandi list",
+        description: "Entry cancelled successfully",
       });
     } catch (error) {
       toast({
         title: "Error",
-        description: `Failed to remove entry: ${
+        description: `Failed to cancel entry: ${
           error instanceof Error ? error.message : "Unknown error"
         }`,
         variant: "destructive",
@@ -327,7 +331,20 @@ const DateBhiwandiList = () => {
         <Button onClick={() => navigate("/")} variant="outline" className="w-full sm:w-auto">
           Back to Home
         </Button>
-        <h1 className="text-3xl font-bold text-center flex-1">Date Wise Bhiwandi List</h1>
+        <div className="flex-1 text-center">
+          <h1 className="text-3xl font-bold">Date Wise Bhiwandi List</h1>
+          {dateGroups.length > 0 && (
+            <div className="flex items-center justify-center gap-4 mt-3">
+              <span className="bg-indigo-50 text-indigo-700 px-3 py-1 rounded-full text-sm font-semibold border border-indigo-100">
+                Total Entries: {dateGroups.reduce((acc, g) => acc + g.total_entries, 0)}
+              </span>
+              <span className="bg-indigo-50 text-indigo-700 px-3 py-1 rounded-full text-sm font-semibold border border-indigo-100">
+                Total Meters: {dateGroups.reduce((acc, g) => acc + g.total_meters, 0).toFixed(2)}m
+              </span>
+            </div>
+          )}
+        </div>
+        <div className="hidden sm:block w-[120px]"></div>
       </div>
       
       <div className="border-b mb-6" />
@@ -452,13 +469,13 @@ const DateBhiwandiList = () => {
                           </div>
 
                           <Button
-                            variant="ghost"
-                            size="icon"
-                            className="absolute top-3 right-3 h-8 w-8 rounded-full text-red-500 hover:text-red-600 hover:bg-red-50 transition-colors"
-                            onClick={() => handleRemoveBhiwandiDate(entry.id, group.bhiwandi_date)}
-                            title="Remove Bhiwandi Date"
+                            variant="outline"
+                            size="sm"
+                            className="absolute top-3 right-3 text-red-500 hover:text-red-600 hover:bg-red-50 border-red-200 transition-colors shadow-sm"
+                            onClick={() => handleCancelEntry(entry.id, group.bhiwandi_date)}
+                            title="Cancel Entry"
                           >
-                            <X className="h-5 w-5" />
+                            <X className="h-4 w-4 mr-1" /> Cancel Entry
                           </Button>
                         </div>
                       ))}

@@ -72,6 +72,10 @@ export default function Dashboard() {
   const [isDispatchCollapsed, setIsDispatchCollapsed] = useState(true);
   const [loadingDispatch, setLoadingDispatch] = useState(false);
 
+  const [todaysCancelledEntries, setTodaysCancelledEntries] = useState<DesignEntryDetail[]>([]);
+  const [todaysCancelledMeters, setTodaysCancelledMeters] = useState(0);
+  const [isCancelledCollapsed, setIsCancelledCollapsed] = useState(true);
+
   // Order preview state
   const [previewOrder, setPreviewOrder] = useState<OrderDetail | null>(null);
   const [previewDesigns, setPreviewDesigns] = useState<any[]>([]);
@@ -161,16 +165,21 @@ export default function Dashboard() {
       const bhiwandiSum = (bhiwandiData || []).reduce((sum, row: any) => sum + sumShadesMeters(row.shades), 0);
       setTodaysBhiwandiMeters(bhiwandiSum);
 
-      // 3. Dispatched entries on selected date
+      // 3. Dispatched & Cancelled entries on selected date
       const { data: dispatchData, error: dispatchError } = await supabase
         .from("design_entries")
-        .select(`shades, orders!inner(canceled)`)
-        .eq("dispatch_date", selectedDateStr)
+        .select(`shades, remark, orders!inner(canceled)`)
+        .gte("dispatch_date", startOfDay)
+        .lte("dispatch_date", endOfDay)
         .eq("orders.canceled", false);
 
       if (dispatchError) throw dispatchError;
-      const dispatchSum = (dispatchData || []).reduce((sum, row: any) => sum + sumShadesMeters(row.shades), 0);
-      setTodaysDispatchMeters(dispatchSum);
+      
+      const actualDispatched = (dispatchData || []).filter((r: any) => r.remark !== "Entry Cancelled");
+      const actualCancelled = (dispatchData || []).filter((r: any) => r.remark === "Entry Cancelled");
+
+      setTodaysDispatchMeters(actualDispatched.reduce((sum, row: any) => sum + sumShadesMeters(row.shades), 0));
+      setTodaysCancelledMeters(actualCancelled.reduce((sum, row: any) => sum + sumShadesMeters(row.shades), 0));
 
     } catch (err: any) {
       console.error("Error fetching date aggregates:", err);
@@ -275,23 +284,27 @@ export default function Dashboard() {
   };
 
   const fetchDispatchDetails = async () => {
-    if (todaysDispatchEntries.length > 0) return;
+    if (todaysDispatchEntries.length > 0 || todaysCancelledEntries.length > 0) return;
     setLoadingDispatch(true);
     try {
+      const startOfDay = `${selectedDateStr}T00:00:00`;
+      const endOfDay = `${selectedDateStr}T23:59:59.999`;
       const { data, error } = await supabase
         .from("design_entries")
         .select(`
           id, design, price, remark, shades, dispatch_date,
           orders!inner(order_no, date, remark, canceled, party_profiles!orders_bill_to_id_fkey(name))
         `)
-        .eq("dispatch_date", selectedDateStr)
+        .gte("dispatch_date", startOfDay)
+        .lte("dispatch_date", endOfDay)
         .eq("orders.canceled", false);
       if (error) throw error;
       const formatted = (data || []).map((row: any) => ({
         id: row.id, design: row.design, price: row.price || 0, remark: row.remark || null, shades: row.shades || [],
         order_no: row.orders?.order_no || 0, party_name: row.orders?.party_profiles?.name || "Unknown Party", date: row.orders?.date || "", total_meters: sumShadesMeters(row.shades),
       }));
-      setTodaysDispatchEntries(formatted);
+      setTodaysDispatchEntries(formatted.filter((r: any) => r.remark !== "Entry Cancelled"));
+      setTodaysCancelledEntries(formatted.filter((r: any) => r.remark === "Entry Cancelled"));
     } catch (err) { console.error(err); } finally { setLoadingDispatch(false); }
   };
 
@@ -321,9 +334,11 @@ export default function Dashboard() {
     setIsTodaysOrdersCollapsed(true);
     setIsBhiwandiCollapsed(true);
     setIsDispatchCollapsed(true);
+    setIsCancelledCollapsed(true);
     setTodaysOrders([]);
     setTodaysBhiwandiEntries([]);
     setTodaysDispatchEntries([]);
+    setTodaysCancelledEntries([]);
     fetchDateAggregates();
   }, [selectedDateStr]);
 
@@ -341,7 +356,6 @@ export default function Dashboard() {
             </Button>
             <div>
               <h1 className="text-xl font-bold text-slate-800">Dashboard</h1>
-              <p className="text-xs text-slate-500">Live operational insights and daily summary</p>
             </div>
           </div>
           <Button
@@ -359,10 +373,7 @@ export default function Dashboard() {
       <div className="container mx-auto px-4 py-6 max-w-6xl space-y-8">
         {/* AREA A: Global KPIs */}
         <section>
-          <h2 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-4 flex items-center gap-2">
-            Global Active Pipeline
             {loadingGlobal && <span className="w-4 h-4 border-2 border-slate-300 border-t-slate-600 rounded-full animate-spin" />}
-          </h2>
           <div className="grid grid-cols-1 gap-4 mb-4">
             {/* Total Pending (No Dispatch Date) */}
             <Card className="border border-indigo-100 bg-slate-50 shadow-sm overflow-hidden">
@@ -559,7 +570,7 @@ export default function Dashboard() {
               )}
             </Card>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {/* Section 2: Bhiwandi List */}
               <Card className="border border-slate-100 shadow-sm bg-white overflow-hidden flex flex-col">
                 <div
@@ -634,6 +645,50 @@ export default function Dashboard() {
                     ) : (
                       <div className="divide-y divide-slate-100 max-h-80 overflow-y-auto">
                         {todaysDispatchEntries.map((item) => (
+                          <div key={item.id} className="p-4 hover:bg-slate-50/50 flex justify-between">
+                            <div>
+                              <span className="font-bold text-slate-800 text-sm">Design: {item.design}</span>
+                              <p className="text-xs text-slate-500">{item.party_name}</p>
+                            </div>
+                            <span className="text-xs font-bold text-slate-900">{formatMeters(item.total_meters)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </Card>
+
+              {/* Section 4: Cancelled List */}
+              <Card className="border border-slate-100 shadow-sm bg-white overflow-hidden flex flex-col">
+                <div
+                  className="bg-red-50/30 px-4 py-3.5 border-b border-red-50 flex items-center justify-between cursor-pointer hover:bg-red-50/60 transition-colors"
+                  onClick={() => {
+                    const newCollapsed = !isCancelledCollapsed;
+                    setIsCancelledCollapsed(newCollapsed);
+                    if (!newCollapsed) fetchDispatchDetails();
+                  }}
+                >
+                  <div className="flex items-center gap-2">
+                    <div className="h-2 w-2 rounded-full bg-red-500" />
+                    <h3 className="font-bold text-red-900 text-sm">Cancelled Entries</h3>
+                  </div>
+                  <div className="flex items-center gap-3 flex-shrink-0 ml-2">
+                    <span className="text-xs font-bold text-red-700 bg-white px-2.5 py-1 rounded-full border border-red-100 shadow-sm whitespace-nowrap">
+                      {formatMeters(todaysCancelledMeters)}
+                    </span>
+                    {isCancelledCollapsed ? <ChevronDown className="h-4 w-4 text-red-500" /> : <ChevronUp className="h-4 w-4 text-red-500" />}
+                  </div>
+                </div>
+                {!isCancelledCollapsed && (
+                  <div className="flex-1 p-0">
+                    {loadingDispatch ? (
+                      <div className="p-8 text-center text-sm text-slate-400">Loading...</div>
+                    ) : todaysCancelledEntries.length === 0 ? (
+                      <div className="p-8 text-center text-sm text-slate-400">No entries cancelled.</div>
+                    ) : (
+                      <div className="divide-y divide-slate-100 max-h-80 overflow-y-auto">
+                        {todaysCancelledEntries.map((item) => (
                           <div key={item.id} className="p-4 hover:bg-slate-50/50 flex justify-between">
                             <div>
                               <span className="font-bold text-slate-800 text-sm">Design: {item.design}</span>
