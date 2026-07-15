@@ -38,8 +38,18 @@ export default function OrderList() {
   const [currentMatchIdx, setCurrentMatchIdx] = useState(0);
   const itemRefs = useRef<Record<number, HTMLDivElement | null>>({});
 
-  const fetchOrders = async () => {
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const PAGE_SIZE = 50;
+
+  const fetchOrders = async (reset = false) => {
+    setLoading(true);
     try {
+      const currentPage = reset ? 0 : page;
+      const from = currentPage * PAGE_SIZE;
+      const to = from + PAGE_SIZE - 1;
+
       const { data, error } = await supabase
         .from("orders")
         .select(
@@ -54,7 +64,8 @@ export default function OrderList() {
         `
         )
         .order("date", { ascending: false })
-        .order("order_no", { ascending: false });
+        .order("order_no", { ascending: false })
+        .range(from, to);
 
       if (error) throw error;
 
@@ -69,7 +80,15 @@ export default function OrderList() {
           total_meters: order.total_meters || 0,
         })
       );
-      setOrders(formattedOrders);
+
+      if (formattedOrders.length < PAGE_SIZE) {
+        setHasMore(false);
+      } else {
+        setHasMore(true);
+      }
+
+      setOrders(prev => reset ? formattedOrders : [...prev, ...formattedOrders]);
+      setPage(currentPage + 1);
     } catch (error) {
       console.error("Error fetching orders:", error);
       toast({
@@ -78,11 +97,13 @@ export default function OrderList() {
           }`,
         variant: "destructive",
       });
+    } finally {
+      setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchOrders();
+    fetchOrders(true);
   }, []);
 
   const handleEdit = (orderId: number) => {
@@ -93,7 +114,7 @@ export default function OrderList() {
 
 
   const handleOrderUpdated = () => {
-    fetchOrders();
+    fetchOrders(true);
   };
 
   const handleOpenPDF = (orderId: number) => {
@@ -283,6 +304,18 @@ export default function OrderList() {
             </div>
           </div>
         ))}
+        {hasMore && (
+          <div className="flex justify-center mt-6 pb-6">
+            <Button
+              variant="outline"
+              onClick={() => fetchOrders()}
+              disabled={loading}
+              className="px-8"
+            >
+              {loading ? "Loading..." : "Load More"}
+            </Button>
+          </div>
+        )}
       </div>
       <EditOrderModal
         isOpen={isEditModalOpen}

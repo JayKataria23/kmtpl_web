@@ -55,7 +55,14 @@ export function PartyOrderTable({
               >
                 <td className="px-2 py-4 w-3/6 text-sm font-medium text-gray-900">
                   <div className="break-words">
-                    {order.design}
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="font-bold text-base">{order.design}</span>
+                      {order.part && (
+                        <span className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded-full">
+                          Part
+                        </span>
+                      )}
+                    </div>
                     {order.remark && (
                       <>
                         <br />

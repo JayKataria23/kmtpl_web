@@ -227,6 +227,9 @@ const PartyDispatchList = () => {
         }`,
         variant: "destructive",
       });
+      // Rollback on error
+      fetchPartyEntries(partyId);
+      fetchDispatchEntries();
     }
   };
 

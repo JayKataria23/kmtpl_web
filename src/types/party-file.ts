@@ -1,6 +1,7 @@
 export interface PartyCount {
   party_name: string;
   design_entry_count: number;
+  part: boolean;
 }
 
 export interface DesignDetail {
@@ -15,6 +16,8 @@ export interface DesignDetail {
   design_entry_id: number;
   party_name: string;
   order_no: number;
+  part: boolean;
+  program?: string;
 }
 
 export interface SelectedDesignDetail extends DesignDetail {

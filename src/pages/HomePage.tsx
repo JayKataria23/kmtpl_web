@@ -13,7 +13,7 @@ export default function HomePage() {
         { path: "/order-form", label: "Order Form" },
         { path: "/fast-order-form", label: "Fast Order Form" },
         { path: "/order-list", label: "Order List" },
-        { path: "/pending-orders", label: "Pending Orders" },
+        { path: "/dashboard", label: "Dashboard" },
         { path: "/part-order-file", label: "Part Orders" },
       ],
     },

@@ -137,16 +137,42 @@ function OrderFile() {
   };
   const fetchDesignCounts = async () => {
     try {
-      const { data, error } = await supabase.rpc("get_design_entry_count");
+      let allData: any[] = [];
+      let from = 0;
+      let to = 999;
+      while (true) {
+        const { data, error } = await supabase
+          .from("design_entries")
+          .select(`design, part, orders!inner(canceled)`)
+          .is("bhiwandi_date", null)
+          .is("dispatch_date", null)
+          .eq("orders.canceled", false)
+          .range(from, to);
 
-      if (error) throw error;
-      const formattedData: DesignCount[] = data.map(
-        (item: { design: string; count: bigint; part: bigint }) => ({
-          design: item.design,
-          count: Number(item.count),
-          part: Boolean(Number(item.part) > 0),
-        })
-      );
+        if (error) throw error;
+        allData = allData.concat(data || []);
+        if (!data || data.length < 1000) break;
+        from += 1000;
+        to += 1000;
+      }
+
+      const countsMap = new Map<string, { count: number; part: boolean }>();
+      allData.forEach((row: any) => {
+        const d = row.design;
+        if (!countsMap.has(d)) {
+          countsMap.set(d, { count: 0, part: false });
+        }
+        const meta = countsMap.get(d)!;
+        meta.count += 1;
+        if (row.part) meta.part = true;
+      });
+
+      const formattedData: DesignCount[] = Array.from(countsMap.entries()).map(([design, meta]) => ({
+        design,
+        count: meta.count,
+        part: meta.part,
+      }));
+
       formattedData.sort((a, b) => {
         const nameA = a.design.toLowerCase();
         const nameB = b.design.toLowerCase();
@@ -174,37 +200,41 @@ function OrderFile() {
 
   const fetchOrderDetails = async (design: string) => {
     try {
-      const { data, error } = await supabase.rpc("get_orders_by_design", {
-        design_input: design,
-      });
+      let allData: any[] = [];
+      let from = 0;
+      let to = 999;
+      while (true) {
+        const { data, error } = await supabase
+          .from("design_entries")
+          .select(`
+            id, price, remark, shades, part, program,
+            orders!inner(order_no, date, remark, canceled, party_profiles!orders_bill_to_id_fkey(name))
+          `)
+          .eq("design", design)
+          .is("bhiwandi_date", null)
+          .is("dispatch_date", null)
+          .eq("orders.canceled", false)
+          .range(from, to);
 
-      if (error) throw error;
+        if (error) throw error;
+        allData = allData.concat(data || []);
+        if (!data || data.length < 1000) break;
+        from += 1000;
+        to += 1000;
+      }
 
-      const orderDetails: OrderDetail[] = data.map(
-        (entry: {
-          id: number; // Add id to the mapping
-          party_name: string;
-          shades: [];
-          order_remark: string | null;
-          price: number;
-          part: boolean;
-          entry_remark: string | null;
-          order_date: string;
-          order_no: number;
-          program?: string;
-        }) => ({
-          partyName: entry.party_name,
-          shades: entry.shades,
-          order_remark: entry.order_remark, // Existing line
-          id: entry.id, // Add this line to include id
-          price: entry.price,
-          part: entry.part,
-          entry_remark: entry.entry_remark,
-          order_date: entry.order_date,
-          order_no: entry.order_no,
-          program: entry.program || "", // Add program mapping
-        })
-      );
+      const orderDetails: OrderDetail[] = allData.map((entry: any) => ({
+        partyName: entry.orders?.party_profiles?.name || "Unknown Party",
+        shades: entry.shades || [],
+        order_remark: entry.orders?.remark || null,
+        id: entry.id,
+        price: entry.price || 0,
+        part: entry.part || false,
+        entry_remark: entry.remark || null,
+        order_date: entry.orders?.date || "",
+        order_no: entry.orders?.order_no || entry.order_no || 0,
+        program: entry.program || "",
+      }));
 
       setDesignOrders((prev) => ({ ...prev, [design]: orderDetails }));
     } catch (error) {
@@ -546,7 +576,11 @@ function OrderFile() {
             <div className="flex items-center justify-between w-full">
               <AccordionTrigger
                 className="text-lg flex items-center w-full hover:bg-gray-50"
-                onClick={() => fetchOrderDetails(item.design)}
+                onClick={() => {
+                  if (!designOrders[item.design]) {
+                    fetchOrderDetails(item.design);
+                  }
+                }}
               >
                 <div className="flex items-center gap-2">
                   <span className="text-left font-medium">{item.design}</span>

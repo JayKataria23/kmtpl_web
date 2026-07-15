@@ -58,9 +58,15 @@ function PartyFile() {
   }, [startTransition]);
 
   const handleFetchOrderDetails = useCallback(async (party: string) => {
-    const orders = await fetchOrderDetails(party);
-    startTransition(() => {
-      setPartyOrders((prev) => ({ ...prev, [party]: orders }));
+    setPartyOrders((prev) => {
+      if (prev[party]) return prev;
+      // If not present, fetch it
+      fetchOrderDetails(party).then(orders => {
+        startTransition(() => {
+          setPartyOrders(p => ({ ...p, [party]: orders }));
+        });
+      });
+      return prev;
     });
   }, [startTransition]);
 

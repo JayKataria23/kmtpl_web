@@ -208,6 +208,9 @@ const DateWiseDispatchList = () => {
         }`,
         variant: "destructive",
       });
+      // Rollback on error
+      fetchDateEntries(dateStr);
+      fetchDispatchEntries();
     }
   };
 
