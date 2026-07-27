@@ -123,7 +123,7 @@ const DateBhiwandiList = () => {
 
       if (error) throw error;
       
-      const formattedData: BhiwandiEntryResponse[] = (data || []).map((row: any) => ({
+      const formattedData: BhiwandiEntryResponse[] = sortEntriesByPartyAndOrder((data || []).map((row: any) => ({
         id: row.id,
         title: row.design,
         price: row.price?.toString() || "0",
@@ -138,7 +138,7 @@ const DateBhiwandiList = () => {
         part: row.part || false,
         bhiwandi_date: row.bhiwandi_date,
         order_date: row.orders?.date
-      }));
+      })));
       setEntriesCacheByDate((prev) => ({ ...prev, [dateStr]: formattedData }));
       return formattedData;
     } catch (error) {
@@ -159,23 +159,71 @@ const DateBhiwandiList = () => {
     fetchBhiwandiEntries();
   }, []);
 
+  const getISTDate = (): Date => {
+    const now = new Date();
+    return new Date(now.toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
+  };
+
   const formatDate = (dateString: string): string => {
     const date = new Date(dateString);
-    return date.toLocaleDateString("en-US", {
+    return date.toLocaleDateString("en-IN", {
       day: "numeric",
       month: "short",
       year: "numeric",
+      timeZone: "Asia/Kolkata",
     });
   };
 
   const formatLongDate = (dateString: string): string => {
     const date = new Date(dateString);
-    return date.toLocaleDateString("en-US", {
+    return date.toLocaleDateString("en-IN", {
       weekday: 'short',
       day: "numeric",
       month: "long",
       year: "numeric",
+      timeZone: "Asia/Kolkata",
     });
+  };
+
+  const formatPrintedAtIST = (): string => {
+    return new Date().toLocaleString("en-IN", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: true,
+      timeZone: "Asia/Kolkata",
+      timeZoneName: "short",
+    });
+  };
+
+  const sortEntriesByPartyAndOrder = (entries: BhiwandiEntryResponse[]): BhiwandiEntryResponse[] => {
+    return [...entries].sort((a, b) => {
+      const partyCompare = a.bill_to_party.localeCompare(b.bill_to_party, undefined, { sensitivity: "base" });
+      if (partyCompare !== 0) return partyCompare;
+
+      const orderCompare = a.order_no - b.order_no;
+      if (orderCompare !== 0) return orderCompare;
+
+      return a.title.localeCompare(b.title, undefined, { sensitivity: "base" });
+    });
+  };
+
+  const groupEntriesByOrder = (entries: BhiwandiEntryResponse[]): BhiwandiEntryResponse[][] => {
+    return sortEntriesByPartyAndOrder(entries).reduce<BhiwandiEntryResponse[][]>((groups, entry) => {
+      const lastGroup = groups[groups.length - 1];
+      const lastEntry = lastGroup?.[0];
+
+      if (lastEntry && lastEntry.order_no === entry.order_no) {
+        lastGroup.push(entry);
+      } else {
+        groups.push([entry]);
+      }
+
+      return groups;
+    }, []);
   };
 
   const handleCancelEntry = async (id: number, dateStr: string) => {
@@ -194,7 +242,7 @@ const DateBhiwandiList = () => {
       }));
       setDateGroups(prev => prev.map(g => g.bhiwandi_date === dateStr ? { ...g, total_entries: Math.max(0, g.total_entries - 1) } : g).filter(g => g.total_entries > 0));
 
-      const today = new Date(new Date().getTime() + 5.5 * 60 * 60 * 1000).toISOString().split("T")[0];
+      const today = getISTDate().toISOString().split("T")[0];
       const { error } = await supabase
         .from("design_entries")
         .update({ dispatch_date: today, remark: "Entry Cancelled" })
@@ -250,11 +298,14 @@ const DateBhiwandiList = () => {
   };
 
   const handlePrintDate = (group: DateGroup) => {
+    const sortedEntries = sortEntriesByPartyAndOrder(group.entries);
+    const orderGroups = groupEntriesByOrder(sortedEntries);
+    let rowIndex = 0;
     let content = `
-      <div style="text-align: center; margin-bottom: 20px; border-bottom: 2px solid #000; padding-bottom: 10px;">
-        <h1 style="font-size:2.2em; margin-bottom:0; font-weight:800; letter-spacing:1px;">Daily Bhiwandi Report</h1>
-        <h2 style="margin:0; font-size:1.4em; font-weight:700; color:#1a237e;">${formatLongDate(group.bhiwandi_date)}</h2>
-        <div style="font-size:1em; color:#555; margin-bottom:10px;">Printed on: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}</div>
+      <div style="text-align: center; margin-bottom: 12px; border-bottom: 1px solid #000; padding-bottom: 8px;">
+        <h1 style="font-size:1.4em; margin:0 0 4px; font-weight:800; letter-spacing:.3px;">Date Bhiwandi List</h1>
+        <h2 style="margin:0; font-size:1em; font-weight:700; color:#1a237e;">${formatLongDate(group.bhiwandi_date)}</h2>
+        <div style="font-size:.85em; color:#555; margin-top:4px;">Printed on: ${formatPrintedAtIST()}</div>
       </div>
     `;
 
@@ -262,15 +313,17 @@ const DateBhiwandiList = () => {
       <table style="width:100%; border-collapse:collapse; margin-bottom:20px; font-size:1em; table-layout:fixed;">
         <colgroup>
           <col style="width: 12%" />
-          <col style="width: 22%" />
+          <col style="width: 24%" />
+          <col style="width: 9%" />
           <col style="width: 15%" />
-          <col style="width: 41%" />
+          <col style="width: 30%" />
           <col style="width: 10%" />
         </colgroup>
         <thead>
           <tr style="background:#f0f4fa;">
             <th style="border:1px solid #e0e0e0; padding:10px 6px; font-size:1.05em; font-weight:700; text-align:center;">Order No</th>
             <th style="border:1px solid #e0e0e0; padding:10px 6px; font-size:1.05em; font-weight:700; text-align:center;">Bill To Party</th>
+            <th style="border:1px solid #e0e0e0; padding:10px 6px; font-size:1.05em; font-weight:700; text-align:center;">Part</th>
             <th style="border:1px solid #e0e0e0; padding:10px 6px; font-size:1.05em; font-weight:700; text-align:center;">Design</th>
             <th style="border:1px solid #e0e0e0; padding:10px 6px; font-size:1.05em; font-weight:700; text-align:center;">Shades</th>
             <th style="border:1px solid #e0e0e0; padding:10px 6px; font-size:1.05em; font-weight:700; text-align:center;">Price</th>
@@ -279,16 +332,28 @@ const DateBhiwandiList = () => {
         <tbody>
     `;
 
-    group.entries.forEach((entry, eIdx) => {
-      content += `
-        <tr style="background:${eIdx % 2 === 0 ? '#fff' : '#f7fafd'}; vertical-align:middle;">
-          <td style="border:1px solid #e0e0e0; padding:10px 6px; text-align:center; font-size:1.02em;">${entry.order_no}</td>
-          <td style="border:1px solid #e0e0e0; padding:10px 6px; font-size:1.02em;">${entry.bill_to_party}</td>
-          <td style="border:1px solid #e0e0e0; padding:10px 6px; text-align:center; font-size:1.02em;">${entry.title}</td>
-          <td style="border:1px solid #e0e0e0; padding:10px 6px; font-size:1.02em;">${formatShadesGrouped(entry.shades) || '-'}</td>
-          <td style="border:1px solid #e0e0e0; padding:10px 6px; text-align:center; font-size:1.02em;">${entry.price}</td>
-        </tr>
-      `;
+    orderGroups.forEach((entriesForOrder) => {
+      const firstEntry = entriesForOrder[0];
+      const groupBackground = rowIndex % 2 === 0 ? '#fff' : '#f7fafd';
+
+      entriesForOrder.forEach((entry, indexWithinOrder) => {
+        const orderCells = indexWithinOrder === 0 ? `
+          <td rowspan="${entriesForOrder.length}" style="border:1px solid #e0e0e0; padding:10px 6px; text-align:center; font-size:1.02em; font-weight:700; vertical-align:middle;">${firstEntry.order_no}</td>
+          <td rowspan="${entriesForOrder.length}" style="border:1px solid #e0e0e0; padding:10px 6px; font-size:1.02em; font-weight:700; vertical-align:middle;">${firstEntry.bill_to_party}</td>
+        ` : "";
+
+        content += `
+          <tr style="background:${groupBackground}; vertical-align:middle;">
+            ${orderCells}
+            <td style="border:1px solid #e0e0e0; padding:10px 6px; text-align:center; font-size:1.02em;">${entry.part ? '<span style="background:#f59e0b;color:#fff;border-radius:4px;padding:2px 6px;font-weight:700;font-size:.82em;">PART</span>' : '-'}</td>
+            <td style="border:1px solid #e0e0e0; padding:10px 6px; text-align:center; font-size:1.02em;">${entry.title}</td>
+            <td style="border:1px solid #e0e0e0; padding:10px 6px; font-size:1.02em;">${formatShadesGrouped(entry.shades) || '-'}</td>
+            <td style="border:1px solid #e0e0e0; padding:10px 6px; text-align:center; font-size:1.02em;">${entry.price}</td>
+          </tr>
+        `;
+      });
+
+      rowIndex++;
     });
 
     content += `
@@ -404,7 +469,17 @@ const DateBhiwandiList = () => {
                     <div className="text-center text-gray-400 py-4">No entries for this date.</div>
                   ) : (
                     <div className="space-y-4">
-                      {(entriesCacheByDate[group.bhiwandi_date] || []).map((entry) => (
+                      {groupEntriesByOrder(entriesCacheByDate[group.bhiwandi_date] || []).map((entriesForOrder) => (
+                        <div
+                          key={`${entriesForOrder[0].order_no}-${entriesForOrder[0].bill_to_party}`}
+                          className="space-y-3 p-3 border border-gray-200 rounded-xl bg-white shadow-sm"
+                        >
+                          {entriesForOrder.length > 1 && (
+                            <div className="text-xs font-bold uppercase tracking-wider text-indigo-700 bg-indigo-50 border border-indigo-100 rounded-lg px-3 py-2">
+                              Clubbed Order #{entriesForOrder[0].order_no} • {entriesForOrder[0].bill_to_party}
+                            </div>
+                          )}
+                          {entriesForOrder.map((entry) => (
                         <div
                           key={entry.id}
                           className="flex flex-col lg:flex-row gap-4 p-4 border border-gray-200 rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow relative pr-12"
@@ -477,6 +552,8 @@ const DateBhiwandiList = () => {
                           >
                             <X className="h-4 w-4 mr-1" /> Cancel Entry
                           </Button>
+                        </div>
+                          ))}
                         </div>
                       ))}
                     </div>
