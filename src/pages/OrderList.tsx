@@ -38,57 +38,55 @@ export default function OrderList() {
   const [currentMatchIdx, setCurrentMatchIdx] = useState(0);
   const itemRefs = useRef<Record<number, HTMLDivElement | null>>({});
 
-  const [page, setPage] = useState(0);
-  const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState(false);
-  const PAGE_SIZE = 50;
+  const PAGE_SIZE = 1000;
 
-  const fetchOrders = async (reset = false) => {
+  const fetchOrders = async () => {
     setLoading(true);
     try {
-      const currentPage = reset ? 0 : page;
-      const from = currentPage * PAGE_SIZE;
-      const to = from + PAGE_SIZE - 1;
+      const allOrders: Order[] = [];
+      let from = 0;
+      let hasMoreOrders = true;
 
-      const { data, error } = await supabase
-        .from("orders")
-        .select(
+      while (hasMoreOrders) {
+        const to = from + PAGE_SIZE - 1;
+        const { data, error } = await supabase
+          .from("orders")
+          .select(
+            `
+            id, 
+            order_no, 
+            date, 
+            remark,
+            canceled, 
+            total_meters,
+            bill_to:bill_to_id(name)
           `
-          id, 
-          order_no, 
-          date, 
-          remark,
-          canceled, 
-          total_meters,
-          bill_to:bill_to_id(name)
-        `
-        )
-        .order("date", { ascending: false })
-        .order("order_no", { ascending: false })
-        .range(from, to);
+          )
+          .order("date", { ascending: false })
+          .order("order_no", { ascending: false })
+          .range(from, to);
 
-      if (error) throw error;
+        if (error) throw error;
 
-      const formattedOrders = (data as unknown as OrderFromDB[]).map(
-        (order) => ({
-          id: order.id,
-          order_no: order.order_no,
-          date: order.date,
-          remark: order.remark,
-          canceled: order.canceled, // Include canceled in the formatted orders
-          party_name: order.bill_to?.name || "N/A",
-          total_meters: order.total_meters || 0,
-        })
-      );
+        const formattedOrders = (data as unknown as OrderFromDB[]).map(
+          (order) => ({
+            id: order.id,
+            order_no: order.order_no,
+            date: order.date,
+            remark: order.remark,
+            canceled: order.canceled, // Include canceled in the formatted orders
+            party_name: order.bill_to?.name || "N/A",
+            total_meters: order.total_meters || 0,
+          })
+        );
 
-      if (formattedOrders.length < PAGE_SIZE) {
-        setHasMore(false);
-      } else {
-        setHasMore(true);
+        allOrders.push(...formattedOrders);
+        hasMoreOrders = formattedOrders.length === PAGE_SIZE;
+        from += PAGE_SIZE;
       }
 
-      setOrders(prev => reset ? formattedOrders : [...prev, ...formattedOrders]);
-      setPage(currentPage + 1);
+      setOrders(allOrders);
     } catch (error) {
       console.error("Error fetching orders:", error);
       toast({
@@ -103,7 +101,7 @@ export default function OrderList() {
   };
 
   useEffect(() => {
-    fetchOrders(true);
+    fetchOrders();
   }, []);
 
   const handleEdit = (orderId: number) => {
@@ -114,7 +112,7 @@ export default function OrderList() {
 
 
   const handleOrderUpdated = () => {
-    fetchOrders(true);
+    fetchOrders();
   };
 
   const handleOpenPDF = (orderId: number) => {
@@ -178,10 +176,12 @@ export default function OrderList() {
     }
   };
 
+  const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
   const highlightText = (text: string) => {
     const q = searchQuery.trim();
     if (!q) return text;
-    const parts = text.split(new RegExp(`(${q.replace(/[.*+?^${}()|\[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\-\uFFFF]/g, "\\$&")})`, "gi"));
+    const parts = text.split(new RegExp(`(${escapeRegExp(q)})`, "gi"));
     return parts.map((part, i) =>
       part.toLowerCase() === q.toLowerCase() ? (
         <mark key={i} className="bg-yellow-200 px-0.5 rounded">
@@ -304,16 +304,9 @@ export default function OrderList() {
             </div>
           </div>
         ))}
-        {hasMore && (
-          <div className="flex justify-center mt-6 pb-6">
-            <Button
-              variant="outline"
-              onClick={() => fetchOrders()}
-              disabled={loading}
-              className="px-8"
-            >
-              {loading ? "Loading..." : "Load More"}
-            </Button>
+        {loading && (
+          <div className="flex justify-center mt-6 pb-6 text-sm text-gray-500">
+            Loading all orders...
           </div>
         )}
       </div>
