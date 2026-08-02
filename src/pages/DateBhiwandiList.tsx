@@ -10,7 +10,7 @@ import {
   AccordionContent,
 } from "@/components/ui/accordion";
 import { Toaster } from "@/components/ui";
-import { Printer, X, Calendar as CalendarIcon } from "lucide-react";
+import { Printer, X, Calendar as CalendarIcon, ArrowLeft } from "lucide-react";
 
 interface BhiwandiEntryResponse {
   id: number;
@@ -212,18 +212,40 @@ const DateBhiwandiList = () => {
   };
 
   const groupEntriesByOrder = (entries: BhiwandiEntryResponse[]): BhiwandiEntryResponse[][] => {
-    return sortEntriesByPartyAndOrder(entries).reduce<BhiwandiEntryResponse[][]>((groups, entry) => {
-      const lastGroup = groups[groups.length - 1];
-      const lastEntry = lastGroup?.[0];
+    const sorted = sortEntriesByPartyAndOrder(entries);
+    const groups: BhiwandiEntryResponse[][] = [];
 
-      if (lastEntry && lastEntry.order_no === entry.order_no) {
+    sorted.forEach((entry) => {
+      const lastGroup = groups[groups.length - 1];
+      if (
+        lastGroup &&
+        lastGroup[0].order_no === entry.order_no &&
+        lastGroup[0].bill_to_party.trim().toLowerCase() === entry.bill_to_party.trim().toLowerCase()
+      ) {
         lastGroup.push(entry);
       } else {
         groups.push([entry]);
       }
+    });
 
-      return groups;
-    }, []);
+    return groups;
+  };
+
+  const getGroupedShades = (shades: { [key: string]: string }[]) => {
+    const formattedShades: { meters: string; keys: string[] }[] = [];
+    (shades || []).forEach((shadeObj) => {
+      const shadeName = Object.keys(shadeObj)[0];
+      const shadeValue = shadeObj[shadeName];
+      if (shadeValue) {
+        const existing = formattedShades.find((g) => g.meters === shadeValue);
+        if (existing) {
+          existing.keys.push(shadeName);
+        } else {
+          formattedShades.push({ meters: shadeValue, keys: [shadeName] });
+        }
+      }
+    });
+    return formattedShades;
   };
 
   const handleCancelEntry = async (id: number, dateStr: string) => {
@@ -265,28 +287,24 @@ const DateBhiwandiList = () => {
     }
   };
 
-  const formatShadesGrouped = (shades: { [key: string]: string }[]): string => {
-    const meterGroups = new Map<string, { shadeNames: string[] }>();
-    shades.forEach((shadeObj) => {
-      const shadeName = Object.keys(shadeObj)[0];
-      const meterValue = shadeObj[shadeName];
-      if (!meterValue) return;
-      if (!meterGroups.has(meterValue)) {
-        meterGroups.set(meterValue, { shadeNames: [shadeName] });
-      } else {
-        meterGroups.get(meterValue)!.shadeNames.push(shadeName);
-      }
-    });
-    return Array.from(meterGroups.entries())
-      .map(
-        ([meters, { shadeNames }]) => `
-          <span style="display:inline-block; margin:2px 8px 2px 0; padding:6px 10px; background:#f5f7fa; border-radius:12px; border:1px solid #d1d5db; min-width:70px; text-align:center; font-size:0.98em; vertical-align:middle;">
-            <div style="font-weight:600; color:#222;">${shadeNames.join(", ")}</div>
-            <div style="font-size:0.97em; color:#444;">${meters} mtr</div>
-          </span>
-        `
-      )
-      .join("");
+  const formatShadesPrint = (shades: { [key: string]: string }[]): string => {
+    const formattedShades = getGroupedShades(shades);
+    if (formattedShades.length === 0) return '<span style="color:#64748b; font-style:italic;">No shades</span>';
+
+    return `
+      <div style="display:flex; flex-wrap:wrap; gap:6px; align-items:center;">
+        ${formattedShades
+          .map(
+            (g) => `
+            <div style="display:inline-block; border-radius:4px; text-align:center; background:#ffffff; overflow:hidden;">
+              <div style="font-weight:900; font-size:12px; color:#000000; padding:2px 8px; border-bottom:1.5px solid #000000; background:#f8fafc;">${g.keys.join(" - ")}</div>
+              <div style="font-weight:900; font-size:12px; color:#1e40af; padding:2px 8px; background:#ffffff;">${g.meters} mtr</div>
+            </div>
+          `
+          )
+          .join("")}
+      </div>
+    `;
   };
 
   const handlePrintDateClick = async (group: DateGroup) => {
@@ -298,71 +316,100 @@ const DateBhiwandiList = () => {
   };
 
   const handlePrintDate = (group: DateGroup) => {
-    const sortedEntries = sortEntriesByPartyAndOrder(group.entries);
-    const orderGroups = groupEntriesByOrder(sortedEntries);
-    let rowIndex = 0;
-    let content = `
-      <div style="text-align: center; margin-bottom: 12px; border-bottom: 1px solid #000; padding-bottom: 8px;">
-        <h1 style="font-size:1.4em; margin:0 0 4px; font-weight:800; letter-spacing:.3px;">Date Bhiwandi List</h1>
-        <h2 style="margin:0; font-size:1em; font-weight:700; color:#1a237e;">${formatLongDate(group.bhiwandi_date)}</h2>
-        <div style="font-size:.85em; color:#555; margin-top:4px;">Printed on: ${formatPrintedAtIST()}</div>
-      </div>
-    `;
+    const orderGroups = groupEntriesByOrder(group.entries);
+    let totalMetersAll = 0;
+    let globalOrderIndex = 1;
+    
+    let tableRowsHtml = "";
 
-    content += `
-      <table style="width:100%; border-collapse:collapse; margin-bottom:20px; font-size:1em; table-layout:fixed;">
-        <colgroup>
-          <col style="width: 12%" />
-          <col style="width: 24%" />
-          <col style="width: 9%" />
-          <col style="width: 15%" />
-          <col style="width: 30%" />
-          <col style="width: 10%" />
-        </colgroup>
-        <thead>
-          <tr style="background:#f0f4fa;">
-            <th style="border:1px solid #e0e0e0; padding:10px 6px; font-size:1.05em; font-weight:700; text-align:center;">Order No</th>
-            <th style="border:1px solid #e0e0e0; padding:10px 6px; font-size:1.05em; font-weight:700; text-align:center;">Bill To Party</th>
-            <th style="border:1px solid #e0e0e0; padding:10px 6px; font-size:1.05em; font-weight:700; text-align:center;">Part</th>
-            <th style="border:1px solid #e0e0e0; padding:10px 6px; font-size:1.05em; font-weight:700; text-align:center;">Design</th>
-            <th style="border:1px solid #e0e0e0; padding:10px 6px; font-size:1.05em; font-weight:700; text-align:center;">Shades</th>
-            <th style="border:1px solid #e0e0e0; padding:10px 6px; font-size:1.05em; font-weight:700; text-align:center;">Price</th>
-          </tr>
-        </thead>
-        <tbody>
-    `;
-
-    orderGroups.forEach((entriesForOrder) => {
+    orderGroups.forEach((entriesForOrder, groupIdx) => {
       const firstEntry = entriesForOrder[0];
-      const groupBackground = rowIndex % 2 === 0 ? '#fff' : '#f7fafd';
+      const orderRowSpan = entriesForOrder.length;
+      const groupBg = groupIdx % 2 === 0 ? "#ffffff" : "#f8fafc";
 
       entriesForOrder.forEach((entry, indexWithinOrder) => {
-        const orderCells = indexWithinOrder === 0 ? `
-          <td rowspan="${entriesForOrder.length}" style="border:1px solid #e0e0e0; padding:10px 6px; text-align:center; font-size:1.02em; font-weight:700; vertical-align:middle;">${firstEntry.order_no}</td>
-          <td rowspan="${entriesForOrder.length}" style="border:1px solid #e0e0e0; padding:10px 6px; font-size:1.02em; font-weight:700; vertical-align:middle;">${firstEntry.bill_to_party}</td>
+        let entryMeters = 0;
+        if (entry.shades) {
+          entry.shades.forEach((s) => {
+            const v = Object.values(s)[0];
+            entryMeters += v ? parseFloat(v) : 0;
+          });
+        }
+        totalMetersAll += entryMeters;
+        
+        const partBadge = entry.part
+          ? `<span style="background:#d97706; color:#ffffff; font-size:11px; font-weight:900; padding:2px 6px; border-radius:3px; border:1px solid #92400e;">PART</span>`
+          : `<span style="color:#94a3b8;">-</span>`;
+
+        const isLastInOrderGroup = indexWithinOrder === orderRowSpan - 1;
+        const borderBottomStyle = isLastInOrderGroup ? "border-bottom:2.5px solid #000000;" : "border-bottom:1px solid #cbd5e1;";
+
+        const orderNoAndPartyCell = indexWithinOrder === 0 ? `
+          <td rowspan="${orderRowSpan}" style="border:1.5px solid #000000; padding:8px 4px; text-align:center; font-weight:bold; font-size:13px; color:#000000; vertical-align:top; background:${groupBg}; border-bottom:2.5px solid #000000;">${globalOrderIndex++}</td>
+          <td rowspan="${orderRowSpan}" style="border:1.5px solid #000000; padding:8px 6px; font-size:13px; color:#000000; vertical-align:top; background:${groupBg}; border-bottom:2.5px solid #000000;">
+            <div style="font-weight:900; font-size:13px; color:#1e1b4b; margin-bottom:3px;">ORDER #${firstEntry.order_no}</div>
+            <div style="font-weight:800; font-size:13.5px; color:#000000;">${firstEntry.bill_to_party}</div>
+            ${firstEntry.ship_to_party && firstEntry.ship_to_party !== firstEntry.bill_to_party ? `<div style="font-size:11.5px; color:#334155; margin-top:2px;">Ship: ${firstEntry.ship_to_party}</div>` : ""}
+          </td>
         ` : "";
 
-        content += `
-          <tr style="background:${groupBackground}; vertical-align:middle;">
-            ${orderCells}
-            <td style="border:1px solid #e0e0e0; padding:10px 6px; text-align:center; font-size:1.02em;">${entry.part ? '<span style="background:#f59e0b;color:#fff;border-radius:4px;padding:2px 6px;font-weight:700;font-size:.82em;">PART</span>' : '-'}</td>
-            <td style="border:1px solid #e0e0e0; padding:10px 6px; text-align:center; font-size:1.02em;">${entry.title}</td>
-            <td style="border:1px solid #e0e0e0; padding:10px 6px; font-size:1.02em;">${formatShadesGrouped(entry.shades) || '-'}</td>
-            <td style="border:1px solid #e0e0e0; padding:10px 6px; text-align:center; font-size:1.02em;">${entry.price}</td>
+        tableRowsHtml += `
+          <tr style="background:${groupBg}; ${borderBottomStyle}">
+            ${orderNoAndPartyCell}
+            <td style="border:1.5px solid #000000; padding:3px 6px; font-size:13px; font-weight:800; color:#1e40af;">${entry.title}</td>
+            <td style="border:1.5px solid #000000; padding:3px 3px; text-align:center; font-size:13px;">${partBadge}</td>
+            <td style="border:1.5px solid #000000; padding:3px 3px; font-size:13px; color:#000000;">
+              ${formatShadesPrint(entry.shades)}
+              ${entry.design_remark ? `<div style="font-size:11px; color:#1e293b; margin-top:4px; font-style:italic;"><strong>Remark:</strong> ${entry.design_remark}</div>` : ""}
+            </td>
+            <td style="border:1.5px solid #000000; padding:3px 3px; text-align:center; font-weight:bold; font-size:13px; color:#000000;">₹${entry.price}</td>
           </tr>
         `;
       });
-
-      rowIndex++;
     });
 
-    content += `
-        </tbody>
-      </table>
-      <div style="margin-top: 18px; border-top: 1px solid #ddd; padding-top: 10px;">
-        <p style="font-size:1.05em;"><strong>Total Entries:</strong> ${group.total_entries}</p>
-        <p style="font-size:1.05em;"><strong>Total Meters:</strong> ${group.total_meters.toFixed(2)}m</p>
+    const content = `
+      <div style="text-align: center; margin-bottom: 16px; border-bottom: 3px solid #000000; padding-bottom: 12px;">
+        <h1 style="font-size:1.7em; margin:0 0 4px; font-weight:900; letter-spacing:0.5px; text-transform:uppercase; color:#000000;">BHIWANDI DISPATCH LIST</h1>
+        <h2 style="margin:0 0 6px; font-size:1.15em; font-weight:800; color:#1e40af;">${formatLongDate(group.bhiwandi_date)}</h2>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px; font-size:12px; font-weight:bold; color:#000000; background:#f1f5f9; padding:8px 12px; border:2px solid #000000; border-radius:6px;">
+          <span>TOTAL ORDERS: ${orderGroups.length}</span>
+          <span>TOTAL ITEMS: ${group.entries.length}</span>
+          <span>TOTAL METERS: ${totalMetersAll.toFixed(2)} mtr</span>
+          <span>PRINTED: ${formatPrintedAtIST()}</span>
+        </div>
       </div>
+
+      <table style="width:100%; border-collapse:collapse; margin-bottom:20px; font-size:13px; font-family: Arial, sans-serif; table-layout:fixed; border:2.5px solid #000000;">
+        <colgroup>
+          <col style="width: 5%" />
+          <col style="width: 25%" />
+          <col style="width: 17%" />
+          <col style="width: 8%" />
+          <col style="width: 35%" />
+          <col style="width: 10%" />
+        </colgroup>
+        <thead>
+          <tr style="background:#0f172a; color:#ffffff;">
+            <th style="border:1.5px solid #000000; padding:10px 4px; font-size:12px; font-weight:900; text-align:center; text-transform:uppercase;">SR.</th>
+            <th style="border:1.5px solid #000000; padding:10px 6px; font-size:12px; font-weight:900; text-align:left; text-transform:uppercase;">ORDER # & PARTY NAME</th>
+            <th style="border:1.5px solid #000000; padding:10px 6px; font-size:12px; font-weight:900; text-align:left; text-transform:uppercase;">DESIGN</th>
+            <th style="border:1.5px solid #000000; padding:10px 4px; font-size:12px; font-weight:900; text-align:center; text-transform:uppercase;">PART</th>
+            <th style="border:1.5px solid #000000; padding:10px 6px; font-size:12px; font-weight:900; text-align:left; text-transform:uppercase;">SHADES & METERS</th>
+            <th style="border:1.5px solid #000000; padding:10px 4px; font-size:12px; font-weight:900; text-align:center; text-transform:uppercase;">PRICE</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${tableRowsHtml}
+        </tbody>
+        <tfoot>
+          <tr style="background:#e2e8f0; border-top:2.5px solid #000000; font-weight:900; font-size:13px; color:#000000;">
+            <td colspan="4" style="border:1.5px solid #000000; padding:10px; text-align:right; text-transform:uppercase;">Grand Totals:</td>
+            <td style="border:1.5px solid #000000; padding:10px; font-weight:900; color:#1e40af;">${totalMetersAll.toFixed(2)} mtr</td>
+            <td style="border:1.5px solid #000000; padding:10px; text-align:center;">${group.entries.length} Items</td>
+          </tr>
+        </tfoot>
+      </table>
     `;
 
     const iframe = printFrameRef.current;
@@ -374,9 +421,9 @@ const DateBhiwandiList = () => {
       <!DOCTYPE html>
       <html>
         <head>
-          <title>Daily Bhiwandi List - ${group.bhiwandi_date}</title>
+          <title>Bhiwandi List - ${group.bhiwandi_date}</title>
           <style>
-            body { font-family: Arial, sans-serif; margin: 20px; }
+            body { font-family: Arial, sans-serif; margin: 20px; color: #000; }
             @media print { body { margin: 0; padding: 15px; } }
           </style>
         </head>
@@ -391,33 +438,38 @@ const DateBhiwandiList = () => {
   };
 
   return (
-    <div className="container mx-auto max-w-4xl mt-10 p-4">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-        <Button onClick={() => navigate("/")} variant="outline" className="w-full sm:w-auto">
-          Back to Home
+    <div className="container mx-auto max-w-6xl mt-8 p-4 sm:p-6">
+      {/* Header Banner */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6 bg-slate-900 text-white p-5 rounded-2xl border-2 border-slate-800 shadow-lg">
+        <Button 
+          onClick={() => navigate("/")} 
+          variant="outline" 
+          className="w-full md:w-auto bg-slate-800 hover:bg-slate-700 text-white border-slate-600 hover:text-white font-semibold"
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" /> Back to Home
         </Button>
-        <div className="flex-1 text-center">
-          <h1 className="text-3xl font-bold">Date Wise Bhiwandi List</h1>
-          {dateGroups.length > 0 && (
-            <div className="flex items-center justify-center gap-4 mt-3">
-              <span className="bg-indigo-50 text-indigo-700 px-3 py-1 rounded-full text-sm font-semibold border border-indigo-100">
-                Total Entries: {dateGroups.reduce((acc, g) => acc + g.total_entries, 0)}
-              </span>
-              <span className="bg-indigo-50 text-indigo-700 px-3 py-1 rounded-full text-sm font-semibold border border-indigo-100">
-                Total Meters: {dateGroups.reduce((acc, g) => acc + g.total_meters, 0).toFixed(2)}m
-              </span>
-            </div>
-          )}
+        <div className="text-center md:text-left flex-1 md:ml-4">
+          <h1 className="text-2xl md:text-3xl font-black tracking-tight">Date Wise Bhiwandi List</h1>
+          <p className="text-xs md:text-sm text-slate-300 mt-1 font-medium">All Bhiwandi dispatch items clubbed by Order Number & Party Name per date</p>
         </div>
-        <div className="hidden sm:block w-[120px]"></div>
+        {dateGroups.length > 0 && (
+          <div className="flex flex-wrap items-center justify-center md:justify-end gap-3 shrink-0">
+            <div className="bg-slate-800 border border-slate-700 px-3.5 py-1.5 rounded-xl text-xs font-bold text-slate-200 shadow-2xs">
+              Total Entries: <span className="text-amber-400 font-extrabold text-sm ml-1">{dateGroups.reduce((acc, g) => acc + g.total_entries, 0)}</span>
+            </div>
+            <div className="bg-slate-800 border border-slate-700 px-3.5 py-1.5 rounded-xl text-xs font-bold text-slate-200 shadow-2xs">
+              Total Meters: <span className="text-cyan-400 font-extrabold text-sm ml-1">{dateGroups.reduce((acc, g) => acc + g.total_meters, 0).toFixed(2)}m</span>
+            </div>
+          </div>
+        )}
       </div>
       
-      <div className="border-b mb-6" />
-      <div className="mt-6">
+      {/* Main Content Accordion */}
+      <div className="mt-4">
         <Accordion
           type="single"
           collapsible
-          className="w-full"
+          className="w-full space-y-4"
           value={openAccordion as string | undefined}
           onValueChange={(val) => {
             setOpenAccordion(val);
@@ -431,131 +483,206 @@ const DateBhiwandiList = () => {
           }}
         >
           {dateGroups.length === 0 ? (
-            <div className="text-center text-gray-500 py-12">No bhiwandi entries found.</div>
+            <div className="text-center text-slate-500 py-16 bg-white border-2 border-slate-300 rounded-2xl shadow-sm font-semibold">
+              No bhiwandi entries found.
+            </div>
           ) : (
             dateGroups.map((group, dateIndex) => (
-              <AccordionItem key={dateIndex} value={`date-${dateIndex}`} className="rounded-lg border mb-4 shadow-sm bg-white overflow-hidden">
-                <div className="flex items-center justify-between px-4 py-3 bg-gray-50/50 hover:bg-gray-50 transition-colors">
-                  <AccordionTrigger className="text-lg flex items-center gap-3 w-full font-semibold border-none hover:no-underline py-0">
+              <AccordionItem 
+                key={dateIndex} 
+                value={`date-${dateIndex}`} 
+                className="rounded-xl border-2 border-slate-700 shadow-md bg-white overflow-hidden transition-all"
+              >
+                <div className="flex items-center justify-between px-5 py-3.5 bg-slate-100 hover:bg-slate-200/80 transition-colors border-b-2 border-slate-300">
+                  <AccordionTrigger className="text-lg flex items-center gap-3 w-full font-extrabold border-none hover:no-underline py-0 text-slate-900">
                     <div className="flex items-center gap-3 text-left">
-                      <div className="bg-white p-2 rounded-lg border border-gray-200 shadow-sm flex items-center justify-center">
-                        <CalendarIcon className="h-5 w-5 text-indigo-600" />
+                      <div className="bg-slate-900 p-2 rounded-lg text-white shadow-xs flex items-center justify-center">
+                        <CalendarIcon className="h-5 w-5 text-indigo-300" />
                       </div>
-                      <span className="text-gray-900">{formatLongDate(group.bhiwandi_date)}</span>
+                      <span className="text-slate-900 font-black text-lg">{formatLongDate(group.bhiwandi_date)}</span>
                     </div>
                     <div className="ml-auto mr-4 flex items-center gap-2">
-                      <span className="text-xs font-bold bg-indigo-100 text-indigo-800 px-2.5 py-1 rounded-full">
-                        {group.total_meters.toFixed(2)}m
+                      <span className="text-xs font-black bg-indigo-900 text-indigo-100 px-3 py-1 rounded-lg border border-indigo-700 shadow-2xs">
+                        {group.total_entries} Items • {group.total_meters.toFixed(2)}m
                       </span>
                     </div>
                   </AccordionTrigger>
                   <Button 
-                    size="icon" 
+                    size="sm" 
                     variant="outline"
-                    className="flex-shrink-0 bg-white shadow-sm hover:bg-gray-50 text-gray-600"
+                    className="flex-shrink-0 bg-slate-900 hover:bg-slate-800 text-white border-2 border-slate-800 shadow-xs font-bold text-xs h-9 px-3 transition-all"
                     onClick={(e) => {
                       e.stopPropagation();
                       handlePrintDateClick(group);
                     }}
                     title="Print Daily Bhiwandi List"
                   >
-                    <Printer size={18} />
+                    <Printer className="h-4 w-4 mr-1.5" /> Print List
                   </Button>
                 </div>
-                <AccordionContent className="p-4 bg-gray-50 border-t">
+
+                <AccordionContent className="p-4 sm:p-5 bg-slate-50">
                   {loadingDates[group.bhiwandi_date] ? (
-                    <div className="text-center text-gray-400 py-4">Loading entries...</div>
+                    <div className="text-center text-slate-500 py-8 font-bold">Loading entries for {formatDate(group.bhiwandi_date)}...</div>
                   ) : ((entriesCacheByDate[group.bhiwandi_date] || []).length === 0) ? (
-                    <div className="text-center text-gray-400 py-4">No entries for this date.</div>
+                    <div className="text-center text-slate-500 py-8 font-bold">No entries found for this date.</div>
                   ) : (
-                    <div className="space-y-4">
-                      {groupEntriesByOrder(entriesCacheByDate[group.bhiwandi_date] || []).map((entriesForOrder) => (
-                        <div
-                          key={`${entriesForOrder[0].order_no}-${entriesForOrder[0].bill_to_party}`}
-                          className="space-y-3 p-3 border border-gray-200 rounded-xl bg-white shadow-sm"
-                        >
-                          {entriesForOrder.length > 1 && (
-                            <div className="text-xs font-bold uppercase tracking-wider text-indigo-700 bg-indigo-50 border border-indigo-100 rounded-lg px-3 py-2">
-                              Clubbed Order #{entriesForOrder[0].order_no} • {entriesForOrder[0].bill_to_party}
-                            </div>
-                          )}
-                          {entriesForOrder.map((entry) => (
-                        <div
-                          key={entry.id}
-                          className="flex flex-col lg:flex-row gap-4 p-4 border border-gray-200 rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow relative pr-12"
-                        >
-                          <div className="flex-1 min-w-[200px]">
-                            <div className="flex flex-col gap-2">
-                              <div className="flex items-start justify-between gap-2">
-                                <h3 className="font-bold text-gray-900 leading-tight">
-                                  <span className="text-indigo-600 mr-2">[{entry.title}]</span>
-                                  {entry.bill_to_party}
-                                </h3>
-                                {entry.part && (
-                                  <span className="shrink-0 px-2 py-0.5 bg-amber-100 text-amber-800 text-[10px] font-bold rounded border border-amber-200 uppercase tracking-wider">
-                                    Part Order
-                                  </span>
-                                )}
-                              </div>
-                              <div className="flex items-center gap-3 text-sm">
-                                <span className="font-bold text-blue-700 bg-blue-50 px-2.5 py-1 rounded-md border border-blue-100">Order #{entry.order_no}</span>
-                                <span className="font-semibold text-gray-700 bg-gray-50 px-2.5 py-1 rounded-md border border-gray-100">₹{entry.price}/m</span>
-                              </div>
-                            </div>
-                          </div>
+                    <div className="overflow-x-auto rounded-xl border-2 border-slate-800 shadow-md bg-white">
+                      <table className="w-full text-left border-collapse min-w-[800px]">
+                        <thead>
+                          <tr className="bg-slate-900 text-white font-extrabold text-xs uppercase tracking-wider">
+                            <th className="p-3 text-center border-r border-slate-700 w-12">Sr.</th>
+                            <th className="p-3 border-r border-slate-700 w-48">Order # & Party Name</th>
+                            <th className="p-3 border-r border-slate-700 w-40">Design</th>
+                            <th className="p-3 text-center border-r border-slate-700 w-24">Part</th>
+                            <th className="p-3 border-r border-slate-700">Shades Breakdown & Meters</th>
+                            <th className="p-3 text-center border-r border-slate-700 w-24">Price (₹/m)</th>
+                            <th className="p-3 text-center w-28">Action</th>
+                          </tr>
+                        </thead>
+                        <tbody className="text-sm">
+                          {(() => {
+                            const orderGroups = groupEntriesByOrder(entriesCacheByDate[group.bhiwandi_date] || []);
+                            let globalOrderIdx = 1;
 
-                          <div className="flex-[0.8] min-w-[180px] flex flex-col justify-center gap-1.5 text-xs text-gray-600 lg:border-l lg:border-gray-100 lg:pl-5">
-                            <div className="flex items-center justify-between">
-                              <span className="font-medium text-gray-400 uppercase tracking-wider text-[10px]">Order Date</span>
-                              <span className="font-semibold text-gray-800">{entry.order_date ? formatDate(entry.order_date) : "-"}</span>
-                            </div>
-                            <div className="flex items-center justify-between border-t border-gray-100 pt-1.5 mt-1.5">
-                              <span className="font-medium text-gray-400 uppercase tracking-wider text-[10px]">Ship To</span>
-                              <span className="font-semibold text-gray-800 truncate max-w-[120px]" title={entry.ship_to_party}>{entry.ship_to_party}</span>
-                            </div>
-                          </div>
+                            return orderGroups.map((entriesForOrder, groupIdx) => {
+                              const firstEntry = entriesForOrder[0];
+                              const orderRowSpan = entriesForOrder.length;
+                              const currentOrderIdx = globalOrderIdx++;
+                              const isEvenGroup = groupIdx % 2 === 0;
+                              const groupBgClass = isEvenGroup ? "bg-white" : "bg-slate-50/70";
 
-                          <div className="flex-[1.2] min-w-[200px] lg:border-l lg:border-gray-100 lg:pl-5">
-                            <span className="text-[10px] uppercase tracking-wider font-bold text-gray-400 mb-2 block">Shades Breakdown</span>
-                            <div className="flex flex-wrap gap-1.5 mb-2">
-                              {entry.shades && entry.shades.length > 0 ? (
-                                entry.shades.map((shade, idx) => {
-                                  const shadeName = Object.keys(shade)[0];
-                                  const shadeValue = shade[shadeName];
-                                  if (!shadeValue) return null;
-                                  return (
-                                    <span
-                                      key={idx}
-                                      className="bg-gray-50 text-gray-700 border border-gray-200 px-2 py-1 rounded-md text-[11px] font-bold flex items-center gap-1"
-                                    >
-                                      {shadeName}: <span className="text-blue-600">{shadeValue}m</span>
-                                    </span>
-                                  );
-                                })
-                              ) : (
-                                <span className="text-gray-400 text-xs italic">No shades</span>
-                              )}
-                            </div>
-                            {entry.design_remark && (
-                              <div className="text-xs text-gray-500 bg-gray-50 p-1.5 rounded">
-                                <span className="font-semibold text-gray-600">Remark:</span> {entry.design_remark}
-                              </div>
-                            )}
-                          </div>
+                              return entriesForOrder.map((entry, indexWithinOrder) => {
+                                const entryMeters = (entry.shades || []).reduce((acc, s) => {
+                                  const v = Object.values(s)[0];
+                                  return acc + (v ? parseFloat(v) : 0);
+                                }, 0);
 
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="absolute top-3 right-3 text-red-500 hover:text-red-600 hover:bg-red-50 border-red-200 transition-colors shadow-sm"
-                            onClick={() => handleCancelEntry(entry.id, group.bhiwandi_date)}
-                            title="Cancel Entry"
-                          >
-                            <X className="h-4 w-4 mr-1" /> Cancel Entry
-                          </Button>
-                        </div>
-                          ))}
-                        </div>
-                      ))}
+                                const isLastInOrder = indexWithinOrder === orderRowSpan - 1;
+                                const borderBottomClass = isLastInOrder 
+                                  ? "border-b-2 border-slate-800" 
+                                  : "border-b border-slate-200";
+
+                                return (
+                                  <tr 
+                                    key={entry.id} 
+                                    className={`${groupBgClass} hover:bg-amber-50/60 transition-colors ${borderBottomClass}`}
+                                  >
+                                    {indexWithinOrder === 0 && (
+                                      <>
+                                        <td 
+                                          rowSpan={orderRowSpan} 
+                                          className="p-3 text-center font-black text-slate-900 border-r-2 border-slate-700 align-top bg-slate-100/50"
+                                        >
+                                          {currentOrderIdx}
+                                        </td>
+                                        <td 
+                                          rowSpan={orderRowSpan} 
+                                          className="p-3 border-r-2 border-slate-700 align-top bg-slate-100/50"
+                                        >
+                                          <div className="flex flex-col gap-1 sticky top-2">
+                                            <span className="font-black text-indigo-800 text-xs bg-indigo-100 border border-indigo-300 px-2.5 py-0.5 rounded-md w-fit shadow-2xs">
+                                              Order #{firstEntry.order_no}
+                                            </span>
+                                            <span className="font-black text-slate-900 text-base leading-snug">
+                                              {firstEntry.bill_to_party}
+                                            </span>
+                                            {firstEntry.ship_to_party && firstEntry.ship_to_party !== firstEntry.bill_to_party && (
+                                              <span className="text-xs text-slate-600 font-semibold">
+                                                Ship: {firstEntry.ship_to_party}
+                                              </span>
+                                            )}
+                                            {orderRowSpan > 1 && (
+                                              <span className="text-[11px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded w-fit mt-1">
+                                                {orderRowSpan} Designs Clubbed
+                                              </span>
+                                            )}
+                                          </div>
+                                        </td>
+                                      </>
+                                    )}
+
+                                    <td className="p-3 border-r border-slate-300 font-extrabold text-blue-700 text-base">
+                                      {entry.title}
+                                    </td>
+                                    <td className="p-3 text-center border-r border-slate-300">
+                                      {entry.part ? (
+                                        <span className="px-2.5 py-1 bg-amber-500 text-white text-[11px] font-black rounded-md uppercase shadow-xs border border-amber-600">
+                                          PART
+                                        </span>
+                                      ) : (
+                                        <span className="text-slate-400 font-medium">-</span>
+                                      )}
+                                    </td>
+                                    <td className="p-3 border-r border-slate-300">
+                                      <div className="flex flex-wrap gap-2 mb-1.5">
+                                        {getGroupedShades(entry.shades).length > 0 ? (
+                                          getGroupedShades(entry.shades).map((shadeGroup, sIdx) => (
+                                            <div 
+                                              key={sIdx} 
+                                              className="inline-flex flex-col text-center border-2 border-slate-800 rounded-md bg-white overflow-hidden shadow-2xs"
+                                            >
+                                              <div className="bg-slate-100 px-2.5 py-0.5 border-b-2 border-slate-800 text-slate-900 font-black text-xs">
+                                                {shadeGroup.keys.join(" - ")}
+                                              </div>
+                                              <div className="px-2.5 py-0.5 text-blue-700 font-black text-xs bg-white">
+                                                {shadeGroup.meters} mtr
+                                              </div>
+                                            </div>
+                                          ))
+                                        ) : (
+                                          <span className="text-slate-400 text-xs italic">No shades</span>
+                                        )}
+                                      </div>
+                                      <div className="flex items-center justify-between mt-1 text-xs">
+                                        {entry.design_remark ? (
+                                          <span className="text-slate-700 bg-slate-100 px-2 py-0.5 rounded border border-slate-300 italic font-medium">
+                                            <span className="font-bold text-slate-900">Remark:</span> {entry.design_remark}
+                                          </span>
+                                        ) : <span />}
+                                        <span className="font-black text-slate-800 ml-auto">
+                                          Total: {entryMeters.toFixed(2)}m
+                                        </span>
+                                      </div>
+                                    </td>
+                                    <td className="p-3 text-center border-r border-slate-300 font-extrabold text-slate-900 text-base">
+                                      ₹{entry.price}
+                                    </td>
+                                    <td className="p-3 text-center">
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="text-red-600 hover:text-red-700 hover:bg-red-50 border-2 border-red-300 font-bold text-xs h-8 px-2.5 shadow-2xs transition-colors"
+                                        onClick={() => handleCancelEntry(entry.id, group.bhiwandi_date)}
+                                        title="Cancel Entry"
+                                      >
+                                        <X className="h-3.5 w-3.5 mr-1" /> Cancel
+                                      </Button>
+                                    </td>
+                                  </tr>
+                                );
+                              });
+                            });
+                          })()}
+                        </tbody>
+                        <tfoot>
+                          <tr className="bg-slate-900 text-white font-extrabold text-xs">
+                            <td colSpan={4} className="p-3 text-right uppercase tracking-wider border-r border-slate-700">
+                              Grand Total ({entriesCacheByDate[group.bhiwandi_date]?.length || 0} Items):
+                            </td>
+                            <td className="p-3 border-r border-slate-700 font-black text-amber-300 text-sm">
+                              {(entriesCacheByDate[group.bhiwandi_date] || []).reduce((acc, entry) => {
+                                const entrySum = (entry.shades || []).reduce((sAcc, s) => {
+                                  const val = Object.values(s)[0];
+                                  return sAcc + (val ? parseFloat(val) : 0);
+                                }, 0);
+                                return acc + entrySum;
+                              }, 0).toFixed(2)}m Total
+                            </td>
+                            <td colSpan={2} className="p-3 text-center"></td>
+                          </tr>
+                        </tfoot>
+                      </table>
                     </div>
                   )}
                 </AccordionContent>
