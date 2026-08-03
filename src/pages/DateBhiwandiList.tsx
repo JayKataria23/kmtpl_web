@@ -45,6 +45,26 @@ const DateBhiwandiList = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
+  const getBhiwandiDateKey = (dateString: string): string => {
+    const date = new Date(dateString);
+    const formatter = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Kolkata",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    });
+
+    return formatter.format(date);
+  };
+
+  const getNextDateKey = (dateKey: string): string => {
+    const [year, month, day] = dateKey.split("-").map(Number);
+    const date = new Date(Date.UTC(year, month - 1, day));
+    date.setUTCDate(date.getUTCDate() + 1);
+
+    return date.toISOString().split("T")[0];
+  };
+
   const fetchBhiwandiEntries = async () => {
     try {
       const { data, error } = await supabase
@@ -60,7 +80,7 @@ const DateBhiwandiList = () => {
       const groupsMap = new Map<string, DateGroup>();
 
       (data || []).forEach((entry: any) => {
-        const dateStr = entry.bhiwandi_date;
+        const dateStr = getBhiwandiDateKey(entry.bhiwandi_date);
         if (!groupsMap.has(dateStr)) {
           groupsMap.set(dateStr, { bhiwandi_date: dateStr, entries: [], total_entries: 0, total_meters: 0 });
         }
@@ -96,6 +116,7 @@ const DateBhiwandiList = () => {
   const fetchDateEntries = async (dateStr: string) => {
     try {
       setLoadingDates((prev) => ({ ...prev, [dateStr]: true }));
+      const nextDateStr = getNextDateKey(dateStr);
       const { data, error } = await supabase
         .from("design_entries")
         .select(`
@@ -117,7 +138,8 @@ const DateBhiwandiList = () => {
             transport_profiles!orders_transport_id_fkey(name)
           )
         `)
-        .eq("bhiwandi_date", dateStr)
+        .gte("bhiwandi_date", dateStr)
+        .lt("bhiwandi_date", nextDateStr)
         .is("dispatch_date", null)
         .eq("orders.canceled", false);
 
