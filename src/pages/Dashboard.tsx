@@ -40,14 +40,6 @@ const SUMMARY_TABS: { value: SummaryDuration; label: string; days: number }[] = 
   { value: "monthly", label: "Monthly", days: 30 },
 ];
 
-interface SummaryGraphPoint {
-  date: string;
-  orders: number;
-  bhiwandi: number;
-  dispatched: number;
-  cancelled: number;
-}
-
 export default function Dashboard() {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -95,7 +87,6 @@ export default function Dashboard() {
   const [todaysCancelledEntries, setTodaysCancelledEntries] = useState<DesignEntryDetail[]>([]);
   const [todaysCancelledMeters, setTodaysCancelledMeters] = useState(0);
   const [isCancelledCollapsed, setIsCancelledCollapsed] = useState(true);
-  const [summaryGraphData, setSummaryGraphData] = useState<SummaryGraphPoint[]>([]);
 
   // Order preview state
   const [previewOrder, setPreviewOrder] = useState<OrderDetail | null>(null);
@@ -129,15 +120,6 @@ export default function Dashboard() {
       startDateTime: `${startDate.toISOString().split("T")[0]}T00:00:00`,
       endDateTime: `${selectedDateStr}T23:59:59.999`,
     };
-  };
-
-  const getSummaryDateKeys = () => {
-    const { startDateStr } = getSummaryDateRange();
-    return Array.from({ length: selectedSummaryTab.days }, (_, index) => {
-      const d = new Date(`${startDateStr}T00:00:00Z`);
-      d.setUTCDate(d.getUTCDate() + index);
-      return d.toISOString().split("T")[0];
-    });
   };
 
   const fetchGlobalAggregates = async () => {
@@ -183,10 +165,6 @@ export default function Dashboard() {
     setLoadingDate(true);
     try {
       const { startDateStr, endDateStr, startDateTime, endDateTime } = getSummaryDateRange();
-      const graphMap = getSummaryDateKeys().reduce<Record<string, SummaryGraphPoint>>((acc, date) => {
-        acc[date] = { date, orders: 0, bhiwandi: 0, dispatched: 0, cancelled: 0 };
-        return acc;
-      }, {});
 
       // 1. New orders in selected summary range
       const { data: ordersData, error: ordersError } = await supabase
@@ -197,11 +175,7 @@ export default function Dashboard() {
         .eq("canceled", false);
 
       if (ordersError) throw ordersError;
-      const ordersSum = (ordersData || []).reduce((sum, row: any) => {
-        const meters = Number(row.total_meters) || 0;
-        if (graphMap[row.date]) graphMap[row.date].orders += meters;
-        return sum + meters;
-      }, 0);
+      const ordersSum = (ordersData || []).reduce((sum, row: any) => sum + (Number(row.total_meters) || 0), 0);
       setTodaysOrdersMeters(ordersSum);
 
       // 2. Bhiwandi entries on selected date
@@ -213,12 +187,7 @@ export default function Dashboard() {
         .eq("orders.canceled", false);
 
       if (bhiwandiError) throw bhiwandiError;
-      const bhiwandiSum = (bhiwandiData || []).reduce((sum, row: any) => {
-        const meters = sumShadesMeters(row.shades);
-        const dateKey = row.bhiwandi_date?.split("T")[0];
-        if (dateKey && graphMap[dateKey]) graphMap[dateKey].bhiwandi += meters;
-        return sum + meters;
-      }, 0);
+      const bhiwandiSum = (bhiwandiData || []).reduce((sum, row: any) => sum + sumShadesMeters(row.shades), 0);
       setTodaysBhiwandiMeters(bhiwandiSum);
 
       // 3. Dispatched & Cancelled entries on selected date
@@ -234,19 +203,8 @@ export default function Dashboard() {
       const actualDispatched = (dispatchData || []).filter((r: any) => r.remark !== "Entry Cancelled");
       const actualCancelled = (dispatchData || []).filter((r: any) => r.remark === "Entry Cancelled");
 
-      setTodaysDispatchMeters(actualDispatched.reduce((sum, row: any) => {
-        const meters = sumShadesMeters(row.shades);
-        const dateKey = row.dispatch_date?.split("T")[0];
-        if (dateKey && graphMap[dateKey]) graphMap[dateKey].dispatched += meters;
-        return sum + meters;
-      }, 0));
-      setTodaysCancelledMeters(actualCancelled.reduce((sum, row: any) => {
-        const meters = sumShadesMeters(row.shades);
-        const dateKey = row.dispatch_date?.split("T")[0];
-        if (dateKey && graphMap[dateKey]) graphMap[dateKey].cancelled += meters;
-        return sum + meters;
-      }, 0));
-      setSummaryGraphData(Object.values(graphMap));
+      setTodaysDispatchMeters(actualDispatched.reduce((sum, row: any) => sum + sumShadesMeters(row.shades), 0));
+      setTodaysCancelledMeters(actualCancelled.reduce((sum, row: any) => sum + sumShadesMeters(row.shades), 0));
 
     } catch (err: any) {
       console.error("Error fetching date aggregates:", err);
@@ -416,29 +374,6 @@ export default function Dashboard() {
     if (startDateStr === endDateStr) return format(parseISO(endDateStr), "dd MMM yyyy");
     return `${format(parseISO(startDateStr), "dd MMM")} - ${format(parseISO(endDateStr), "dd MMM yyyy")}`;
   })();
-
-  const graphMetrics = [
-    { key: "orders", label: "New Orders", color: "#2563eb" },
-    { key: "bhiwandi", label: "Sent to Bhiwandi", color: "#6366f1" },
-    { key: "dispatched", label: "Dispatched", color: "#10b981" },
-    { key: "cancelled", label: "Cancelled", color: "#ef4444" },
-  ] as const;
-
-  const maxGraphValue = Math.max(
-    1,
-    ...summaryGraphData.flatMap((point) => graphMetrics.map((metric) => point[metric.key]))
-  );
-
-  const getGraphPolyline = (key: (typeof graphMetrics)[number]["key"]) => {
-    if (summaryGraphData.length === 0) return "";
-    return summaryGraphData
-      .map((point, index) => {
-        const x = summaryGraphData.length === 1 ? 50 : (index / (summaryGraphData.length - 1)) * 100;
-        const y = 100 - (point[key] / maxGraphValue) * 85;
-        return `${x},${y}`;
-      })
-      .join(" ");
-  };
 
   return (
     <div className="min-h-screen bg-slate-50/50 pb-12">
@@ -633,55 +568,6 @@ export default function Dashboard() {
               </Button>
             </div>
           </div>
-
-          <Card className="mb-6 border border-slate-100 bg-gradient-to-br from-white to-slate-50 shadow-sm">
-            <CardContent className="p-4 md:p-5">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-                <div>
-                  <h3 className="text-sm font-bold text-slate-800">Metric trend</h3>
-                  <p className="text-xs text-slate-500">Daily movement changes with the selected summary duration.</p>
-                </div>
-                <div className="flex flex-wrap gap-3">
-                  {graphMetrics.map((metric) => (
-                    <span key={metric.key} className="flex items-center gap-1.5 text-xs font-semibold text-slate-600">
-                      <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: metric.color }} />
-                      {metric.label}
-                    </span>
-                  ))}
-                </div>
-              </div>
-              <div className="h-64 w-full rounded-lg border border-slate-100 bg-white p-3">
-                <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="h-full w-full overflow-visible">
-                  {[15, 36.25, 57.5, 78.75, 100].map((y) => (
-                    <line key={y} x1="0" x2="100" y1={y} y2={y} stroke="#e2e8f0" strokeWidth="0.35" />
-                  ))}
-                  {graphMetrics.map((metric) => (
-                    <polyline
-                      key={metric.key}
-                      points={getGraphPolyline(metric.key)}
-                      fill="none"
-                      stroke={metric.color}
-                      strokeWidth="1.8"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      vectorEffect="non-scaling-stroke"
-                    />
-                  ))}
-                  {summaryGraphData.map((point, index) => {
-                    const x = summaryGraphData.length === 1 ? 50 : (index / (summaryGraphData.length - 1)) * 100;
-                    return graphMetrics.map((metric) => {
-                      const y = 100 - (point[metric.key] / maxGraphValue) * 85;
-                      return <circle key={`${point.date}-${metric.key}`} cx={x} cy={y} r="1.2" fill={metric.color} vectorEffect="non-scaling-stroke" />;
-                    });
-                  })}
-                </svg>
-              </div>
-              <div className="mt-3 flex justify-between text-[10px] font-semibold uppercase tracking-wide text-slate-400">
-                <span>{summaryGraphData[0] ? format(parseISO(summaryGraphData[0].date), "dd MMM") : "Start"}</span>
-                <span>{summaryGraphData[summaryGraphData.length - 1] ? format(parseISO(summaryGraphData[summaryGraphData.length - 1].date), "dd MMM") : "End"}</span>
-              </div>
-            </CardContent>
-          </Card>
 
           <div className="space-y-4">
             {/* Section 1: Date Orders */}
