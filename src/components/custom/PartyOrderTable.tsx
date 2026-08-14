@@ -75,6 +75,12 @@ export function PartyOrderTable({
                         Price: {order.price}
                       </>
                     )}
+                    {order.program && (
+                      <>
+                        <br />
+                        Program: {order.program}
+                      </>
+                    )}
                     {order.order_date && (
                       <>
                         <br />
