@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import supabase from "@/utils/supabase";
@@ -20,7 +20,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { X, Printer } from "lucide-react";
+import { X, Printer, Filter, ChevronDown } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -34,6 +34,10 @@ interface DesignCount {
   design: string;
   count: number;
   part: boolean;
+  allProgrammed?: boolean;
+  parties: string[];
+  partyCounts: { [partyName: string]: number };
+  entries: { partyName: string; program?: string }[];
 }
 
 interface OrderDetail {
@@ -87,6 +91,127 @@ function DesignReports() {
   const shareRef = useRef<HTMLDivElement>(null);
   const [shareDesignName, setShareDesignName] = useState<string>("");
 
+  const [selectedParties, setSelectedParties] = useState<string[]>([]);
+  const [partySearchTerm, setPartySearchTerm] = useState<string>("");
+  const [isPartyFilterOpen, setIsPartyFilterOpen] = useState<boolean>(false);
+
+  // Filter designs by current type/prefix filter
+  const typeFilteredDesigns = useMemo(() => {
+    if (filter === "all") {
+      return [...designCounts].sort((a, b) => a.design.localeCompare(b.design));
+    } else if (filter === "regular") {
+      return designCounts
+        .filter(
+          (item) =>
+            !(
+              item.design.includes("-") && /^\d{4}$/.test(item.design.slice(-4))
+            ) &&
+            !(
+              item.design.includes("-") && /^\d{3}$/.test(item.design.slice(-3))
+            ) &&
+            isNaN(Number(item.design))
+        )
+        .sort((a, b) => a.design.localeCompare(b.design));
+    } else if (filter === "Design No.") {
+      return designCounts
+        .filter((item) => !isNaN(Number(item.design)))
+        .sort((a, b) => Number(a.design) - Number(b.design));
+    } else if (filter === "digital") {
+      return designCounts
+        .filter((item) => item.design.includes("D-") || item.design.includes("DDBY-"))
+        .sort((a, b) => {
+          const numA = Number(a.design.split("-").pop());
+          const numB = Number(b.design.split("-").pop());
+          return numA - numB;
+        });
+    } else if (filter === "prefix") {
+      return designCounts
+        .filter((item) => item.design.startsWith(customPrefix))
+        .sort((a, b) => a.design.localeCompare(b.design));
+    } else {
+      return designCounts
+        .filter(
+          (item) =>
+            (item.design.includes("-") &&
+              /^\d{4}$/.test(item.design.slice(-4))) ||
+            (item.design.includes("-") && /^\d{3}$/.test(item.design.slice(-3)))
+        )
+        .sort((a, b) => {
+          const numA = Number(a.design.split("-").pop());
+          const numB = Number(b.design.split("-").pop());
+          return numA - numB;
+        });
+    }
+  }, [designCounts, filter, customPrefix]);
+
+  // Parties available for the currently filtered design entries
+  const availableParties = useMemo(() => {
+    const partySet = new Set<string>();
+    typeFilteredDesigns.forEach((item) => {
+      item.parties.forEach((p) => partySet.add(p));
+    });
+    return Array.from(partySet).sort((a, b) => a.localeCompare(b));
+  }, [typeFilteredDesigns]);
+
+  // Keep selectedParties in sync with availableParties for current filter
+  useEffect(() => {
+    setSelectedParties((prev) => {
+      if (prev.length === 0) return availableParties;
+      const validPrev = prev.filter((p) => availableParties.includes(p));
+      return validPrev.length > 0 ? validPrev : availableParties;
+    });
+  }, [availableParties]);
+
+  const toggleParty = (party: string) => {
+    setSelectedParties((prev) =>
+      prev.includes(party) ? prev.filter((p) => p !== party) : [...prev, party]
+    );
+  };
+
+  const selectAllParties = () => {
+    setSelectedParties([...availableParties]);
+  };
+
+  const deselectAllParties = () => {
+    setSelectedParties([]);
+  };
+
+  const getDesignHighlightState = (item: DesignCount): "blue" | "gray" | "normal" => {
+    const entries = designOrders[item.design]
+      ? designOrders[item.design].map((o) => ({
+          partyName: o.partyName,
+          program: o.program,
+        }))
+      : item.entries || [];
+
+    if (entries.length === 0) return "normal";
+
+    const isProgrammed = (p?: string) =>
+      typeof p === "string" && p.trim() !== "";
+
+    // Rule 1: BLUE if ALL entries are programmed
+    const allProgrammed = entries.every((e) => isProgrammed(e.program));
+    if (allProgrammed) return "blue";
+
+    // Check if there are any unprogrammed entries for a SELECTED party
+    const hasUnprogrammedSelectedParty = entries.some((e) => {
+      const unprogrammed = !isProgrammed(e.program);
+      const isSelected =
+        availableParties.length === 0 ||
+        selectedParties.length === availableParties.length ||
+        selectedParties.includes(e.partyName);
+      return unprogrammed && isSelected;
+    });
+
+    if (hasUnprogrammedSelectedParty) {
+      // Rule 3: NORMAL (white) if at least one selected party is pending program
+      return "normal";
+    }
+
+    // Rule 2: GRAY if all unprogrammed entries belong to UNSELECTED parties
+    return "gray";
+  };
+
   useEffect(() => {
     fetchDesignCounts();
   }, []);
@@ -124,7 +249,10 @@ function DesignReports() {
       while (true) {
         const { data, error } = await supabase
           .from("design_entries")
-          .select(`design, part, orders!inner(canceled)`)
+          .select(`
+            design, part, program,
+            orders!inner(canceled, party_profiles!orders_bill_to_id_fkey(name))
+          `)
           .is("bhiwandi_date", null)
           .is("dispatch_date", null)
           .eq("orders.canceled", false)
@@ -137,21 +265,54 @@ function DesignReports() {
         to += 1000;
       }
 
-      const countsMap = new Map<string, { count: number; part: boolean }>();
+      const countsMap = new Map<
+        string,
+        {
+          count: number;
+          part: boolean;
+          programmedCount: number;
+          parties: Set<string>;
+          partyCounts: { [partyName: string]: number };
+          entries: { partyName: string; program?: string }[];
+        }
+      >();
+      const allPartiesSet = new Set<string>();
+
       allData.forEach((row: any) => {
         const d = row.design;
+        if (!d) return;
+        const partyName = row.orders?.party_profiles?.name || "Unknown Party";
+        allPartiesSet.add(partyName);
+
         if (!countsMap.has(d)) {
-          countsMap.set(d, { count: 0, part: false });
+          countsMap.set(d, {
+            count: 0,
+            part: false,
+            programmedCount: 0,
+            parties: new Set<string>(),
+            partyCounts: {},
+            entries: [],
+          });
         }
         const meta = countsMap.get(d)!;
         meta.count += 1;
         if (row.part) meta.part = true;
+        if (row.program && typeof row.program === "string" && row.program.trim() !== "") {
+          meta.programmedCount += 1;
+        }
+        meta.parties.add(partyName);
+        meta.partyCounts[partyName] = (meta.partyCounts[partyName] || 0) + 1;
+        meta.entries.push({ partyName, program: row.program });
       });
 
       const formattedData: DesignCount[] = Array.from(countsMap.entries()).map(([design, meta]) => ({
         design,
         count: meta.count,
         part: meta.part,
+        allProgrammed: meta.count > 0 && meta.programmedCount === meta.count,
+        parties: Array.from(meta.parties),
+        partyCounts: meta.partyCounts,
+        entries: meta.entries,
       }));
 
       formattedData.sort((a, b) => {
@@ -224,51 +385,7 @@ function DesignReports() {
   };
 
   const filteredDesignCounts = () => {
-    if (filter === "all") {
-      return designCounts.sort((a, b) => a.design.localeCompare(b.design));
-    } else if (filter === "regular") {
-      return designCounts
-        .filter(
-          (item) =>
-            !(
-              item.design.includes("-") && /^\d{4}$/.test(item.design.slice(-4))
-            ) &&
-            !(
-              item.design.includes("-") && /^\d{3}$/.test(item.design.slice(-3))
-            ) &&
-            isNaN(Number(item.design))
-        )
-        .sort((a, b) => a.design.localeCompare(b.design));
-    } else if (filter === "Design No.") {
-      return designCounts
-        .filter((item) => !isNaN(Number(item.design)))
-        .sort((a, b) => Number(a.design) - Number(b.design));
-    } else if (filter === "digital") {
-      return designCounts
-        .filter((item) => item.design.includes("D-") || item.design.includes("DDBY-"))
-        .sort((a, b) => {
-          const numA = Number(a.design.split("-").pop());
-          const numB = Number(b.design.split("-").pop());
-          return numA - numB;
-        });
-    } else if (filter === "prefix") {
-      return designCounts
-        .filter((item) => item.design.startsWith(customPrefix))
-        .sort((a, b) => a.design.localeCompare(b.design));
-    } else {
-      return designCounts
-        .filter(
-          (item) =>
-            (item.design.includes("-") &&
-              /^\d{4}$/.test(item.design.slice(-4))) ||
-            (item.design.includes("-") && /^\d{3}$/.test(item.design.slice(-3)))
-        )
-        .sort((a, b) => {
-          const numA = Number(a.design.split("-").pop());
-          const numB = Number(b.design.split("-").pop());
-          return numA - numB;
-        });
-    }
+    return typeFilteredDesigns;
   };
 
   const handleEditShades = async (order: OrderDetail) => {
@@ -686,7 +803,7 @@ function DesignReports() {
   const areAllEntriesSelectedForDesign = (design: string) => {
     const orders = designOrders[design] || [];
     if (!orders.length) return false;
-    return orders.every(order => selectedEntries.some(e => e.id === order.id));
+    return orders.every((order) => selectedEntries.some((e) => e.id === order.id));
   };
 
   const handleSelectAllForDesign = async (design: string) => {
@@ -709,6 +826,7 @@ function DesignReports() {
           order_date: entry.order_date,
           order_no: entry.order_no,
           design: design,
+          program: entry.program || "",
         }));
         setDesignOrders((prev) => ({ ...prev, [design]: orders }));
       } catch (err) {
@@ -716,13 +834,18 @@ function DesignReports() {
         return;
       }
     }
-    const allSelected = areAllEntriesSelectedForDesign(design);
+
+    const allSelected =
+      orders.length > 0 &&
+      orders.every((order) => selectedEntries.some((e) => e.id === order.id));
+
     if (allSelected) {
-      setSelectedEntries(prev => prev.filter(entry => entry.design !== design));
+      const orderIds = new Set(orders.map((o) => o.id));
+      setSelectedEntries((prev) => prev.filter((entry) => !orderIds.has(entry.id)));
     } else {
-      setSelectedEntries(prev => {
-        const existingIds = new Set(prev.map(e => e.id));
-        const toAdd = (orders || []).filter(order => !existingIds.has(order.id));
+      setSelectedEntries((prev) => {
+        const existingIds = new Set(prev.map((e) => e.id));
+        const toAdd = orders.filter((order) => !existingIds.has(order.id));
         return [...prev, ...toAdd];
       });
     }
@@ -994,6 +1117,97 @@ function DesignReports() {
               Prefix
             </ToggleGroupItem>
           </ToggleGroup>
+
+          {/* Party Filter Multi-Select Dropdown */}
+          <div className="relative inline-block text-left">
+            <Button
+              variant="outline"
+              onClick={() => setIsPartyFilterOpen(!isPartyFilterOpen)}
+              className="flex items-center gap-2 border-blue-200 bg-blue-50/60 hover:bg-blue-100 text-blue-900 font-medium"
+            >
+              <Filter className="w-4 h-4 text-blue-600" />
+              <span>
+                Parties:{" "}
+                {availableParties.length === 0
+                  ? "All"
+                  : selectedParties.length === availableParties.length
+                  ? "All"
+                  : `${selectedParties.length}/${availableParties.length}`}
+              </span>
+              <ChevronDown className="w-4 h-4 text-gray-500" />
+            </Button>
+
+            {isPartyFilterOpen && (
+              <>
+                <div
+                  className="fixed inset-0 z-20"
+                  onClick={() => setIsPartyFilterOpen(false)}
+                />
+                <div className="absolute left-0 mt-2 w-72 sm:w-80 rounded-xl bg-white shadow-xl border border-gray-200 z-30 p-3 flex flex-col gap-2">
+                  <div className="flex items-center justify-between border-b pb-2">
+                    <span className="font-semibold text-sm text-gray-800">Filter by Party</span>
+                    <span className="text-xs text-gray-500 font-medium">
+                      {selectedParties.length} of {availableParties.length} selected
+                    </span>
+                  </div>
+
+                  {availableParties.length > 4 && (
+                    <Input
+                      placeholder="Search party..."
+                      value={partySearchTerm}
+                      onChange={(e) => setPartySearchTerm(e.target.value)}
+                      className="h-8 text-xs"
+                    />
+                  )}
+
+                  <div className="flex items-center justify-between text-xs py-1 border-b">
+                    <button
+                      type="button"
+                      onClick={selectAllParties}
+                      className="text-blue-600 font-medium hover:underline px-1 py-0.5"
+                    >
+                      Select All
+                    </button>
+                    <button
+                      type="button"
+                      onClick={deselectAllParties}
+                      className="text-red-600 font-medium hover:underline px-1 py-0.5"
+                    >
+                      Deselect All
+                    </button>
+                  </div>
+
+                  <div className="max-h-60 overflow-y-auto space-y-1 pr-1">
+                    {availableParties
+                      .filter((p) => p.toLowerCase().includes(partySearchTerm.toLowerCase()))
+                      .map((party) => {
+                        const isChecked = selectedParties.includes(party);
+                        return (
+                          <label
+                            key={party}
+                            className={`flex items-center justify-between px-2 py-1.5 rounded-md text-sm cursor-pointer transition-colors ${
+                              isChecked
+                                ? "bg-blue-50/70 text-blue-900 font-medium"
+                                : "hover:bg-gray-100 text-gray-700"
+                            }`}
+                          >
+                            <div className="flex items-center gap-2 overflow-hidden w-full">
+                              <input
+                                type="checkbox"
+                                checked={isChecked}
+                                onChange={() => toggleParty(party)}
+                                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
+                              />
+                              <span className="truncate flex-1">{party}</span>
+                            </div>
+                          </label>
+                        );
+                      })}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
           {filter === "prefix" && (
             <div className="flex items-center gap-2 mt-2">
               <Input
@@ -1236,41 +1450,94 @@ function DesignReports() {
         value={openAccordionItems}
         onValueChange={setOpenAccordionItems}
       >
-        {filteredDesignCounts().map((item, index) => (
-          <AccordionItem key={index} value={`item-${index}`}>
-            <div className="flex items-center justify-between w-full">
-              <AccordionTrigger
-                className="text-lg flex items-center w-full hover:bg-gray-50"
-                onClick={() => {
-                  if (!designOrders[item.design]) {
-                    fetchOrderDetails(item.design);
+        {filteredDesignCounts().map((item, index) => {
+          const highlightState = getDesignHighlightState(item);
+
+          return (
+            <AccordionItem
+              key={index}
+              value={`item-${index}`}
+              className={`rounded-lg border mb-3 overflow-hidden transition-colors ${
+                highlightState === "gray"
+                  ? "bg-gray-100/90 border-gray-300 opacity-65"
+                  : highlightState === "blue"
+                  ? "bg-blue-50/70 border-blue-200 border-l-4 border-l-blue-600 shadow-xs"
+                  : "bg-white border-gray-200"
+              }`}
+            >
+              <div className="flex items-center justify-between w-full px-3 py-1">
+                <AccordionTrigger
+                  className={`text-lg flex items-center w-full px-2 py-2 hover:no-underline rounded-md transition-colors ${
+                    highlightState === "gray"
+                      ? "bg-gray-100/80 hover:bg-gray-200/50 text-gray-500"
+                      : highlightState === "blue"
+                      ? "hover:bg-blue-100/60"
+                      : "hover:bg-gray-50"
+                  }`}
+                  onClick={() => {
+                    if (!designOrders[item.design]) {
+                      fetchOrderDetails(item.design);
+                    }
+                  }}
+                >
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span
+                      className={`text-left font-semibold ${
+                        highlightState === "gray"
+                          ? "text-gray-500 font-medium"
+                          : highlightState === "blue"
+                          ? "text-blue-900 font-bold"
+                          : "text-gray-900"
+                      }`}
+                    >
+                      {item.design}
+                    </span>
+                    <span
+                      className={`text-xs px-2.5 py-1 rounded-full font-medium ${
+                        highlightState === "gray"
+                          ? "bg-gray-200 text-gray-600 border border-gray-300 font-normal"
+                          : highlightState === "blue"
+                          ? "bg-blue-100 text-blue-800 border border-blue-200 font-bold"
+                          : "bg-gray-100 text-gray-700"
+                      }`}
+                    >
+                      {item.count} order{item.count === 1 ? "" : "s"}
+                    </span>
+                    {highlightState === "gray" && (
+                      <span className="text-[11px] bg-gray-400 text-white font-semibold px-2.5 py-0.5 rounded-full shadow-2xs tracking-wider uppercase">
+                        Unselected Party
+                      </span>
+                    )}
+                    {highlightState === "blue" && (
+                      <span className="text-[11px] bg-blue-600 text-white font-extrabold px-2.5 py-0.5 rounded-full shadow-2xs tracking-wider uppercase">
+                        Programmed
+                      </span>
+                    )}
+                  </div>
+                </AccordionTrigger>
+                <Button
+                  size="sm"
+                  variant={
+                    areAllEntriesSelectedForDesign(item.design)
+                      ? "destructive"
+                      : "outline"
                   }
-                }}
-              >
-                <div className="flex items-center gap-2">
-                  <span className="text-left font-medium">{item.design}</span>
-                  <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
-                    {item.count} orders
-                  </span>
-                </div>
-              </AccordionTrigger>
-              <Button
-                size="sm"
-                variant={areAllEntriesSelectedForDesign(item.design) ? "destructive" : "outline"}
-                className="ml-2 whitespace-nowrap"
-                onClick={async (e) => {
-                  e.stopPropagation();
-                  await handleSelectAllForDesign(item.design);
-                }}
-              >
-                {areAllEntriesSelectedForDesign(item.design) ? "Deselect All" : "Select All"}
-              </Button>
-            </div>
+                  className="ml-2 whitespace-nowrap shrink-0"
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    await handleSelectAllForDesign(item.design);
+                  }}
+                >
+                  {areAllEntriesSelectedForDesign(item.design)
+                    ? "Deselect All"
+                    : "Select All"}
+                </Button>
+              </div>
             <AccordionContent>
               {designOrders[item.design] ? (
                 <div className="overflow-x-auto">
                   <div className="min-w-full divide-y divide-gray-200">
-                    {designOrders[item.design]
+                    {(designOrders[item.design] || [])
                       .sort((a, b) => a.order_no - b.order_no)
                       .sort((a, b) => Number(b.part) - Number(a.part))
                       .map((order, orderIndex) => (
@@ -1279,16 +1546,18 @@ function DesignReports() {
                           className={`p-4 ${
                             orderIndex % 2 === 0 ? "bg-white" : "bg-gray-50"
                           }`}
-                          onTouchStart={e => handleTouchStart(e)}
-                          onTouchEnd={e => handleTouchEnd(e, order)}
+                          onTouchStart={(e) => handleTouchStart(e)}
+                          onTouchEnd={(e) => handleTouchEnd(e, order)}
                         >
                           <div className="flex sm:flex-row gap-4">
                             <div className="flex-1 min-w-0 flex flex-row gap-4">
                               <div className="flex-1">
                                 <div className="flex items-center gap-2 mb-2">
-                                  <h3 className={`text-base font-medium ${
-                                    order.part ? "text-red-500" : ""
-                                  }`}>
+                                  <h3
+                                    className={`text-base font-medium ${
+                                      order.part ? "text-red-500" : ""
+                                    }`}
+                                  >
                                     {order.partyName}
                                   </h3>
                                   {order.part && (
@@ -1378,8 +1647,9 @@ function DesignReports() {
               )}
             </AccordionContent>
           </AccordionItem>
-        ))}
-      </Accordion>
+        );
+      })}
+    </Accordion>
 
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
