@@ -103,13 +103,52 @@ export default function Dashboard() {
     }, 0);
   };
 
-  const changeDate = (days: number) => {
+  const changeDate = (step: number) => {
+    if (summaryDuration === "monthly") {
+      const [yearStr, monthStr] = selectedDateStr.split("-");
+      let year = parseInt(yearStr, 10);
+      let month = parseInt(monthStr, 10) + step;
+
+      while (month > 12) {
+        month -= 12;
+        year += 1;
+      }
+      while (month < 1) {
+        month += 12;
+        year -= 1;
+      }
+
+      setSelectedDateStr(`${year}-${String(month).padStart(2, "0")}-01`);
+      return;
+    }
+
+    let daysToShift = step;
+    if (summaryDuration === "weekly") daysToShift = step * 7;
+    if (summaryDuration === "15days") daysToShift = step * 15;
+
     const d = new Date(`${selectedDateStr}T00:00:00Z`);
-    d.setUTCDate(d.getUTCDate() + days);
+    d.setUTCDate(d.getUTCDate() + daysToShift);
     setSelectedDateStr(d.toISOString().split("T")[0]);
   };
 
   const getSummaryDateRange = () => {
+    if (summaryDuration === "monthly") {
+      const [yearStr, monthStr] = selectedDateStr.split("-");
+      const year = parseInt(yearStr, 10);
+      const month = parseInt(monthStr, 10);
+
+      const startDateStr = `${year}-${String(month).padStart(2, "0")}-01`;
+      const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
+      const endDateStr = `${year}-${String(month).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+
+      return {
+        startDateStr,
+        endDateStr,
+        startDateTime: `${startDateStr}T00:00:00`,
+        endDateTime: `${endDateStr}T23:59:59.999`,
+      };
+    }
+
     const endDate = new Date(`${selectedDateStr}T00:00:00Z`);
     const startDate = new Date(endDate);
     startDate.setUTCDate(endDate.getUTCDate() - selectedSummaryTab.days + 1);
@@ -372,7 +411,21 @@ export default function Dashboard() {
   const summaryRangeLabel = (() => {
     const { startDateStr, endDateStr } = getSummaryDateRange();
     if (startDateStr === endDateStr) return format(parseISO(endDateStr), "dd MMM yyyy");
-    return `${format(parseISO(startDateStr), "dd MMM")} - ${format(parseISO(endDateStr), "dd MMM yyyy")}`;
+
+    const startObj = parseISO(startDateStr);
+    const endObj = parseISO(endDateStr);
+    if (startObj.getFullYear() === endObj.getFullYear()) {
+      return `${format(startObj, "dd MMM")} - ${format(endObj, "dd MMM yyyy")}`;
+    }
+    return `${format(startObj, "dd MMM yyyy")} - ${format(endObj, "dd MMM yyyy")}`;
+  })();
+
+  const pickerLabel = (() => {
+    if (summaryDuration === "monthly") {
+      const { startDateStr } = getSummaryDateRange();
+      return format(parseISO(startDateStr), "MMMM yyyy");
+    }
+    return isToday ? "Today" : format(parseISO(selectedDateStr), "dd MMM yyyy");
   })();
 
   return (
@@ -561,7 +614,7 @@ export default function Dashboard() {
                 <ChevronLeft className="h-4 w-4 text-slate-600" />
               </Button>
               <div className="px-4 text-sm font-bold text-slate-700 min-w-[140px] text-center">
-                {isToday ? "Today" : format(parseISO(selectedDateStr), "dd MMM yyyy")}
+                {pickerLabel}
               </div>
               <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-white hover:shadow-sm" onClick={() => changeDate(1)}>
                 <ChevronRight className="h-4 w-4 text-slate-600" />
