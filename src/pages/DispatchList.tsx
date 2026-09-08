@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/accordion";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Toaster } from "@/components/ui";
-import { Printer, X, Loader2, RefreshCw } from "lucide-react";
+import { Printer, X, Loader2, RefreshCw, Users, Calendar } from "lucide-react";
 
 interface DesignSummary {
   design: string;
@@ -30,6 +30,7 @@ interface DesignEntry {
   id: number;
   design: string;
   party_name: string;
+  party_id?: number;
   shades: { [key: string]: string }[];
   order_remark: string;
   price: string;
@@ -47,7 +48,7 @@ function DispatchList() {
   const [designCounts, setDesignCounts] = useState<DesignSummary[]>([]);
   const [loadingDesignsList, setLoadingDesignsList] = useState<boolean>(true);
 
-  // Level 2: Map of Design Name -> List of Party Summaries
+  // Level 2 (Party Wise): Map of Design Name -> List of Party Summaries
   const [partiesCacheByDesign, setPartiesCacheByDesign] = useState<
     Record<string, PartySummaryForDesign[]>
   >({});
@@ -55,13 +56,24 @@ function DispatchList() {
     Record<string, boolean>
   >({});
 
-  // Level 3: Map of `${designName}_${partyId}` -> List of Detailed Entries
+  // Level 3 (Party Wise): Map of `${designName}_${partyId}` -> List of Detailed Entries
   const [entriesCacheByDesignParty, setEntriesCacheByDesignParty] = useState<
     Record<string, DesignEntry[]>
   >({});
   const [loadingEntriesForDesignParty, setLoadingEntriesForDesignParty] = useState<
     Record<string, boolean>
   >({});
+
+  // Date Wise View Cache: Map of `designName` -> List of All Entries sorted by dispatch date
+  const [entriesCacheByDesign, setEntriesCacheByDesign] = useState<
+    Record<string, DesignEntry[]>
+  >({});
+  const [loadingEntriesForDesign, setLoadingEntriesForDesign] = useState<
+    Record<string, boolean>
+  >({});
+
+  // View switch state: "party" (Party Wise) | "date" (Date Wise)
+  const [viewType, setViewType] = useState<"party" | "date">("party");
 
   // UI state
   const [filter, setFilter] = useState<string>("all");
@@ -274,6 +286,7 @@ function DispatchList() {
           id: row.id,
           design: row.design,
           party_name: row.orders?.party_profiles?.name || "Unknown Party",
+          party_id: row.orders?.bill_to_id || partyId,
           shades: row.shades || [],
           order_remark: row.orders?.remark || row.remark || "",
           price: row.price?.toString() || "0",
@@ -306,6 +319,109 @@ function DispatchList() {
     },
     [toast]
   );
+
+  // DATE-WISE: Fetch All Entries within a Design sorted by dispatch_date DESC
+  const fetchEntriesForDesign = useCallback(
+    async (designName: string) => {
+      setLoadingEntriesForDesign((prev) => ({ ...prev, [designName]: true }));
+      try {
+        let allData: any[] = [];
+        let from = 0;
+
+        while (true) {
+          const { data, error } = await supabase
+            .from("design_entries")
+            .select(`
+              id,
+              price,
+              remark,
+              shades,
+              dispatch_date,
+              bhiwandi_date,
+              part,
+              design,
+              orders!inner(
+                order_no,
+                date,
+                remark,
+                bill_to_id,
+                party_profiles!orders_bill_to_id_fkey(name)
+              )
+            `)
+            .eq("design", designName)
+            .not("dispatch_date", "is", null)
+            .order("dispatch_date", { ascending: false })
+            .order("id", { ascending: false })
+            .range(from, from + BATCH_SIZE - 1);
+
+          if (error) throw error;
+          if (!data || data.length === 0) break;
+          allData.push(...data);
+          if (data.length < BATCH_SIZE) break;
+          from += BATCH_SIZE;
+        }
+
+        const entries: DesignEntry[] = allData.map((row: any) => ({
+          id: row.id,
+          design: row.design,
+          party_name: row.orders?.party_profiles?.name || "Unknown Party",
+          party_id: row.orders?.bill_to_id || 0,
+          shades: row.shades || [],
+          order_remark: row.orders?.remark || row.remark || "",
+          price: row.price?.toString() || "0",
+          dispatch_date: row.dispatch_date,
+          order_no: row.orders?.order_no || 0,
+          part: row.part || false,
+          bhiwandi_date: row.bhiwandi_date,
+          order_date: row.orders?.date,
+        }));
+
+        setEntriesCacheByDesign((prev) => ({
+          ...prev,
+          [designName]: entries,
+        }));
+        return entries;
+      } catch (error) {
+        console.error("Error fetching date-wise design entries:", error);
+        toast({
+          title: "Error",
+          description: `Failed to fetch dispatch entries for design ${designName}.`,
+          variant: "destructive",
+        });
+        return [];
+      } finally {
+        setLoadingEntriesForDesign((prev) => ({
+          ...prev,
+          [designName]: false,
+        }));
+      }
+    },
+    [toast]
+  );
+
+  const handleViewTypeChange = (newViewType: "party" | "date") => {
+    setViewType(newViewType);
+    if (openDesignAccordion) {
+      const designName = openDesignAccordion.replace("design-", "");
+      if (designName) {
+        if (newViewType === "party") {
+          if (
+            !partiesCacheByDesign[designName] &&
+            !loadingPartiesForDesign[designName]
+          ) {
+            fetchPartiesForDesign(designName);
+          }
+        } else {
+          if (
+            !entriesCacheByDesign[designName] &&
+            !loadingEntriesForDesign[designName]
+          ) {
+            fetchEntriesForDesign(designName);
+          }
+        }
+      }
+    }
+  };
 
   useEffect(() => {
     fetchDesignCountsList();
@@ -376,10 +492,16 @@ function DispatchList() {
     const cacheKey = `${designName}_${partyId}`;
 
     try {
-      // Optimistic update Level 3 cache
+      // Optimistic update Level 3 Party-Wise cache
       setEntriesCacheByDesignParty((prev) => {
         const current = prev[cacheKey] || [];
         return { ...prev, [cacheKey]: current.filter((e) => e.id !== id) };
+      });
+
+      // Optimistic update Date-Wise cache
+      setEntriesCacheByDesign((prev) => {
+        const current = prev[designName] || [];
+        return { ...prev, [designName]: current.filter((e) => e.id !== id) };
       });
 
       // Optimistic update Level 2 cache
@@ -427,10 +549,12 @@ function DispatchList() {
         variant: "destructive",
       });
       // Rollback by refetching
-      fetchEntriesForDesignAndParty(designName, partyId);
+      if (partyId) fetchEntriesForDesignAndParty(designName, partyId);
+      fetchEntriesForDesign(designName);
       fetchPartiesForDesign(designName);
     }
   };
+
 
   // Print helper for Design dispatch report
   const handlePrintDesign = async (designName: string) => {
@@ -641,6 +765,33 @@ function DispatchList() {
         </Button>
       </div>
 
+      {/* View Mode Switch (Party Wise vs Date Wise) */}
+      <div className="flex items-center justify-between gap-4 mb-4 bg-gray-100 p-1.5 rounded-lg border border-gray-200">
+        <span className="text-xs font-bold text-gray-700 uppercase tracking-wider pl-2">
+          View Mode:
+        </span>
+        <div className="flex items-center gap-1">
+          <Button
+            size="sm"
+            variant={viewType === "party" ? "default" : "outline"}
+            onClick={() => handleViewTypeChange("party")}
+            className="text-xs h-8 gap-1.5 font-semibold"
+          >
+            <Users className="h-3.5 w-3.5" />
+            Party Wise
+          </Button>
+          <Button
+            size="sm"
+            variant={viewType === "date" ? "default" : "outline"}
+            onClick={() => handleViewTypeChange("date")}
+            className="text-xs h-8 gap-1.5 font-semibold"
+          >
+            <Calendar className="h-3.5 w-3.5" />
+            Date Wise
+          </Button>
+        </div>
+      </div>
+
       {/* Filter Toggle Group */}
       <div className="flex flex-wrap gap-2 mb-4 justify-center">
         <ToggleGroup
@@ -693,13 +844,24 @@ function DispatchList() {
               setOpenDesignAccordion(val);
               if (val) {
                 const designName = val.replace("design-", "");
-                if (
-                  designName &&
-                  !partiesCacheByDesign[designName] &&
-                  !loadingPartiesForDesign[designName]
-                ) {
-                  // LEVEL 2: Trigger fetching parties for this design on click
-                  fetchPartiesForDesign(designName);
+                if (designName) {
+                  if (viewType === "party") {
+                    if (
+                      !partiesCacheByDesign[designName] &&
+                      !loadingPartiesForDesign[designName]
+                    ) {
+                      // LEVEL 2: Trigger fetching parties for this design on click
+                      fetchPartiesForDesign(designName);
+                    }
+                  } else {
+                    if (
+                      !entriesCacheByDesign[designName] &&
+                      !loadingEntriesForDesign[designName]
+                    ) {
+                      // DATE-WISE: Trigger fetching date-wise entries for this design on click
+                      fetchEntriesForDesign(designName);
+                    }
+                  }
                 }
               }
             }}
@@ -747,12 +909,156 @@ function DispatchList() {
                   </div>
 
                   <AccordionContent className="px-4 pb-4 pt-2 border-t bg-gray-50/50">
-                    {loadingPartiesForDesign[item.design] ? (
+                    {viewType === "date" ? (
+                      loadingEntriesForDesign[item.design] ? (
+                        <div className="flex items-center justify-center py-6 text-gray-500 gap-2 text-sm">
+                          <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+                          <span>
+                            Loading dispatch entries for design {item.design}...
+                          </span>
+                        </div>
+                      ) : (entriesCacheByDesign[item.design] || []).length ===
+                        0 ? (
+                        <div className="text-center text-gray-400 py-4 text-sm">
+                          No dispatch entries found for this design.
+                        </div>
+                      ) : (
+                        <div className="space-y-3 mt-2">
+                          {(entriesCacheByDesign[item.design] || []).map(
+                            (entry) => (
+                              <div
+                                key={entry.id}
+                                className="flex flex-col lg:flex-row gap-4 p-4 border border-gray-200 rounded-xl bg-white shadow-xs hover:shadow-sm transition-shadow relative pr-12"
+                              >
+                                {/* Column 1: Core Details */}
+                                <div className="flex-1 min-w-[200px]">
+                                  <div className="flex flex-col gap-2">
+                                    <div className="flex items-start justify-between gap-2">
+                                      <h3 className="font-bold text-gray-900 leading-tight text-base">
+                                        {entry.party_name}
+                                      </h3>
+                                      {entry.part && (
+                                        <span className="shrink-0 px-2 py-0.5 bg-amber-100 text-amber-800 text-[10px] font-bold rounded border border-amber-200 uppercase tracking-wider">
+                                          Part Order
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div className="flex items-center gap-3 text-sm">
+                                      <span className="font-bold text-blue-700 bg-blue-50 px-2.5 py-1 rounded-md border border-blue-100">
+                                        Order #{entry.order_no}
+                                      </span>
+                                      <span className="font-semibold text-gray-700 bg-gray-50 px-2.5 py-1 rounded-md border border-gray-100">
+                                        ₹{entry.price}/m
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {/* Column 2: Dates */}
+                                <div className="flex-[0.8] min-w-[180px] flex flex-col justify-center gap-1.5 text-xs text-gray-600 lg:border-l lg:border-gray-100 lg:pl-5">
+                                  <div className="flex items-center justify-between">
+                                    <span className="font-medium text-gray-400 uppercase tracking-wider text-[10px]">
+                                      Order Date
+                                    </span>
+                                    <span className="font-semibold text-gray-800">
+                                      {entry.order_date
+                                        ? formatDate(entry.order_date)
+                                        : "-"}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center justify-between">
+                                    <span className="font-medium text-gray-400 uppercase tracking-wider text-[10px]">
+                                      Bhiwandi Date
+                                    </span>
+                                    <span className="font-semibold text-gray-800">
+                                      {entry.bhiwandi_date
+                                        ? formatDate(entry.bhiwandi_date)
+                                        : "-"}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center justify-between">
+                                    <span className="font-medium text-gray-400 uppercase tracking-wider text-[10px]">
+                                      Dispatch Date
+                                    </span>
+                                    <span className="font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">
+                                      {entry.dispatch_date
+                                        ? formatDate(entry.dispatch_date)
+                                        : "-"}
+                                    </span>
+                                  </div>
+                                </div>
+
+                                {/* Column 3: Shades Breakdown */}
+                                <div className="flex-[1.2] min-w-[200px] lg:border-l lg:border-gray-100 lg:pl-5">
+                                  <span className="text-[10px] uppercase tracking-wider font-bold text-gray-400 mb-2 block">
+                                    Shades Breakdown
+                                  </span>
+                                  <div className="flex flex-wrap gap-1.5 mb-2">
+                                    {entry.shades &&
+                                    entry.shades.length > 0 ? (
+                                      entry.shades.map((shade, idx) => {
+                                        const shadeName =
+                                          Object.keys(shade)[0];
+                                        const shadeValue = shade[shadeName];
+                                        if (!shadeValue) return null;
+                                        return (
+                                          <span
+                                            key={idx}
+                                            className="bg-gray-50 text-gray-700 border border-gray-200 px-2 py-1 rounded-md text-[11px] font-bold flex items-center gap-1"
+                                          >
+                                            {shadeName}:{" "}
+                                            <span className="text-blue-600">
+                                              {shadeValue}m
+                                            </span>
+                                          </span>
+                                        );
+                                      })
+                                    ) : (
+                                      <span className="text-gray-400 text-xs italic">
+                                        No shades
+                                      </span>
+                                    )}
+                                  </div>
+                                  {entry.order_remark && (
+                                    <div className="text-xs text-gray-500 bg-gray-50 p-1.5 rounded">
+                                      <span className="font-semibold text-gray-600">
+                                        Remark:
+                                      </span>{" "}
+                                      {entry.order_remark}
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* Action button: Remove */}
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="absolute top-3 right-3 h-8 w-8 rounded-full text-red-500 hover:text-red-600 hover:bg-red-50 transition-colors"
+                                  onClick={() =>
+                                    handleRemoveDispatchDate(
+                                      entry.id,
+                                      item.design,
+                                      entry.party_id || 0
+                                    )
+                                  }
+                                  title="Remove from Dispatch"
+                                >
+                                  <X className="h-5 w-5" />
+                                </Button>
+                              </div>
+                            )
+                          )}
+                        </div>
+                      )
+                    ) : loadingPartiesForDesign[item.design] ? (
                       <div className="flex items-center justify-center py-6 text-gray-500 gap-2 text-sm">
                         <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
-                        <span>Loading parties for design {item.design}...</span>
+                        <span>
+                          Loading parties for design {item.design}...
+                        </span>
                       </div>
-                    ) : (partiesCacheByDesign[item.design] || []).length === 0 ? (
+                    ) : (partiesCacheByDesign[item.design] || []).length ===
+                      0 ? (
                       <div className="text-center text-gray-400 py-4 text-sm">
                         No parties found for this design.
                       </div>
@@ -770,14 +1076,19 @@ function DispatchList() {
                             [item.design]: val,
                           }));
                           if (val) {
-                            const partyId = Number(val.replace("party-", ""));
+                            const partyId = Number(
+                              val.replace("party-", "")
+                            );
                             const cacheKey = `${item.design}_${partyId}`;
                             if (
                               !entriesCacheByDesignParty[cacheKey] &&
                               !loadingEntriesForDesignParty[cacheKey]
                             ) {
                               // LEVEL 3: Trigger fetching entry details for this design & party on click
-                              fetchEntriesForDesignAndParty(item.design, partyId);
+                              fetchEntriesForDesignAndParty(
+                                item.design,
+                                partyId
+                              );
                             }
                           }
                         }}
@@ -804,7 +1115,8 @@ function DispatchList() {
                                   </div>
                                   <div className="flex items-center gap-3 text-xs text-gray-500 mr-2">
                                     <span className="bg-emerald-50 text-emerald-700 font-semibold px-2 py-0.5 rounded border border-emerald-100">
-                                      {partySummary.total_meters.toFixed(1)}m total
+                                      {partySummary.total_meters.toFixed(1)}m
+                                      total
                                     </span>
                                     <span className="text-gray-400">
                                       {partySummary.entry_count} item
@@ -820,7 +1132,8 @@ function DispatchList() {
                                     <div className="flex items-center justify-center py-6 text-gray-500 gap-2 text-sm">
                                       <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
                                       <span>
-                                        Loading dispatches for {partySummary.party_name}...
+                                        Loading dispatches for{" "}
+                                        {partySummary.party_name}...
                                       </span>
                                     </div>
                                   ) : partyEntries.length === 0 ? (
