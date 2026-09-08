@@ -155,12 +155,15 @@ const PartyDispatchList = () => {
               design,
               price,
               shades,
+              dispatch_date,
               orders!inner(
                 bill_to_id
               )
             `)
             .not("dispatch_date", "is", null)
             .eq("orders.bill_to_id", partyId)
+            .order("dispatch_date", { ascending: false })
+            .order("id", { ascending: false })
             .range(from, from + BATCH_SIZE - 1);
 
           if (error) throw error;
@@ -170,19 +173,38 @@ const PartyDispatchList = () => {
           from += BATCH_SIZE;
         }
 
-        const designsMap = new Map<string, DesignSummary>();
+        const designsMap = new Map<
+          string,
+          DesignSummary & { latestDispatchDate: string; latestId: number }
+        >();
 
         allData.forEach((row: any) => {
           const dName = row.design;
           if (!dName) return;
 
+          const rowDate = row.dispatch_date || "";
+          const rowId = row.id || 0;
+          const rowPrice = row.price?.toString() || "0";
+
           if (!designsMap.has(dName)) {
             designsMap.set(dName, {
               design: dName,
-              price: row.price?.toString() || "0",
+              price: rowPrice,
               total_meters: 0,
               entry_count: 0,
+              latestDispatchDate: rowDate,
+              latestId: rowId,
             });
+          } else {
+            const group = designsMap.get(dName)!;
+            if (
+              rowDate > group.latestDispatchDate ||
+              (rowDate === group.latestDispatchDate && rowId > group.latestId)
+            ) {
+              group.price = rowPrice;
+              group.latestDispatchDate = rowDate;
+              group.latestId = rowId;
+            }
           }
 
           const group = designsMap.get(dName)!;
@@ -197,9 +219,9 @@ const PartyDispatchList = () => {
           group.total_meters += entryMeters;
         });
 
-        const grouped = Array.from(designsMap.values()).sort((a, b) =>
-          a.design.localeCompare(b.design)
-        );
+        const grouped: DesignSummary[] = Array.from(designsMap.values())
+          .map(({ latestDispatchDate, latestId, ...rest }) => rest)
+          .sort((a, b) => a.design.localeCompare(b.design));
 
         setDesignsCacheByParty((prev) => ({ ...prev, [partyId]: grouped }));
         return grouped;
@@ -253,6 +275,7 @@ const PartyDispatchList = () => {
             .eq("orders.bill_to_id", partyId)
             .eq("design", designName)
             .order("dispatch_date", { ascending: false })
+            .order("id", { ascending: false })
             .range(from, from + BATCH_SIZE - 1);
 
           if (error) throw error;
@@ -282,6 +305,22 @@ const PartyDispatchList = () => {
           ...prev,
           [cacheKey]: entries,
         }));
+
+        // Update Level 2 design summary price with latest entry's price
+        if (entries.length > 0) {
+          const latestPrice = entries[0].price;
+          setDesignsCacheByParty((prev) => {
+            const currentDesigns = prev[partyId];
+            if (!currentDesigns) return prev;
+            return {
+              ...prev,
+              [partyId]: currentDesigns.map((d) =>
+                d.design === designName ? { ...d, price: latestPrice } : d
+              ),
+            };
+          });
+        }
+
         return entries;
       } catch (error) {
         toast({
@@ -331,9 +370,25 @@ const PartyDispatchList = () => {
       // Optimistic update for Level 3 cache
       setEntriesCacheByPartyDesign((prev) => {
         const currentEntries = prev[cacheKey] || [];
+        const updatedEntries = currentEntries.filter((e) => e.id !== id);
+
+        // Also update design price in Level 2 cache if remaining entries exist
+        if (updatedEntries.length > 0) {
+          const newLatestPrice = updatedEntries[0].price;
+          setDesignsCacheByParty((prevDesigns) => {
+            const currentDesigns = prevDesigns[partyId] || [];
+            return {
+              ...prevDesigns,
+              [partyId]: currentDesigns.map((d) =>
+                d.design === designName ? { ...d, price: newLatestPrice } : d
+              ),
+            };
+          });
+        }
+
         return {
           ...prev,
-          [cacheKey]: currentEntries.filter((e) => e.id !== id),
+          [cacheKey]: updatedEntries,
         };
       });
 
@@ -418,9 +473,11 @@ const PartyDispatchList = () => {
         if (!entries) {
           entries = await fetchEntriesForDesign(party.party_id, d.design);
         }
+        const latestPrice =
+          entries && entries.length > 0 ? entries[0].price : d.price;
         designsWithEntries.push({
           design: d.design,
-          price: d.price,
+          price: latestPrice,
           entries: entries || [],
         });
       }
