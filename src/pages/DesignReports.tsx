@@ -153,6 +153,43 @@ function DesignReports() {
     return Array.from(partySet).sort((a, b) => a.localeCompare(b));
   }, [typeFilteredDesigns]);
 
+  // Set of party names where all designs/entries for that party are programmed
+  const programmedParties = useMemo(() => {
+    const partyTotalMap = new Map<string, number>();
+    const partyProgrammedMap = new Map<string, number>();
+
+    typeFilteredDesigns.forEach((item) => {
+      const entries = designOrders[item.design]
+        ? designOrders[item.design].map((o) => ({
+            partyName: o.partyName,
+            program: o.program,
+          }))
+        : item.entries || [];
+
+      entries.forEach((e) => {
+        if (!e.partyName) return;
+        const currentTotal = partyTotalMap.get(e.partyName) || 0;
+        partyTotalMap.set(e.partyName, currentTotal + 1);
+
+        const isProg = typeof e.program === "string" && e.program.trim() !== "";
+        if (isProg) {
+          const currentProg = partyProgrammedMap.get(e.partyName) || 0;
+          partyProgrammedMap.set(e.partyName, currentProg + 1);
+        }
+      });
+    });
+
+    const setOfAllProgrammedParties = new Set<string>();
+    partyTotalMap.forEach((totalCount, partyName) => {
+      const progCount = partyProgrammedMap.get(partyName) || 0;
+      if (totalCount > 0 && progCount === totalCount) {
+        setOfAllProgrammedParties.add(partyName);
+      }
+    });
+
+    return setOfAllProgrammedParties;
+  }, [typeFilteredDesigns, designOrders]);
+
   // Keep selectedParties in sync with availableParties for current filter
   useEffect(() => {
     setSelectedParties((prev) => {
@@ -1182,11 +1219,16 @@ function DesignReports() {
                       .filter((p) => p.toLowerCase().includes(partySearchTerm.toLowerCase()))
                       .map((party) => {
                         const isChecked = selectedParties.includes(party);
+                        const isAllProgrammed = programmedParties.has(party);
                         return (
                           <label
                             key={party}
                             className={`flex items-center justify-between px-2 py-1.5 rounded-md text-sm cursor-pointer transition-colors ${
-                              isChecked
+                              isAllProgrammed
+                                ? isChecked
+                                  ? "bg-green-50 border border-green-200 text-green-700 font-semibold"
+                                  : "hover:bg-green-50/60 text-green-600 font-semibold"
+                                : isChecked
                                 ? "bg-blue-50/70 text-blue-900 font-medium"
                                 : "hover:bg-gray-100 text-gray-700"
                             }`}
@@ -1196,9 +1238,23 @@ function DesignReports() {
                                 type="checkbox"
                                 checked={isChecked}
                                 onChange={() => toggleParty(party)}
-                                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
+                                className={`rounded border-gray-300 w-4 h-4 cursor-pointer ${
+                                  isAllProgrammed
+                                    ? "text-green-600 focus:ring-green-500 accent-green-600"
+                                    : "text-blue-600 focus:ring-blue-500"
+                                }`}
                               />
-                              <span className="truncate flex-1">{party}</span>
+                              <span
+                                className={`truncate flex-1 ${
+                                  isAllProgrammed
+                                    ? isChecked
+                                      ? "text-green-700 font-bold"
+                                      : "text-green-600 font-semibold"
+                                    : ""
+                                }`}
+                              >
+                                {party}
+                              </span>
                             </div>
                           </label>
                         );
