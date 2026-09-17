@@ -25,6 +25,7 @@ export default function HomePage() {
         { path: "/bhiwandi-list", label: "Bhiwandi List" },
         { path: "/bhiwandi-designs", label: "Bhiwandi Designs" },
         { path: "/date-bhiwandi-list", label: "Date Bhiwandi List" },
+        { path: "/date-wise-pending-orders", label: "Date Wise Pending Orders" },
       ],
     },
     {

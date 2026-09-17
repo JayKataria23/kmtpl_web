@@ -36,6 +36,7 @@ import BhiwandiDesigns from "./pages/BhiwandiDesigns";
 import Outstanding from "./pages/Outstanding";
 import TransportChallanUpload from "./pages/TransportChallanUpload";
 import OutstandingMonthWise from "./pages/OutstandingMonthWise";
+import DateWisePendingOrders from "./pages/DateWisePendingOrders";
 
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
@@ -173,6 +174,14 @@ createRoot(document.getElementById("root")!).render(
             element={
               <ProtectedRoute>
                 <DateBhiwandiList />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/date-wise-pending-orders"
+            element={
+              <ProtectedRoute>
+                <DateWisePendingOrders />
               </ProtectedRoute>
             }
           />
