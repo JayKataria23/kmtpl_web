@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Toaster } from "@/components/ui";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
   Accordion,
   AccordionContent,
@@ -16,6 +17,13 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import supabase from "@/utils/supabase";
@@ -63,6 +71,11 @@ export default function DateWisePendingOrders() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [isBhiwandiDrawerOpen, setIsBhiwandiDrawerOpen] = useState(false);
+  const [filter, setFilter] = useState("all");
+  const [openMonth, setOpenMonth] = useState("");
+  const [programEntry, setProgramEntry] = useState<PendingOrderEntry | null>(null);
+  const [programInput, setProgramInput] = useState("");
+  const [savingProgram, setSavingProgram] = useState(false);
 
   const fetchEntries = useCallback(async () => {
     setLoading(true);
@@ -135,6 +148,24 @@ export default function DateWisePendingOrders() {
     return [...byMonth.entries()].sort(([a], [b]) => a.localeCompare(b));
   }, [entries]);
 
+  const filteredGroups = useMemo(() => {
+    const matchesFilter = (design: string) => {
+      const isNumeric = !isNaN(Number(design));
+      const isDigital = design.includes("D-") || design.includes("DDBY-");
+      const isPrint = (design.includes("-") && /^\d{3,4}$/.test(design.split("-").pop() || ""));
+
+      if (filter === "regular") return !isNumeric && !isDigital && !isPrint;
+      if (filter === "print") return isPrint;
+      if (filter === "digital") return isDigital;
+      if (filter === "designs") return isNumeric;
+      return true;
+    };
+
+    return groups
+      .map(([key, monthEntries]) => [key, monthEntries.filter((entry) => matchesFilter(entry.design))] as const)
+      .filter(([, monthEntries]) => monthEntries.length > 0);
+  }, [filter, groups]);
+
   const toggleEntry = (entry: PendingOrderEntry) => {
     setSelectedEntries((current) =>
       current.some((item) => item.id === entry.id)
@@ -178,6 +209,36 @@ export default function DateWisePendingOrders() {
       toast({ title: "Error", description: `Failed to send entries to Bhiwandi: ${error instanceof Error ? error.message : "Unknown error"}`, variant: "destructive" });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const openProgramDialog = (entry: PendingOrderEntry) => {
+    setProgramEntry(entry);
+    setProgramInput(entry.program);
+  };
+
+  const saveProgram = async () => {
+    if (!programEntry) return;
+    setSavingProgram(true);
+    try {
+      const { error } = await supabase
+        .from("design_entries")
+        .update({ program: programInput })
+        .eq("id", programEntry.id);
+      if (error) throw error;
+      setEntries((current) => current.map((entry) =>
+        entry.id === programEntry.id ? { ...entry, program: programInput } : entry
+      ));
+      toast({ title: "Success", description: "Program updated." });
+      setProgramEntry(null);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: `Failed to update program: ${error instanceof Error ? error.message : "Unknown error"}`,
+        variant: "destructive",
+      });
+    } finally {
+      setSavingProgram(false);
     }
   };
 
@@ -241,15 +302,62 @@ export default function DateWisePendingOrders() {
             </SheetContent>
           </Sheet>
         </div>
+        <ToggleGroup
+          variant="outline"
+          type="single"
+          value={filter}
+          onValueChange={(value) => {
+            if (value) setFilter(value);
+            setOpenMonth("");
+          }}
+          className="mt-2 flex w-full flex-wrap justify-start"
+        >
+          <ToggleGroupItem value="all" aria-label="Show all designs">ALL</ToggleGroupItem>
+          <ToggleGroupItem value="regular" aria-label="Show regular designs">REGULAR</ToggleGroupItem>
+          <ToggleGroupItem value="print" aria-label="Show print designs">PRINT</ToggleGroupItem>
+          <ToggleGroupItem value="digital" aria-label="Show digital designs">DIGITAL</ToggleGroupItem>
+          <ToggleGroupItem value="designs" aria-label="Show numbered designs">DESIGNS</ToggleGroupItem>
+        </ToggleGroup>
       </div>
 
-      {loading ? <p className="py-10 text-center text-muted-foreground">Loading pending orders...</p> : groups.length === 0 ? <p className="py-10 text-center text-muted-foreground">No pending orders found.</p> : <Accordion type="multiple" className="w-full">
-        {groups.map(([key, monthEntries]) => <AccordionItem key={key} value={key}><AccordionTrigger className="w-full text-lg hover:bg-gray-50 hover:no-underline"><div className="flex items-center gap-2"><span className="text-left font-medium">{formatMonth(key)}</span><span className="rounded-full bg-gray-100 px-2 py-1 text-sm text-gray-500">{monthEntries.length} entries</span></div></AccordionTrigger><AccordionContent><div className="space-y-2">{monthEntries.map((entry) => {
-          const selected = selectedEntries.some((item) => item.id === entry.id);
-          const shadePairs = getShadePairs(entry.shades);
-          return <article key={entry.id} className={`relative mb-2 rounded-lg border p-4 ${selected ? "border-yellow-400 bg-yellow-50" : "bg-white"}`}><div className="flex flex-col gap-4 sm:flex-row"><div className="min-w-0 flex-1"><div className="mb-2 flex flex-wrap items-center gap-2"><h2 className="text-base font-medium">{entry.partyName}</h2>{entry.part && <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs text-red-700">Part</span>}</div><div className="space-y-1 text-sm text-gray-600"><p><span className="font-medium">Design:</span> {entry.design}</p><p><span className="font-medium">Order No:</span> {entry.orderNo}</p><p><span className="font-medium">Order Date:</span> {formatDate(entry.orderDate)}</p><p><span className="font-medium">Price:</span> ₹{entry.price}</p>{entry.entryRemark && <p><span className="font-medium">Remark:</span> {entry.entryRemark}</p>}{entry.orderRemark && <p><span className="font-medium">Order Remark:</span> {entry.orderRemark}</p>}{entry.program && <p><span className="font-medium">Program:</span> {entry.program}</p>}</div></div><div className="rounded-lg bg-gray-50 p-2 sm:w-48"><h4 className="mb-2 text-sm font-medium">Shades</h4><div className="space-y-1">{shadePairs.length > 0 ? shadePairs.map(([name, meters], index) => <div key={`${name}-${index}`} className="text-sm"><span className="font-medium">{name}:</span> {meters}m</div>) : <span className="text-sm text-gray-400">No shades</span>}</div></div></div><div className="mt-4 flex justify-end gap-2"><Button className={selected ? "bg-red-500 hover:bg-red-600" : "bg-yellow-500 hover:bg-yellow-600"} size="sm" onClick={() => toggleEntry(entry)}>{selected ? "Remove from Bhiwandi" : "Add to Bhiwandi"}</Button><Button variant="destructive" size="sm" onClick={() => cancelEntry(entry)}>Cancel</Button></div></article>;
-        })}</div></AccordionContent></AccordionItem>)}
-      </Accordion>}
+      {loading ? (
+        <p className="py-10 text-center text-muted-foreground">Loading pending orders...</p>
+      ) : filteredGroups.length === 0 ? (
+        <p className="py-10 text-center text-muted-foreground">No pending orders found for this filter.</p>
+      ) : (
+        <Accordion type="single" collapsible className="w-full" value={openMonth} onValueChange={setOpenMonth}>
+          {filteredGroups.map(([key, monthEntries]) => (
+            <AccordionItem key={key} value={key}>
+              <AccordionTrigger className="w-full text-lg hover:bg-gray-50 hover:no-underline">
+                <div className="flex items-center gap-2">
+                  <span className="text-left font-medium">{formatMonth(key)}</span>
+                  <span className="rounded-full bg-gray-100 px-2 py-1 text-sm text-gray-500">{monthEntries.length} entries</span>
+                </div>
+              </AccordionTrigger>
+              <AccordionContent><div className="space-y-2">{monthEntries.map((entry) => {
+                const selected = selectedEntries.some((item) => item.id === entry.id);
+                const shadePairs = getShadePairs(entry.shades);
+                return <article key={entry.id} className={`relative mb-2 rounded-lg border p-4 ${selected ? "border-yellow-400 bg-yellow-50" : "bg-white"}`}><div className="flex flex-col gap-4 sm:flex-row"><div className="min-w-0 flex-1"><div className="mb-2"><h2 className="text-base font-bold">{entry.design}</h2><div className="mt-1 flex flex-wrap items-center gap-2"><p className="text-base font-normal">{entry.partyName}</p>{entry.part && <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs text-red-700">Part</span>}</div></div><div className="space-y-1 text-sm text-gray-600"><p><span className="font-medium">Order No:</span> {entry.orderNo}</p><p><span className="font-medium">Order Date:</span> {formatDate(entry.orderDate)}</p><p><span className="font-medium">Price:</span> ₹{entry.price}</p>{entry.entryRemark && <p><span className="font-medium">Remark:</span> {entry.entryRemark}</p>}{entry.orderRemark && <p><span className="font-medium">Order Remark:</span> {entry.orderRemark}</p>}{entry.program && <p className="text-blue-600"><span className="font-medium">Program:</span> {entry.program}</p>}</div></div><div className="rounded-lg bg-gray-50 p-2 sm:w-48"><h4 className="mb-2 text-sm font-medium">Shades</h4><div className="space-y-1">{shadePairs.length > 0 ? shadePairs.map(([name, meters], index) => <div key={`${name}-${index}`} className="text-sm"><span className="font-medium">{name}:</span> {meters}m</div>) : <span className="text-sm text-gray-400">No shades</span>}</div></div></div><div className="mt-4 flex flex-wrap justify-end gap-2"><Button variant="outline" size="sm" onClick={() => openProgramDialog(entry)}>Program</Button><Button className={selected ? "bg-red-500 hover:bg-red-600" : "bg-yellow-500 hover:bg-yellow-600"} size="sm" onClick={() => toggleEntry(entry)}>{selected ? "Remove from Bhiwandi" : "Add to Bhiwandi"}</Button><Button variant="destructive" size="sm" onClick={() => cancelEntry(entry)}>Cancel</Button></div></article>;
+              })}</div></AccordionContent>
+            </AccordionItem>
+          ))}
+        </Accordion>
+      )}
+      <Dialog open={programEntry !== null} onOpenChange={(open) => !open && setProgramEntry(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Program Entry No.</DialogTitle>
+            <DialogDescription>Enter or update the program entry number for {programEntry?.design}.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Input placeholder="Enter program entry no." value={programInput} onChange={(event) => setProgramInput(event.target.value)} />
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setProgramEntry(null)}>Cancel</Button>
+              <Button onClick={saveProgram} disabled={savingProgram}>{savingProgram ? "Saving..." : "Save"}</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
       <Toaster />
     </div>
   );
