@@ -16,6 +16,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import supabase from "@/utils/supabase";
 
@@ -48,6 +49,9 @@ const formatMonth = (key: string) =>
     year: "numeric",
   });
 
+const getShadePairs = (shades: Record<string, string>[]) =>
+  shades.flatMap((shade) => Object.entries(shade).filter(([, meters]) => meters));
+
 export default function DateWisePendingOrders() {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -58,6 +62,7 @@ export default function DateWisePendingOrders() {
   );
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [isBhiwandiDrawerOpen, setIsBhiwandiDrawerOpen] = useState(false);
 
   const fetchEntries = useCallback(async () => {
     setLoading(true);
@@ -167,6 +172,7 @@ export default function DateWisePendingOrders() {
       const selectedIds = new Set(selectedEntries.map((entry) => entry.id));
       setEntries((current) => current.filter((entry) => !selectedIds.has(entry.id)));
       setSelectedEntries([]);
+      setIsBhiwandiDrawerOpen(false);
       toast({ title: "Success", description: `Successfully sent ${selectedIds.size} entries to Bhiwandi.` });
     } catch (error) {
       toast({ title: "Error", description: `Failed to send entries to Bhiwandi: ${error instanceof Error ? error.message : "Unknown error"}`, variant: "destructive" });
@@ -176,34 +182,72 @@ export default function DateWisePendingOrders() {
   };
 
   return (
-    <div className="container mx-auto max-w-6xl p-4 md:py-8">
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold">Date Wise Pending Orders</h1>
-          <p className="text-sm text-muted-foreground">Orders without a Bhiwandi or dispatch date, grouped by order month.</p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => navigate("/")}>Home</Button>
-          <Sheet>
+    <div className="container relative mx-auto mt-4 max-w-6xl p-2 sm:p-4">
+      <div className="sticky top-0 z-10 mb-4 bg-white p-2 shadow-sm">
+        <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center">
+          <Button onClick={() => navigate("/")} className="w-full sm:w-auto">
+            Back to Home
+          </Button>
+          <div className="flex-1">
+            <h1 className="text-2xl font-bold">Date Wise Pending Orders</h1>
+            <p className="text-sm text-muted-foreground">Orders without a Bhiwandi or dispatch date, grouped by order month.</p>
+          </div>
+          <Sheet open={isBhiwandiDrawerOpen} onOpenChange={setIsBhiwandiDrawerOpen}>
             <SheetTrigger asChild>
-              <Button className="relative bg-yellow-500 hover:bg-yellow-600">Bhiwandi {selectedEntries.length > 0 && <span className="ml-2 rounded-full bg-white px-2 py-0.5 text-xs text-yellow-700">{selectedEntries.length}</span>}</Button>
+              <Button variant="outline" className="relative w-full sm:w-auto">
+                Bhiwandi List
+                {selectedEntries.length > 0 && (
+                  <span className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-yellow-500 text-xs text-white">
+                    {selectedEntries.length}
+                  </span>
+                )}
+              </Button>
             </SheetTrigger>
-            <SheetContent className="w-full sm:max-w-lg">
+            <SheetContent className="w-[400px] sm:w-[540px]">
               <SheetHeader><SheetTitle>Bhiwandi List</SheetTitle></SheetHeader>
-              <div className="mt-5 space-y-4">
-                <div><label className="mb-1 block text-sm font-medium" htmlFor="bhiwandi-date">Bhiwandi date</label><Input id="bhiwandi-date" type="date" value={bhiwandiDate} onChange={(event) => setBhiwandiDate(event.target.value)} /></div>
-                <Button className="w-full" disabled={!bhiwandiDate || selectedEntries.length === 0 || saving} onClick={sendToBhiwandi}>{saving ? "Sending..." : "Send to Bhiwandi"}</Button>
-                {selectedEntries.length === 0 ? <p className="text-sm text-muted-foreground">No entries selected.</p> : selectedEntries.map((entry) => <div key={entry.id} className="rounded border p-3"><p className="font-semibold">{entry.design} · {entry.partyName}</p><p className="text-sm text-muted-foreground">Order #{entry.orderNo} · {formatDate(entry.orderDate)}</p><Button className="mt-2" size="sm" variant="outline" onClick={() => toggleEntry(entry)}>Remove</Button></div>)}
+              {selectedEntries.length > 0 && (
+                <div className="mt-4 flex flex-col gap-3">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-sm font-medium text-gray-700" htmlFor="bhiwandi-date">Bhiwandi Date</label>
+                    <Input id="bhiwandi-date" type="date" value={bhiwandiDate} onChange={(event) => setBhiwandiDate(event.target.value)} className="w-full" />
+                  </div>
+                  <Button className="w-full bg-yellow-500 hover:bg-yellow-600" disabled={!bhiwandiDate || saving} onClick={sendToBhiwandi}>
+                    {saving ? "Sending..." : "Send to Bhiwandi"}
+                  </Button>
+                </div>
+              )}
+              <div className="mt-4 max-h-[calc(100vh-220px)] space-y-4 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                {selectedEntries.length === 0 ? <p className="text-center text-gray-500">No entries selected</p> : selectedEntries.map((entry) => (
+                  <div key={entry.id} className="relative mb-2 rounded-lg border bg-white p-4">
+                    <Button variant="ghost" size="icon" className="absolute right-2 top-2" onClick={() => toggleEntry(entry)} aria-label={`Remove ${entry.design} from Bhiwandi list`}>
+                      <X className="h-4 w-4" />
+                    </Button>
+                    <div className="pr-8 font-medium">{entry.partyName}</div>
+                    <div className="mt-1 text-xs text-gray-500">Design: {entry.design}</div>
+                    <div className="mt-1 text-xs text-gray-500">Order No: {entry.orderNo}</div>
+                    <div className="mt-1 text-xs text-gray-500">Order Date: {formatDate(entry.orderDate)}</div>
+                    <div className="mt-1 text-xs text-gray-500">Price: ₹{entry.price}</div>
+                    <div className="mt-2">
+                      <h4 className="text-xs font-medium">Shades:</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {getShadePairs(entry.shades).map(([name, meters], index) => (
+                          <span key={`${name}-${index}`} className="rounded bg-gray-100 px-2 py-1 text-xs">{name}: {meters}m</span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             </SheetContent>
           </Sheet>
         </div>
       </div>
 
-      {loading ? <p className="py-10 text-center text-muted-foreground">Loading pending orders...</p> : groups.length === 0 ? <p className="py-10 text-center text-muted-foreground">No pending orders found.</p> : <Accordion type="multiple" className="rounded-lg border bg-white">
-        {groups.map(([key, monthEntries]) => <AccordionItem key={key} value={key} className="px-4 last:border-b-0"><AccordionTrigger className="text-base font-semibold hover:no-underline"><span>{formatMonth(key)} <span className="ml-2 text-sm font-normal text-muted-foreground">({monthEntries.length})</span></span></AccordionTrigger><AccordionContent><div className="space-y-3">{monthEntries.map((entry) => {
+      {loading ? <p className="py-10 text-center text-muted-foreground">Loading pending orders...</p> : groups.length === 0 ? <p className="py-10 text-center text-muted-foreground">No pending orders found.</p> : <Accordion type="multiple" className="w-full">
+        {groups.map(([key, monthEntries]) => <AccordionItem key={key} value={key}><AccordionTrigger className="w-full text-lg hover:bg-gray-50 hover:no-underline"><div className="flex items-center gap-2"><span className="text-left font-medium">{formatMonth(key)}</span><span className="rounded-full bg-gray-100 px-2 py-1 text-sm text-gray-500">{monthEntries.length} entries</span></div></AccordionTrigger><AccordionContent><div className="space-y-2">{monthEntries.map((entry) => {
           const selected = selectedEntries.some((item) => item.id === entry.id);
-          return <article key={entry.id} className={`rounded-lg border p-4 ${selected ? "border-yellow-400 bg-yellow-50" : "bg-white"}`}><div className="flex flex-col justify-between gap-3 md:flex-row"><div className="space-y-1"><div className="flex flex-wrap items-center gap-2"><h2 className="font-bold">{entry.design}</h2>{entry.part && <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs text-red-700">Part</span>}</div><p><span className="font-medium">Party:</span> {entry.partyName}</p><p><span className="font-medium">Order No:</span> {entry.orderNo} <span className="ml-3 font-medium">Order Date:</span> {formatDate(entry.orderDate)}</p><p><span className="font-medium">Price:</span> ₹{entry.price}</p>{entry.entryRemark && <p><span className="font-medium">Design Remark:</span> {entry.entryRemark}</p>}{entry.orderRemark && <p><span className="font-medium">Order Remark:</span> {entry.orderRemark}</p>}{entry.program && <p><span className="font-medium">Program:</span> {entry.program}</p>}</div><div className="min-w-48 rounded bg-slate-50 p-3 text-sm"><p className="mb-1 font-medium">Order Shades</p>{entry.shades.length === 0 ? <p className="text-muted-foreground">No shades</p> : entry.shades.map((shade, index) => Object.entries(shade).filter(([, meters]) => meters !== "").map(([name, meters]) => <p key={`${index}-${name}`}>{name}: {meters}m</p>))}</div></div><div className="mt-3 flex gap-2"><Button className={selected ? "bg-red-500 hover:bg-red-600" : "bg-yellow-500 hover:bg-yellow-600"} onClick={() => toggleEntry(entry)}>{selected ? "Remove" : "B"}</Button><Button variant="destructive" onClick={() => cancelEntry(entry)}>Cancel</Button></div></article>;
+          const shadePairs = getShadePairs(entry.shades);
+          return <article key={entry.id} className={`relative mb-2 rounded-lg border p-4 ${selected ? "border-yellow-400 bg-yellow-50" : "bg-white"}`}><div className="flex flex-col gap-4 sm:flex-row"><div className="min-w-0 flex-1"><div className="mb-2 flex flex-wrap items-center gap-2"><h2 className="text-base font-medium">{entry.partyName}</h2>{entry.part && <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs text-red-700">Part</span>}</div><div className="space-y-1 text-sm text-gray-600"><p><span className="font-medium">Design:</span> {entry.design}</p><p><span className="font-medium">Order No:</span> {entry.orderNo}</p><p><span className="font-medium">Order Date:</span> {formatDate(entry.orderDate)}</p><p><span className="font-medium">Price:</span> ₹{entry.price}</p>{entry.entryRemark && <p><span className="font-medium">Remark:</span> {entry.entryRemark}</p>}{entry.orderRemark && <p><span className="font-medium">Order Remark:</span> {entry.orderRemark}</p>}{entry.program && <p><span className="font-medium">Program:</span> {entry.program}</p>}</div></div><div className="rounded-lg bg-gray-50 p-2 sm:w-48"><h4 className="mb-2 text-sm font-medium">Shades</h4><div className="space-y-1">{shadePairs.length > 0 ? shadePairs.map(([name, meters], index) => <div key={`${name}-${index}`} className="text-sm"><span className="font-medium">{name}:</span> {meters}m</div>) : <span className="text-sm text-gray-400">No shades</span>}</div></div></div><div className="mt-4 flex justify-end gap-2"><Button className={selected ? "bg-red-500 hover:bg-red-600" : "bg-yellow-500 hover:bg-yellow-600"} size="sm" onClick={() => toggleEntry(entry)}>{selected ? "Remove from Bhiwandi" : "Add to Bhiwandi"}</Button><Button variant="destructive" size="sm" onClick={() => cancelEntry(entry)}>Cancel</Button></div></article>;
         })}</div></AccordionContent></AccordionItem>)}
       </Accordion>}
       <Toaster />
