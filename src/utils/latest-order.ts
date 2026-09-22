@@ -1,8 +1,8 @@
 import supabase from "@/utils/supabase";
 
 /**
- * Returns the ship-to party used on the most recently created order for a
- * bill-to party. An order being edited can be excluded from the lookup.
+ * Returns the ship-to party used on the order with the highest order number
+ * for a bill-to party. An order being edited can be excluded from the lookup.
  */
 export async function fetchLatestShipToId(
   billToId: number,
@@ -18,7 +18,7 @@ export async function fetchLatestShipToId(
   }
 
   const { data, error } = await query
-    .order("id", { ascending: false })
+    .order("order_no", { ascending: false })
     .limit(1)
     .maybeSingle();
 
