@@ -10,6 +10,7 @@ import OrderDetailsSection from "@/components/custom/OrderDetailsSection";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@clerk/clerk-react";
+import { fetchLatestShipToId } from "@/utils/latest-order";
 
 interface Party {
   id: number;
@@ -164,11 +165,35 @@ function FastOrderForm() {
     fetchBrokers();
   }, []);
 
+  const handleBillToChange = async (partyId: number) => {
+    setSelectedBillTo(partyId);
+    fetchPriceList(partyId);
+
+    const selectedParty = partyOptions.find((party) => party.id === partyId);
+    if (selectedParty) {
+      try {
+        const latestShipToId = await fetchLatestShipToId(partyId);
+        setSelectedShipTo(
+          latestShipToId ?? selectedParty.delivery_id ?? selectedParty.id
+        );
+      } catch (error) {
+        console.error("Error fetching latest order ship-to party:", error);
+        setSelectedShipTo(selectedParty.delivery_id ?? selectedParty.id);
+      }
+
+      if (selectedParty.broker_id) {
+        setSelectedBroker(selectedParty.broker_id);
+      }
+    }
+
+    handleNextRef.current();
+  };
+
   const sections = [
     <PartySelectorFast
       partyOptions={partyOptions}
       selectedBillTo={selectedBillTo}
-      setSelectedBillTo={setSelectedBillTo}
+      onBillToChange={handleBillToChange}
     />,
     <DesignSelectorFast
       designs={designs}
@@ -191,7 +216,7 @@ function FastOrderForm() {
       orderDate={orderDate}
       setOrderDate={setOrderDate}
       selectedBillTo={selectedBillTo}
-      setSelectedBillTo={setSelectedBillTo}
+      onBillToChange={handleBillToChange}
       selectedShipTo={selectedShipTo}
       setSelectedShipTo={setSelectedShipTo}
       selectedBroker={selectedBroker}
@@ -271,26 +296,6 @@ function FastOrderForm() {
   useEffect(() => {
     handleNextRef.current = handleNext;
   }, [handleNext]);
-
-  useEffect(() => {
-    if (selectedBillTo !== null) {
-      fetchPriceList(selectedBillTo);
-      const selectedParty = partyOptions.find(
-        (party) => party.id === selectedBillTo
-      );
-      if (selectedParty) {
-        if (selectedParty.delivery_id) {
-          setSelectedShipTo(selectedParty.delivery_id);
-        } else {
-          setSelectedShipTo(selectedParty.id);
-        }
-        if (selectedParty.broker_id) {
-          setSelectedBroker(selectedParty.broker_id);
-        }
-      }
-      handleNextRef.current();
-    }
-  }, [selectedBillTo, partyOptions]);
 
   useEffect(() => {
     if (selectedShipTo !== null) {

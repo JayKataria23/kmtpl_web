@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { Button, Input } from "../ui";
 import { X, Search } from "lucide-react";
 
@@ -9,13 +9,13 @@ interface Party {
 
 interface PartySelectorFastProps {
   selectedBillTo: number | null;
-  setSelectedBillTo: React.Dispatch<React.SetStateAction<number | null>>;
+  onBillToChange: (partyId: number) => void;
   partyOptions: Party[];
 }
 
 function PartySelectorFast({
   selectedBillTo,
-  setSelectedBillTo,
+  onBillToChange,
   partyOptions,
 }: PartySelectorFastProps) {
   const [inputValue, setInputValue] = useState("");
@@ -81,7 +81,7 @@ function PartySelectorFast({
               key={party.id}
               variant={selectedBillTo === party.id ? "default" : "outline"}
               className="w-full justify-start h-11"
-              onClick={() => setSelectedBillTo(party.id)}
+              onClick={() => onBillToChange(party.id)}
             >
               <span className="truncate">{party.name}</span>
             </Button>

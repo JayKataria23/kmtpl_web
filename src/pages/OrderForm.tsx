@@ -29,6 +29,7 @@ import InputWithAutocomplete from "@/components/custom/InputWithAutocomplete";
 import { useUser } from "@clerk/clerk-react"; // Import useAuth
 import NewPartyDrawer from "@/components/custom/NewPartyDrawer";
 import { AddNewDesign } from "@/components/custom/AddNewDesign";
+import { fetchLatestShipToId } from "@/utils/latest-order";
 
 interface DesignEntry {
   id: string;
@@ -503,15 +504,19 @@ export default function OrderForm() {
     }
   };
 
-  const handleBillToChange = (partyId: number) => {
+  const handleBillToChange = async (partyId: number) => {
     setSelectedBillTo(partyId);
     fetchPriceList(partyId);
     const selectedParty = partyOptions.find((party) => party.id === partyId);
     if (selectedParty) {
-      if (selectedParty.delivery_id) {
-        setSelectedShipTo(selectedParty.delivery_id);
-      } else {
-        setSelectedShipTo(selectedParty.id);
+      try {
+        const latestShipToId = await fetchLatestShipToId(partyId);
+        setSelectedShipTo(
+          latestShipToId ?? selectedParty.delivery_id ?? selectedParty.id
+        );
+      } catch (error) {
+        console.error("Error fetching latest order ship-to party:", error);
+        setSelectedShipTo(selectedParty.delivery_id ?? selectedParty.id);
       }
       if (selectedParty.broker_id) {
         setSelectedBroker(selectedParty.broker_id);

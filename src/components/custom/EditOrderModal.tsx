@@ -12,6 +12,7 @@ import { fetchLatestPriceList } from "@/utils/rate-fetching";
 import InputWithAutocomplete from "@/components/custom/InputWithAutocomplete";
 import { format, isValid, parseISO } from "date-fns";
 import { X } from "lucide-react";
+import { fetchLatestShipToId } from "@/utils/latest-order";
 
 interface EditOrderModalProps {
   isOpen: boolean;
@@ -353,7 +354,7 @@ export function EditOrderModal({
     setOrderDetails((prev) => ({ ...prev, date: value }));
   };
 
-  const handleSelectChange = (field: keyof OrderDetails, value: string) => {
+  const handleSelectChange = async (field: keyof OrderDetails, value: string) => {
     const option = getOptionsForField(field).find(
       (opt) => opt.name.toLowerCase() === value.toLowerCase()
     );
@@ -362,6 +363,15 @@ export function EditOrderModal({
       // Fetch price list when bill_to_id changes
       if (field === "bill_to_id") {
         fetchPriceList(option.id);
+        try {
+          const latestShipToId = await fetchLatestShipToId(option.id, orderId);
+          setOrderDetails((prev) => ({
+            ...prev,
+            ship_to_id: latestShipToId,
+          }));
+        } catch (error) {
+          console.error("Error fetching latest order ship-to party:", error);
+        }
       }
     }
   };
