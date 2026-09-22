@@ -35,7 +35,7 @@ interface OrderDetailsSectionProps {
   selectedTransport: number | null;
   setOrderNo: React.Dispatch<React.SetStateAction<string>>;
   setOrderDate: React.Dispatch<React.SetStateAction<Date>>;
-  setSelectedBillTo: React.Dispatch<React.SetStateAction<number | null>>;
+  onBillToChange: (partyId: number) => void;
   setSelectedShipTo: React.Dispatch<React.SetStateAction<number | null>>;
   setSelectedBroker: React.Dispatch<React.SetStateAction<number | null>>;
   setSelectedTransport: React.Dispatch<React.SetStateAction<number | null>>;
@@ -47,7 +47,7 @@ function OrderDetailsSection({
   setOrderDate,
   partyOptions,
   selectedBillTo,
-  setSelectedBillTo,
+  onBillToChange,
   selectedShipTo,
   setSelectedShipTo,
   brokerOptions,
@@ -97,9 +97,9 @@ function OrderDetailsSection({
             <Label className="block mb-2 text-sm font-medium">Bill To</Label>
             <Select
               value={selectedBillTo?.toString() || undefined}
-              onValueChange={(value) =>
-                setSelectedBillTo(value ? parseInt(value) : null)
-              }
+              onValueChange={(value) => {
+                if (value) onBillToChange(parseInt(value));
+              }}
             >
               <SelectTrigger className="h-12 border border-gray-300 rounded-md">
                 <SelectValue placeholder="Select Bill To Party" />
