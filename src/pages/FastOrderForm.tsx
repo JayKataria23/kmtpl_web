@@ -58,6 +58,7 @@ function FastOrderForm() {
   );
   const [orderNo, setOrderNo] = useState<string>("");
   const [orderDate, setOrderDate] = useState<Date>(new Date());
+  const [orderRemark, setOrderRemark] = useState<string>("");
   const [transportOptions, setTransportOptions] = useState<
     {
       id: number;
@@ -215,6 +216,8 @@ function FastOrderForm() {
       setOrderNo={setOrderNo}
       orderDate={orderDate}
       setOrderDate={setOrderDate}
+      orderRemark={orderRemark}
+      setOrderRemark={setOrderRemark}
       selectedBillTo={selectedBillTo}
       onBillToChange={handleBillToChange}
       selectedShipTo={selectedShipTo}
@@ -341,6 +344,7 @@ function FastOrderForm() {
             ship_to_id: selectedShipTo,
             broker_id: selectedBroker,
             transport_id: selectedTransport,
+            remark: orderRemark.toUpperCase(),
             created_by: userName, // You'll need to add userName state from Clerk
           },
         ])

@@ -26,6 +26,7 @@ interface Transport {
 interface OrderDetailsSectionProps {
   orderNo: string;
   orderDate: Date;
+  orderRemark: string;
   partyOptions: Party[];
   selectedBillTo: number | null;
   selectedShipTo: number | null;
@@ -35,6 +36,7 @@ interface OrderDetailsSectionProps {
   selectedTransport: number | null;
   setOrderNo: React.Dispatch<React.SetStateAction<string>>;
   setOrderDate: React.Dispatch<React.SetStateAction<Date>>;
+  setOrderRemark: React.Dispatch<React.SetStateAction<string>>;
   onBillToChange: (partyId: number) => void;
   setSelectedShipTo: React.Dispatch<React.SetStateAction<number | null>>;
   setSelectedBroker: React.Dispatch<React.SetStateAction<number | null>>;
@@ -45,6 +47,8 @@ function OrderDetailsSection({
   orderNo,
   orderDate,
   setOrderDate,
+  orderRemark,
+  setOrderRemark,
   partyOptions,
   selectedBillTo,
   onBillToChange,
@@ -87,6 +91,22 @@ function OrderDetailsSection({
               id="orderDate"
               value={orderDate.toISOString().split("T")[0]}
               onChange={(e) => setOrderDate(new Date(e.target.value))}
+              className="w-full h-12 border border-gray-300 rounded-md"
+            />
+          </div>
+
+          <div>
+            <Label
+              htmlFor="orderRemark"
+              className="block mb-2 text-sm font-medium"
+            >
+              Remark
+            </Label>
+            <Input
+              id="orderRemark"
+              value={orderRemark}
+              onChange={(e) => setOrderRemark(e.target.value)}
+              placeholder="Enter remark"
               className="w-full h-12 border border-gray-300 rounded-md"
             />
           </div>
