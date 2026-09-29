@@ -14,7 +14,7 @@ interface ComputerStockItem {
 type FilterTab = "all" | "regular" | "print" | "designs";
 type SortDirection = "asc" | "desc" | null;
 
-const PRINT_PATTERN = /-\d{4}$/;
+const PRINT_PATTERN = /-\s*\d{4}$/;
 const NUMERIC_PATTERN = /^\d+$/;
 
 const isPrint = (name: string) => PRINT_PATTERN.test(name.trim());
