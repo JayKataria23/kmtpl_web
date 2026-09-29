@@ -55,6 +55,8 @@ export default function BrokerTransportPage() {
   // State for sales receivables upload
   const [receivablesFile, setReceivablesFile] = useState<File | null>(null);
   const [isUploadingReceivables, setIsUploadingReceivables] = useState(false);
+  const [computerStockFile, setComputerStockFile] = useState<File | null>(null);
+  const [isUploadingComputerStock, setIsUploadingComputerStock] = useState(false);
 
   useEffect(() => {
     fetchBrokers();
@@ -405,6 +407,72 @@ export default function BrokerTransportPage() {
     }
   };
 
+  const normaliseHeader = (value: string) => value.trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+
+  const parseQuantity = (value: unknown): number | null => {
+    if (typeof value === "number") return Number.isFinite(value) ? value : null;
+    if (typeof value !== "string") return null;
+    const quantity = Number(value.replace(/,/g, "").trim());
+    return Number.isFinite(quantity) ? quantity : null;
+  };
+
+  const uploadComputerStockFromExcel = async () => {
+    if (!computerStockFile) {
+      toast({ title: "No file selected", description: "Choose an Excel file to upload." });
+      return;
+    }
+
+    setIsUploadingComputerStock(true);
+    try {
+      const workbook = XLSX.read(await computerStockFile.arrayBuffer(), { type: "array" });
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1, defval: "", raw: true });
+      const [headerRow, ...dataRows] = rows;
+      const headers = (headerRow ?? []).map((header) => normaliseHeader(String(header)));
+      const particularsIndex = headers.findIndex((header) => header === "particulars");
+      const quantityIndex = headers.findIndex((header) =>
+        ["quantityinmtrs", "quantitymtrs", "quantityinmeters", "quantitymeters"].includes(header)
+      );
+
+      if (particularsIndex < 0 || quantityIndex < 0) {
+        throw new Error('The first row must contain "Particulars" and "Quantity in Mtrs" columns.');
+      }
+
+      const stock = dataRows
+        .map((row) => ({
+          particulars: String(row[particularsIndex] ?? "").trim(),
+          quantity_mtrs: parseQuantity(row[quantityIndex]),
+        }))
+        .filter((row) => row.particulars && row.quantity_mtrs !== null)
+        .filter((row) => normaliseHeader(row.particulars) !== "grandtotal")
+        .map((row) => ({ particulars: row.particulars, quantity_mtrs: row.quantity_mtrs as number }));
+
+      if (!stock.length) throw new Error("No stock rows were found. The Grand Total row is not uploaded.");
+
+      const confirmed = window.confirm(
+        `Replace all existing computer stock with ${stock.length} rows from this file?`
+      );
+      if (!confirmed) return;
+
+      const { error: deleteError } = await supabase.from("computer_stock").delete().gte("id", 0);
+      if (deleteError) throw deleteError;
+
+      for (let index = 0; index < stock.length; index += 500) {
+        const { error: insertError } = await supabase.from("computer_stock").insert(stock.slice(index, index + 500));
+        if (insertError) throw insertError;
+      }
+
+      setComputerStockFile(null);
+      const fileInput = document.getElementById("computer-stock-file") as HTMLInputElement | null;
+      if (fileInput) fileInput.value = "";
+      toast({ title: "Computer stock updated", description: `${stock.length} design rows were uploaded.` });
+    } catch (error: any) {
+      toast({ title: "Computer stock upload failed", description: error.message || "Unable to upload the file.", variant: "destructive" });
+    } finally {
+      setIsUploadingComputerStock(false);
+    }
+  };
+
   
   
   const editDesign = async (id: number, title: string) => {
@@ -494,6 +562,19 @@ export default function BrokerTransportPage() {
       <Button onClick={() => navigate("/")} className="mb-4">
         Back to Home
       </Button>
+      <div className="mb-8 rounded-lg border border-dashed bg-blue-50/50 p-5">
+        <h2 className="text-xl font-bold">Computer Stock Upload</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Upload an Excel file with <strong>Particulars</strong> and <strong>Quantity in Mtrs</strong> columns. Uploading replaces all existing computer stock; the Grand Total row is skipped.
+        </p>
+        <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
+          <Input id="computer-stock-file" type="file" accept=".xlsx,.xls" onChange={(event) => setComputerStockFile(event.target.files?.[0] ?? null)} />
+          <Button onClick={() => void uploadComputerStockFromExcel()} disabled={!computerStockFile || isUploadingComputerStock}>
+            {isUploadingComputerStock ? "Uploading…" : "Replace Computer Stock"}
+          </Button>
+          <Button variant="outline" onClick={() => navigate("/computer-stock")}>View Computer Stock</Button>
+        </div>
+      </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         <div>
           <h2 className="text-2xl font-bold mb-4">Brokers</h2>

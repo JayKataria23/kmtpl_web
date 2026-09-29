@@ -49,6 +49,7 @@ export default function HomePage() {
       title: "Masters",
       items: [
         { path: "/broker-transport", label: "Master" },
+        { path: "/computer-stock", label: "Computer Stock" },
         { path: "/party-profiles", label: "Party Profiles" },
       ],
     },

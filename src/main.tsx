@@ -37,6 +37,7 @@ import Outstanding from "./pages/Outstanding";
 import TransportChallanUpload from "./pages/TransportChallanUpload";
 import OutstandingMonthWise from "./pages/OutstandingMonthWise";
 import DateWisePendingOrders from "./pages/DateWisePendingOrders";
+import ComputerStock from "./pages/ComputerStock";
 
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
@@ -248,6 +249,14 @@ createRoot(document.getElementById("root")!).render(
             element={
               <ProtectedRoute>
                 <TransportChallanUpload />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/computer-stock"
+            element={
+              <ProtectedRoute>
+                <ComputerStock />
               </ProtectedRoute>
             }
           />
