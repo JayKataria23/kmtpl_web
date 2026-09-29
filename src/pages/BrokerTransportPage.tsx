@@ -412,7 +412,12 @@ export default function BrokerTransportPage() {
   const parseQuantity = (value: unknown): number | null => {
     if (typeof value === "number") return Number.isFinite(value) ? value : null;
     if (typeof value !== "string") return null;
-    const quantity = Number(value.replace(/,/g, "").trim());
+    const quantity = Number(
+      value
+        .replace(/,/g, "")
+        .replace(/\s*(mtrs?|meters?)\.?\s*$/i, "")
+        .trim()
+    );
     return Number.isFinite(quantity) ? quantity : null;
   };
 
@@ -431,11 +436,11 @@ export default function BrokerTransportPage() {
       const headers = (headerRow ?? []).map((header) => normaliseHeader(String(header)));
       const particularsIndex = headers.findIndex((header) => header === "particulars");
       const quantityIndex = headers.findIndex((header) =>
-        ["quantityinmtrs", "quantitymtrs", "quantityinmeters", "quantitymeters"].includes(header)
+        ["quantity", "quantityinmtrs", "quantitymtrs", "quantityinmeters", "quantitymeters"].includes(header)
       );
 
       if (particularsIndex < 0 || quantityIndex < 0) {
-        throw new Error('The first row must contain "Particulars" and "Quantity in Mtrs" columns.');
+        throw new Error('The first row must contain "Particulars" and "Quantity" columns.');
       }
 
       const stock = dataRows
@@ -565,7 +570,7 @@ export default function BrokerTransportPage() {
       <div className="mb-8 rounded-lg border border-dashed bg-blue-50/50 p-5">
         <h2 className="text-xl font-bold">Computer Stock Upload</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Upload an Excel file with <strong>Particulars</strong> and <strong>Quantity in Mtrs</strong> columns. Uploading replaces all existing computer stock; the Grand Total row is skipped.
+          Upload an Excel file with <strong>Particulars</strong> and <strong>Quantity</strong> columns. Quantities may include an MTR suffix. Uploading replaces all existing computer stock; the Grand Total row is skipped.
         </p>
         <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
           <Input id="computer-stock-file" type="file" accept=".xlsx,.xls" onChange={(event) => setComputerStockFile(event.target.files?.[0] ?? null)} />
