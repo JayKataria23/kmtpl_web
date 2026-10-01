@@ -223,11 +223,6 @@ function BhiwandiListPrint() {
               <td style="border: 1px solid #ccc; padding: 2px 8px; width: 12%;">${row.transporter_name}</td>
               <td style="border: 1px solid #ccc; padding: 2px 8px; width: 12%;">
                 ${row.order_no}
-                ${
-                  row.order_remark && row.order_remark !== "N/A"
-                    ? `<div style="margin-top: 3px;"><strong style="${PRINT_REMARK_STYLE}">${row.order_remark}</strong></div>`
-                    : ""
-                }
               </td>
               <td style="border: 1px solid #ccc; padding: 2px 8px; width: 8%;">${row.price}</td>
               <td style="border: 1px solid #ccc; padding: 2px 8px; width: 36%;">
@@ -240,7 +235,16 @@ function BhiwandiListPrint() {
                     : ""
                 }
               </td>
-            </tr>`;
+            </tr>
+            ${
+              row.order_remark && row.order_remark !== "N/A"
+                ? `<tr style="page-break-inside:avoid;">
+                  <td colspan="6" style="border: 1px solid #ccc; padding: 4px 8px; text-align: left;">
+                    <strong style="${PRINT_REMARK_STYLE}">${row.order_remark}</strong>
+                  </td>
+                </tr>`
+                : ""
+            }`;
           });
 
           html += `
