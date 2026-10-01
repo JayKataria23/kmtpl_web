@@ -19,7 +19,7 @@ interface Entry {
   order_id: string;
   order_no: number;
   order_remark: string;
-  part: boolean | string; // <-- Added part
+  part: boolean | string;
 }
 
 interface GroupedEntry {
@@ -28,7 +28,7 @@ interface GroupedEntry {
   remark: string;
   shades: { [key: string]: string }[];
   design_entry_id: number;
-  part: boolean | string; // <-- Added part
+  part: boolean | string;
 }
 
 interface GroupedOrder {
@@ -42,32 +42,56 @@ interface GroupedOrder {
   order_remark: string;
 }
 
+// One row in the "group by design" view
+interface DesignRow {
+  design_entry_id: number;
+  bill_to_party: string;
+  ship_to_party: string;
+  transporter_name: string;
+  order_no: number;
+  order_remark: string;
+  price: string;
+  remark: string;
+  shades: { [key: string]: string }[];
+  part: boolean | string;
+}
+
+interface DesignGroup {
+  design: string;
+  rows: DesignRow[];
+}
+
 const PRINT_REMARK_STYLE =
   "color: #008000; border: 1px solid #000; padding: 1px 6px; font-weight: bold; display: inline-block; line-height: 1.2; print-color-adjust: exact; -webkit-print-color-adjust: exact;";
+
+const PART_BADGE =
+  '<span style="background: #eab308; color: #fff; font-size: 12px; border-radius: 4px; padding: 2px 6px; margin-left: 8px;">PART</span>';
+
+const isPart = (part: boolean | string) => part === true || part === "true";
 
 function BhiwandiListPrint() {
   const { date } = useParams<{ date: string }>();
   const [designEntries, setDesignEntries] = useState<GroupedOrder[]>([]);
   const [generatedHtml, setGeneratedHtml] = useState<string | null>(null);
-  const [hideDetails, setHideDetails] = useState<boolean>(false);
+  const [groupByDesign, setGroupByDesign] = useState<boolean>(false);
 
   const formatDate = (dateString: string): string => {
     const date = new Date(dateString.substring(1));
     const optionsDate: Intl.DateTimeFormatOptions = {
       day: "numeric",
-      month: "long", // Change month to 'long'
+      month: "long",
       year: "numeric",
     };
     const optionsTime: Intl.DateTimeFormatOptions = {
       hour: "numeric",
       minute: "numeric",
-      hour12: false, // Set hour12 to false for 24-hour format
+      hour12: false,
     };
 
-    const formattedDate = date.toLocaleDateString("en-US", optionsDate); // Format date
-    const formattedTime = date.toLocaleTimeString("en-US", optionsTime); // Format time
+    const formattedDate = date.toLocaleDateString("en-US", optionsDate);
+    const formattedTime = date.toLocaleTimeString("en-US", optionsTime);
 
-    return `${formattedDate} ${formattedTime}`; // Return combined formatted date and time
+    return `${formattedDate} ${formattedTime}`;
   };
 
   useEffect(() => {
@@ -80,7 +104,6 @@ function BhiwandiListPrint() {
 
         if (error) throw error;
 
-        // Group the entries by order_id
         const groupedEntries = groupByOrderId(data);
 
         setDesignEntries(groupedEntries);
@@ -88,20 +111,22 @@ function BhiwandiListPrint() {
         console.error("Error fetching design entries:", error);
       }
     };
-    fetchDesignEntries(date as string); // Ensure fetchDesignEntries is defined in the scope
-  }, [date]); // Added fetchDesignEntries to the dependency array
+    fetchDesignEntries(date as string);
+  }, [date]);
 
   useEffect(() => {
-    const handleGenerateHTML = (designEntries: GroupedOrder[]) => {
-      let html = `<div style="display: flex; justify-content: space-between; align-items: center; padding-right: 10px;">
+    const headerHtml = () => `<div style="display: flex; justify-content: space-between; align-items: center; padding-right: 10px;">
         <h1 style='font-size: 24px;'>Order Preview</h1>
         <p style='font-size: 18px; line-height: 0.5;'>${formatDate(
           date as string
         )}</p>
       </div>`;
 
-      // Loop through designEntries to create HTML structure
-      designEntries
+    // ---------- Existing view: grouped by party / order ----------
+    const handlePartyViewHTML = (designEntries: GroupedOrder[]) => {
+      let html = headerHtml();
+
+      [...designEntries]
         .sort((a, b) => a.bill_to_party.localeCompare(b.bill_to_party))
         .forEach((entry: GroupedOrder, entryIndex: number) => {
           html += `
@@ -109,8 +134,8 @@ function BhiwandiListPrint() {
           entryIndex % 2 === 0 ? "#f9f9f9" : "#ffffff"
         }; padding: 10px; border: 1px solid #ccc; border-radius: 5px;">
           <div style="page-break-inside:avoid;page-break-after:auto">
-            ${!hideDetails ? `<p style="font-size: 18px; line-height: 0.5;"><strong>Bill To:</strong> ${entry.bill_to_party}</p>` : ''}
-            ${!hideDetails ? `<p style="font-size: 18px; line-height: 0.5;"><strong>Ship To:</strong> ${entry.ship_to_party}</p>` : ''}
+            <p style="font-size: 18px; line-height: 0.5;"><strong>Bill To:</strong> ${entry.bill_to_party}</p>
+            <p style="font-size: 18px; line-height: 0.5;"><strong>Ship To:</strong> ${entry.ship_to_party}</p>
             <p style="font-size: 18px; line-height: 0.5;">
             <span><strong>Order No.:</strong> ${entry.order_no}
             </span>
@@ -120,29 +145,28 @@ function BhiwandiListPrint() {
                 : ""
             }</span>
             <span></p>
-            ${!hideDetails ? `<p style="font-size: 18px; line-height: 0.5"><strong>Transport:</strong> ${entry.transporter_name}</p>` : ''}
+            <p style="font-size: 18px; line-height: 0.5"><strong>Transport:</strong> ${entry.transporter_name}</p>
           </div>
 
           <table style="width: 100%; border-collapse: collapse; margin-top: 10px; page-break-inside:avoid;">
             <thead style="break-inside:avoid;">
               <tr style="background-color: #f0f0f0;">
-                <th style="border: 1px solid #ccc; padding-left: 8px; text-align: left; width: ${hideDetails ? '32%' : '22%'};">Design</th>
-                ${!hideDetails ? `<th style="border: 1px solid #ccc; padding-left: 8px; text-align: left; width: 10%;">Price</th>` : ''}
-                <th style="border: 1px solid #ccc; padding-left: 8px; text-align: left; width: ${hideDetails ? '68%' : '55%'};">Shades</th>
+                <th style="border: 1px solid #ccc; padding-left: 8px; text-align: left; width: 22%;">Design</th>
+                <th style="border: 1px solid #ccc; padding-left: 8px; text-align: left; width: 10%;">Price</th>
+                <th style="border: 1px solid #ccc; padding-left: 8px; text-align: left; width: 55%;">Shades</th>
               </tr>
             </thead>
             <tbody style="break-inside:avoid;">`;
 
-          // Loop through each design entry
           entry.entries.forEach((order) => {
             html += `
             <tr style="page-break-inside:avoid;">
-              <td style="border: 1px solid #ccc; padding-left: 8px; width: ${hideDetails ? '32%' : '22%'};">
+              <td style="border: 1px solid #ccc; padding-left: 8px; width: 22%;">
                 ${order.design}
-                ${order.part === true || order.part === 'true' ? '<span style="background: #eab308; color: #fff; font-size: 12px; border-radius: 4px; padding: 2px 6px; margin-left: 8px;">PART</span>' : ''}
+                ${isPart(order.part) ? PART_BADGE : ""}
               </td>
-              ${!hideDetails ? `<td style="border: 1px solid #ccc; padding-left: 8px; width: 10%;">${order.price}</td>` : ''}
-              <td style="border: 1px solid #ccc; padding-left: 8px; width: ${hideDetails ? '68%' : '55%'}; ">
+              <td style="border: 1px solid #ccc; padding-left: 8px; width: 10%;">${order.price}</td>
+              <td style="border: 1px solid #ccc; padding-left: 8px; width: 55%; ">
               <div style="width: 100%; text-align: center; display: flex; flex-direction: row; flex-wrap: wrap;">
               ${formatShades(order.shades)}
               </div>  ${
@@ -162,8 +186,79 @@ function BhiwandiListPrint() {
 
       return html;
     };
-    setGeneratedHtml(handleGenerateHTML(designEntries));
-  }, [designEntries, date, hideDetails]);
+
+    // ---------- New view: grouped by design name ----------
+    const handleDesignViewHTML = (designEntries: GroupedOrder[]) => {
+      let html = headerHtml();
+
+      groupByDesignName(designEntries).forEach(
+        (group: DesignGroup, groupIndex: number) => {
+          html += `
+        <div style="page-break-inside:avoid; page-break-after:auto; margin-bottom: 20px; background-color: ${
+          groupIndex % 2 === 0 ? "#f9f9f9" : "#ffffff"
+        }; padding: 10px; border: 1px solid #ccc; border-radius: 5px;">
+          <p style="font-size: 18px; margin: 0 0 6px 0;"><strong>Design:</strong> ${group.design}</p>
+
+          <table style="width: 100%; border-collapse: collapse; page-break-inside:avoid;">
+            <thead style="break-inside:avoid;">
+              <tr style="background-color: #f0f0f0;">
+                <th style="border: 1px solid #ccc; padding-left: 8px; text-align: left; width: 16%;">Bill To</th>
+                <th style="border: 1px solid #ccc; padding-left: 8px; text-align: left; width: 16%;">Ship To</th>
+                <th style="border: 1px solid #ccc; padding-left: 8px; text-align: left; width: 12%;">Transport</th>
+                <th style="border: 1px solid #ccc; padding-left: 8px; text-align: left; width: 12%;">Order No.</th>
+                <th style="border: 1px solid #ccc; padding-left: 8px; text-align: left; width: 8%;">Price</th>
+                <th style="border: 1px solid #ccc; padding-left: 8px; text-align: left; width: 36%;">Shades</th>
+              </tr>
+            </thead>
+            <tbody style="break-inside:avoid;">`;
+
+          group.rows.forEach((row) => {
+            html += `
+            <tr style="page-break-inside:avoid;">
+              <td style="border: 1px solid #ccc; padding: 2px 8px; width: 16%;">
+                ${row.bill_to_party}
+                ${isPart(row.part) ? PART_BADGE : ""}
+              </td>
+              <td style="border: 1px solid #ccc; padding: 2px 8px; width: 16%;">${row.ship_to_party}</td>
+              <td style="border: 1px solid #ccc; padding: 2px 8px; width: 12%;">${row.transporter_name}</td>
+              <td style="border: 1px solid #ccc; padding: 2px 8px; width: 12%;">
+                ${row.order_no}
+                ${
+                  row.order_remark && row.order_remark !== "N/A"
+                    ? `<div style="margin-top: 3px;"><strong style="${PRINT_REMARK_STYLE}">${row.order_remark}</strong></div>`
+                    : ""
+                }
+              </td>
+              <td style="border: 1px solid #ccc; padding: 2px 8px; width: 8%;">${row.price}</td>
+              <td style="border: 1px solid #ccc; padding: 2px 8px; width: 36%;">
+                <div style="width: 100%; text-align: center; display: flex; flex-direction: row; flex-wrap: wrap;">
+                ${formatShades(row.shades)}
+                </div>
+                ${
+                  row.remark && row.remark !== "N/A"
+                    ? `<strong style="${PRINT_REMARK_STYLE}">${row.remark}</strong>`
+                    : ""
+                }
+              </td>
+            </tr>`;
+          });
+
+          html += `
+            </tbody>
+          </table>
+        </div>`;
+        }
+      );
+
+      return html;
+    };
+
+    setGeneratedHtml(
+      groupByDesign
+        ? handleDesignViewHTML(designEntries)
+        : handlePartyViewHTML(designEntries)
+    );
+  }, [designEntries, date, groupByDesign]);
 
   function groupByOrderId(entries: Entry[]): GroupedOrder[] {
     const grouped = new Map<string, GroupedOrder>();
@@ -182,12 +277,10 @@ function BhiwandiListPrint() {
         shades,
         order_no,
         order_remark,
-        part, // <-- Added part
+        part,
       } = entry;
 
-      // Check if the order_id already exists in the map
       if (!grouped.has(order_id)) {
-        // Create a new GroupedOrder if it doesn't exist
         grouped.set(order_id, {
           order_id,
           order_no,
@@ -196,20 +289,49 @@ function BhiwandiListPrint() {
           ship_to_party,
           broker_name,
           transporter_name,
-          entries: [], // Initialize with an empty entries array
+          entries: [],
         });
       }
 
-      // Get the existing group and push the design entry into it
       const group = grouped.get(order_id)!;
-      group.entries.push({ design, price, remark, shades, design_entry_id, part }); // <-- Pass part
+      group.entries.push({ design, price, remark, shades, design_entry_id, part });
     });
 
-    return Array.from(grouped.values()); // Return the grouped orders as an array
+    return Array.from(grouped.values());
+  }
+
+  // Regroup the same orders by design name (designs A→Z, parties A→Z inside each)
+  function groupByDesignName(orders: GroupedOrder[]): DesignGroup[] {
+    const grouped = new Map<string, DesignGroup>();
+
+    orders.forEach((order) => {
+      order.entries.forEach((e) => {
+        if (!grouped.has(e.design)) {
+          grouped.set(e.design, { design: e.design, rows: [] });
+        }
+        grouped.get(e.design)!.rows.push({
+          design_entry_id: e.design_entry_id,
+          bill_to_party: order.bill_to_party,
+          ship_to_party: order.ship_to_party,
+          transporter_name: order.transporter_name,
+          order_no: order.order_no,
+          order_remark: order.order_remark,
+          price: e.price,
+          remark: e.remark,
+          shades: e.shades,
+          part: e.part,
+        });
+      });
+    });
+
+    const groups = Array.from(grouped.values());
+    groups.forEach((g) =>
+      g.rows.sort((a, b) => a.bill_to_party.localeCompare(b.bill_to_party))
+    );
+    return groups.sort((a, b) => a.design.localeCompare(b.design));
   }
 
   const formatShades = (shades: { [key: string]: string }[]): string => {
-    // Group shades by their values
     const formattedShades: {
       meters: string;
       shades: number[];
@@ -217,22 +339,21 @@ function BhiwandiListPrint() {
     }[] = [];
 
     shades.forEach((shadeObj, index) => {
-      const shadeName = Object.keys(shadeObj)[0]; // Get the shade name
-      const shadeValue = shadeObj[shadeName]; // Get the shade value
+      const shadeName = Object.keys(shadeObj)[0];
+      const shadeValue = shadeObj[shadeName];
 
       if (shadeValue) {
-        // Only process non-empty values
         const existingGroup = formattedShades.find(
           (group) => group.meters === shadeValue
         );
         if (existingGroup) {
-          existingGroup.shades.push(index + 1); // Add the index to the existing group
-          existingGroup.keys.push(shadeName); // Add the key to the existing group
+          existingGroup.shades.push(index + 1);
+          existingGroup.keys.push(shadeName);
         } else {
           formattedShades.push({
             meters: shadeValue,
             shades: [index + 1],
-            keys: [shadeName], // Create a new group with the key
+            keys: [shadeName],
           });
         }
       }
@@ -251,7 +372,7 @@ function BhiwandiListPrint() {
   };
 
   const handleShare = () => {
-    const currentUrl = window.location.href; // Get the current page URL
+    const currentUrl = window.location.href;
     const message = `Bhiwandi List ${formatDate(
       date as string
     )}: ${currentUrl}`;
@@ -263,18 +384,18 @@ function BhiwandiListPrint() {
     <div className="p-4">
       <Card className="max-w-md mx-auto shadow-lg p-6">
         <h1 className="text-2xl font-bold mb-4">Bhiwandi List Print</h1>
-        
-        {/* Checkbox to hide details */}
+
+        {/* Checkbox: party view <-> design view */}
         <div className="flex items-center mb-4">
           <input
             type="checkbox"
-            id="hideDetails"
-            checked={hideDetails}
-            onChange={(e) => setHideDetails(e.target.checked)}
+            id="groupByDesign"
+            checked={groupByDesign}
+            onChange={(e) => setGroupByDesign(e.target.checked)}
             className="mr-2"
           />
-          <label htmlFor="hideDetails" className="text-sm">
-            Hide party names, price & transport details
+          <label htmlFor="groupByDesign" className="text-sm">
+            Group by design name
           </label>
         </div>
 
